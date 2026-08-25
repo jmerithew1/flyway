@@ -29,6 +29,9 @@ export const TUNING = {
   // and produces the imperfect post-split reunion
   wHome: 4.5,
   homeRadiusNeutral: 300,
+  // envelope asymmetry along heading: dense leading edge, streaming tail
+  leadTighten: 0.72,
+  tailStretch: 1.65,
   homeRadiusGather: 60,
   homeRadiusSpread: 540,
   homeMax: 560,
@@ -60,6 +63,7 @@ export interface Bird {
   myIntentX: number // this bird's delayed view of the shared intent point
   myIntentY: number
   orbitBias: number // signed: internal circulation direction
+  homeBias: number // per-bird leash multiplier — ragged flock boundary
   edginess: number // jitter amplitude scale
   sidePref: number // -1..1 bias when splitting head-on
   flapPhase: number
@@ -156,6 +160,7 @@ export class Flock {
       myIntentX: x,
       myIntentY: y,
       orbitBias: (Math.random() < 0.5 ? -1 : 1) * rand(0.4, 1),
+      homeBias: rand(0.7, 1.45),
       edginess: rand(0.4, 1.25),
       sidePref: Math.random() < 0.5 ? -rand(0.4, 1) : rand(0.4, 1),
       flapPhase: rand(0, Math.PI * 2),
@@ -340,10 +345,21 @@ export class Flock {
         gcy = (this.centerY - b.y) * lerp(1, TUNING.envelopeYSquash, neutralAmt)
       }
       const gcd = Math.hypot(gcx, gcy)
-      const homeR =
+      let homeR =
         f >= 0
           ? lerp(TUNING.homeRadiusNeutral, TUNING.homeRadiusGather, gather)
           : lerp(TUNING.homeRadiusNeutral, TUNING.homeRadiusSpread, spread)
+
+      // A murmuration is not an ellipse: it packs at the leading edge and
+      // streams out behind. Birds *behind* the centroid get a much longer
+      // leash (the tail); birds ahead of it get reined in (the dense front).
+      const alongOff = (b.x - this.centerX) * hx + (b.y - this.centerY) * hy
+      const tailAmt = alongOff < 0 ? 1 : 0
+      homeR *= lerp(TUNING.leadTighten, TUNING.tailStretch, tailAmt)
+      // per-bird leash variation ragged-edges the boundary instead of
+      // cutting every bird off at the same clean radius
+      homeR *= b.homeBias
+
       if (gcd > homeR) {
         const homePull = Math.min((gcd - homeR) * TUNING.wHome, TUNING.homeMax)
         ax += (gcx / gcd) * homePull
