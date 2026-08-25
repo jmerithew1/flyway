@@ -55,7 +55,20 @@ export const SLICE_END = ROOST_X + 700
 export const SKY_TOP = 40
 export const SKY_BOTTOM = 830
 
-export const CHECKPOINTS = [0, 2100, 4600, 7100, 9600, 12000, 14400, 17400, 20400, 23200]
+export interface Landmark {
+  x: number
+  name: string
+}
+
+/** Named landmarks double as checkpoints (~45-60s apart). x=0 is the silent start. */
+export const LANDMARKS: Landmark[] = [
+  { x: 0, name: '' },
+  { x: 4600, name: 'Sun Gate' },
+  { x: 9600, name: 'Bell Tower' },
+  { x: 14400, name: 'Rose Ruin' },
+  { x: 20400, name: 'Broken Spire' },
+  { x: 23200, name: 'Last Arch' },
+]
 
 const GROUND = 880 // visual ground line where bottom-mounted pieces sit
 

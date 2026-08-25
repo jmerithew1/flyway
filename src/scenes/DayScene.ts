@@ -9,7 +9,7 @@ import {
   FEATURES,
   STRAYS,
   PROMPTS,
-  CHECKPOINTS,
+  LANDMARKS,
   WIND_ZONES,
   buildObstacles,
   pieceDisplay,
@@ -24,6 +24,7 @@ import {
   SKY_BOTTOM,
 } from '../level'
 import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
+import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS } from '../config'
 
 export interface DayStats {
   startCount: number
@@ -42,6 +43,7 @@ interface ActivePrompt {
 
 interface CheckpointState {
   x: number
+  name: string
   count: number
   found: number
 }
@@ -88,6 +90,11 @@ export class DayScene extends Phaser.Scene {
   private debugText!: Phaser.GameObjects.Text
   private debugVisible = false
   private promptText!: Phaser.GameObjects.Text
+  private landmarkText!: Phaser.GameObjects.Text
+  private deltaText!: Phaser.GameObjects.Text
+  private duskOverlay!: Phaser.GameObjects.Rectangle
+  private failTexts: Phaser.GameObjects.Text[] = []
+  private lastShownCount = START_BIRDS
   private prompt: ActivePrompt | null = null
   private shownPrompts = new Set<string>()
   private lastHit = new Map<Bird, number>()
@@ -100,7 +107,7 @@ export class DayScene extends Phaser.Scene {
   private spreadHeld = 0
 
   private stats: DayStats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0 }
-  private checkpoint: CheckpointState = { x: 0, count: 120, found: 0 }
+  private checkpoint: CheckpointState = { x: 0, name: '', count: START_BIRDS, found: 0 }
   private failing = false
   private finishing = false
   private finishTimer = 0
@@ -133,7 +140,7 @@ export class DayScene extends Phaser.Scene {
     this.finishing = false
     this.finishTimer = 0
     this.stats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0 }
-    this.checkpoint = { x: 0, count: 120, found: 0 }
+    this.checkpoint = { x: 0, name: '', count: START_BIRDS, found: 0 }
 
     // ---- backdrop: the supplied painted plate, covering the view
     const plate = ART['bg_plate']
@@ -283,6 +290,37 @@ export class DayScene extends Phaser.Scene {
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
+    this.landmarkText = this.add
+      .text(VIEW_W / 2, 150, '', { fontFamily: 'Georgia, serif', fontSize: '24px', color: '#f2e4d5', letterSpacing: 3 } as Phaser.Types.GameObjects.Text.TextStyle)
+      .setOrigin(0.5)
+      .setAlpha(0)
+      .setScrollFactor(0)
+      .setDepth(20)
+    this.deltaText = this.add
+      .text(96, 44, '', { fontFamily: 'Georgia, serif', fontSize: '20px', color: '#f2e8f5' })
+      .setOrigin(0, 0.5)
+      .setAlpha(0)
+      .setScrollFactor(0)
+      .setDepth(20)
+    this.lastShownCount = START_BIRDS
+    // dusk tint used by the failure sequence (and later, journey warmth)
+    this.duskOverlay = this.add
+      .rectangle(0, 0, VIEW_W, VIEW_H, 0x2a1f3d)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(48)
+      .setAlpha(0)
+    this.failTexts = []
+
+    // ---- day intro: over live gameplay, no confirmation
+    const introBits = [
+      this.add.text(VIEW_W / 2, 330, DAY_NAME, { fontFamily: 'Georgia, serif', fontSize: '44px', color: '#f7f0ea', letterSpacing: 10 } as Phaser.Types.GameObjects.Text.TextStyle).setOrigin(0.5).setScrollFactor(0).setDepth(30),
+      this.add.text(VIEW_W / 2, 386, DAY_SUBTITLE, { fontFamily: 'Georgia, serif', fontSize: '22px', color: '#dccce0', letterSpacing: 6 } as Phaser.Types.GameObjects.Text.TextStyle).setOrigin(0.5).setScrollFactor(0).setDepth(30),
+      this.add.text(VIEW_W / 2, 442, `${START_BIRDS} birds`, { fontFamily: 'Georgia, serif', fontSize: '19px', color: '#f2e8f5' }).setOrigin(0.5).setScrollFactor(0).setDepth(30),
+      this.add.text(VIEW_W / 2, 472, 'Reach the roost.', { fontFamily: 'Georgia, serif', fontSize: '17px', color: '#cdbdd4' }).setOrigin(0.5).setScrollFactor(0).setDepth(30),
+    ]
+    for (const t of introBits) t.setAlpha(0)
+    this.tweens.add({ targets: introBits, alpha: 0.95, duration: 550, hold: 1300, yoyo: true, onComplete: () => introBits.forEach((t) => t.destroy()) })
 
     this.time.delayedCall(1400, () =>
       this.showPrompt('steer', 'move the mouse — steer the flock', () => this.mouseTravel > 900),
@@ -479,8 +517,10 @@ export class DayScene extends Phaser.Scene {
     for (const pr of PROMPTS) {
       if (pr.x < 0) continue
       if (this.scrollX > pr.x) {
-        if (pr.key === 'gather') this.showPrompt('gather', pr.text, () => this.gatherHeld > 0.7)
-        else if (pr.key === 'spread') this.showPrompt('spread', pr.text, () => this.spreadHeld > 0.7)
+        if (pr.key === 'gather')
+          this.showPrompt('gather', pr.text, () => this.gatherHeld > 0.3 && this.flock.centerX > 1020)
+        else if (pr.key === 'spread')
+          this.showPrompt('spread', pr.text, () => this.stats.found > 0 || this.spreadHeld > 1.6)
       }
     }
     const zoneAhead = this.windZoneAt(this.flock.centerX + 500)
@@ -497,7 +537,7 @@ export class DayScene extends Phaser.Scene {
     this.audio.setFlockState(this.flock.form, Phaser.Math.Clamp(meanSpeed, 0, 1))
     if (this.finishing) this.audio.warmth(Math.min(1, this.finishTimer / 4))
 
-    this.countText.setText(String(this.flock.count))
+    this.updateHudCount()
     if (this.debugVisible) {
       this.debugText.setText(
         `fps ${Math.round(this.game.loop.actualFps)}  form ${this.flock.form.toFixed(2)}  x ${Math.round(this.scrollX)}  cp ${this.checkpoint.x}`,
@@ -505,6 +545,44 @@ export class DayScene extends Phaser.Scene {
       this.drawColliderOverlay()
     }
     void timeMs
+  }
+
+  /** Count ticks with a visible ±N so every change has a readable cause. */
+  private updateHudCount(): void {
+    const n = this.flock.count
+    if (n === this.lastShownCount) return
+    const delta = n - this.lastShownCount
+    this.lastShownCount = n
+    this.countText.setText(String(n))
+    this.tweens.killTweensOf(this.deltaText)
+    this.deltaText
+      .setText(delta > 0 ? `+${delta}` : `${delta}`)
+      .setColor(delta > 0 ? '#ffd9a0' : '#e8a090')
+      .setAlpha(1)
+      .setY(44)
+    this.tweens.add({ targets: this.deltaText, alpha: 0, y: delta > 0 ? 30 : 58, duration: 1100, ease: 'Quad.easeOut' })
+    if (delta < 0) {
+      // muted warm-red pulse + tiny feather scatter at the counter
+      this.countText.setColor('#e8a090')
+      this.time.delayedCall(420, () => this.countText.setColor('#f2e8f5'))
+      const burst = this.add.particles(66, 32, 'leaf', {
+        speed: { min: 30, max: 90 },
+        angle: { min: 40, max: 140 },
+        lifespan: 600,
+        quantity: Math.min(6, -delta),
+        scale: { start: 0.4, end: 0.1 },
+        alpha: { start: 0.8, end: 0 },
+        tint: 0x2a2440,
+        emitting: false,
+      })
+      burst.setScrollFactor(0).setDepth(21)
+      burst.explode(Math.min(6, -delta), 0, 0)
+      this.time.delayedCall(700, () => burst.destroy())
+    } else {
+      this.countText.setColor('#ffd9a0')
+      this.time.delayedCall(420, () => this.countText.setColor('#f2e8f5'))
+      this.audio.collectBloom(delta)
+    }
   }
 
   /** Debug: outline every active collider so art/collision mismatch is visible. */
@@ -691,27 +769,69 @@ export class DayScene extends Phaser.Scene {
   }
 
   private checkCheckpoints(): void {
-    for (const cp of CHECKPOINTS) {
-      if (cp > this.checkpoint.x && this.flock.centerX >= cp) {
-        this.checkpoint = { x: cp, count: this.flock.count, found: this.stats.found }
+    for (const lm of LANDMARKS) {
+      if (lm.x > this.checkpoint.x && this.flock.centerX >= lm.x) {
+        this.checkpoint = { x: lm.x, name: lm.name, count: this.flock.count, found: this.stats.found }
+        if (lm.name) {
+          this.showLandmark(`${lm.name} reached`)
+          this.audio.landmarkTone(lm.name)
+        }
       }
     }
   }
 
+  /** Landmark banner: separate slot from tutorial prompts, never collides. */
+  private showLandmark(text: string): void {
+    this.landmarkText.setText(text).setAlpha(0)
+    this.tweens.add({ targets: this.landmarkText, alpha: 0.85, duration: 500, hold: 1300, yoyo: true })
+  }
+
   private checkFail(): void {
     if (this.failing || this.finishing) return
-    if (this.flock.count >= 35) return
+    if (this.flock.count >= FAIL_BIRDS) return
     this.failing = true
     this.stats.resets++
-    this.tweens.add({
-      targets: this.fadeRect,
-      alpha: 1,
-      duration: 700,
-      onComplete: () => {
-        this.respawnAtCheckpoint()
-        this.tweens.add({ targets: this.fadeRect, alpha: 0, duration: 900, delay: 150 })
-        this.failing = false
-      },
+    this.audio.failureFade()
+
+    // 1) the remaining flock visibly scatters across the sky
+    const survivors = [...this.flock.birds]
+    for (const b of survivors) {
+      this.scatter.spawn(b.x, b.y, b.x - this.flock.centerX, b.y - this.flock.centerY - 40)
+      this.flock.removeBird(b)
+    }
+    // 2) colour drains toward dusk, then the message
+    this.promptText.setAlpha(0)
+    this.landmarkText.setAlpha(0)
+    this.prompt = null
+    this.tweens.add({ targets: this.duskOverlay, alpha: 0.55, duration: 1400 })
+    this.tweens.add({ targets: this.fadeRect, alpha: 0.85, duration: 1700, delay: 500 })
+    this.time.delayedCall(1500, () => {
+      const cx = VIEW_W / 2
+      const name = this.checkpoint.name || 'the morning sky'
+      const mk = (y: number, txt: string, size: number, color: string, ls = 0) =>
+        this.add
+          .text(cx, y, txt, { fontFamily: 'Georgia, serif', fontSize: `${size}px`, color, letterSpacing: ls } as Phaser.Types.GameObjects.Text.TextStyle)
+          .setOrigin(0.5)
+          .setAlpha(0)
+          .setScrollFactor(0)
+          .setDepth(52)
+      this.failTexts = [
+        mk(360, 'THE FLOCK SCATTERED', 34, '#f2e4d5', 8),
+        mk(414, 'Too few birds remained together.', 17, '#b9a8be'),
+        mk(478, `Returning to ${name}`, 20, '#dccce0', 2),
+        mk(522, `${this.checkpoint.count} BIRDS`, 24, '#f2e8f5', 3),
+      ]
+      this.tweens.add({ targets: this.failTexts, alpha: 0.95, duration: 700 })
+    })
+    // 3) restart from the landmark
+    this.time.delayedCall(4300, () => {
+      this.respawnAtCheckpoint()
+      if (this.checkpoint.name) this.audio.landmarkTone(this.checkpoint.name)
+      for (const t of this.failTexts) t.destroy()
+      this.failTexts = []
+      this.tweens.add({ targets: [this.fadeRect, this.duskOverlay], alpha: 0, duration: 1100, delay: 150 })
+      this.audio.failureRecover()
+      this.failing = false
     })
   }
 

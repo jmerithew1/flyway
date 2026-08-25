@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { createCoreTextures, loadArt } from './textures'
 import { SandboxScene } from './scenes/SandboxScene'
 import { DayScene } from './scenes/DayScene'
+import { TitleScene } from './scenes/TitleScene'
 import { ResultsScene } from './scenes/ResultsScene'
 
 class BootScene extends Phaser.Scene {
@@ -16,7 +17,7 @@ class BootScene extends Phaser.Scene {
   create(): void {
     createCoreTextures(this)
     const params = new URLSearchParams(window.location.search)
-    this.scene.start(params.has('sandbox') ? 'Sandbox' : 'Day')
+    this.scene.start(params.has('sandbox') ? 'Sandbox' : params.has('day') ? 'Day' : 'Title')
   }
 }
 
@@ -29,5 +30,5 @@ new Phaser.Game({
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, SandboxScene, DayScene, ResultsScene],
+  scene: [BootScene, TitleScene, SandboxScene, DayScene, ResultsScene],
 })

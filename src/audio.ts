@@ -77,6 +77,74 @@ export class GameAudio {
     o.stop(t + 0.25)
   }
 
+  /** Failure: everything falls away to wind; only the noise bed survives, quiet. */
+  failureFade(): void {
+    if (!this.ctx) return
+    const t = this.ctx.currentTime
+    this.master.gain.cancelScheduledValues(t)
+    this.master.gain.setTargetAtTime(0.06, t, 1.2)
+    this.noiseFilter.frequency.setTargetAtTime(220, t, 1.0)
+    this.noiseFilter.Q.setTargetAtTime(0.4, t, 1.0)
+  }
+
+  /** Gameplay resumes: bed swells back. */
+  failureRecover(): void {
+    if (!this.ctx) return
+    this.master.gain.setTargetAtTime(0.22, this.ctx.currentTime, 1.4)
+  }
+
+  /** Musical bloom when birds join — bigger groups, bigger chord. */
+  collectBloom(count: number): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const notes = count >= 8 ? [1, 1.25, 1.5, 2] : count >= 3 ? [1, 1.25, 1.5] : [1, 1.5]
+    const base = 392
+    notes.forEach((ratio, i) => {
+      const o = ctx.createOscillator()
+      o.type = 'triangle'
+      o.frequency.value = base * ratio
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0, t + i * 0.05)
+      g.gain.linearRampToValueAtTime(0.05 + Math.min(count, 12) * 0.004, t + i * 0.05 + 0.06)
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.05 + 0.9)
+      o.connect(g).connect(this.master)
+      o.start(t + i * 0.05)
+      o.stop(t + i * 0.05 + 1)
+    })
+  }
+
+  /** Landmark tone — each named place has a stable identity (Bell Tower = bell). */
+  landmarkTone(name: string): void {
+    if (!this.ctx) return
+    // stable pitch per name so restarts replay the same tone
+    let h = 0
+    for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 997
+    const base = 262 * Math.pow(2, (h % 12) / 12)
+    if (name === 'Bell Tower') {
+      // a real bell: strike + inharmonic partials, long decay
+      const t = this.ctx.currentTime
+      for (const [ratio, amp, dur] of [
+        [1, 0.16, 2.6],
+        [2.02, 0.09, 1.9],
+        [2.94, 0.05, 1.3],
+        [4.4, 0.03, 0.8],
+      ] as Array<[number, number, number]>) {
+        const o = this.ctx.createOscillator()
+        o.type = 'sine'
+        o.frequency.value = 196 * ratio
+        const g = this.ctx.createGain()
+        g.gain.setValueAtTime(amp, t)
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur)
+        o.connect(g).connect(this.master)
+        o.start(t)
+        o.stop(t + dur + 0.1)
+      }
+      return
+    }
+    this.chime(base, 0)
+  }
+
   /** Warm rising chime — roost arrival / star reveal. */
   chime(baseFreq = 440, delay = 0): void {
     if (!this.ctx) return
