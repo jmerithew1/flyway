@@ -153,7 +153,15 @@ def main():
             missing.append(pid)
             continue
         no_collide = family in ('bird', 'fx', 'deco')
-        colliders = [] if no_collide else e['colliders']
+        if no_collide:
+            colliders = []
+        elif family == 'organic-brittle':
+            # a curtain blocks as one soft mass until punched through
+            colliders = [{'x': 0, 'y': 0, 'w': e['w'], 'h': e['h']}]
+        else:
+            # 2.5D passability: full-width coverage bands (crowns/beams/masses);
+            # narrow verticals (arch legs, mullions) are depth-passable
+            colliders = e.get('bands') or e.get('bands40') or e['colliders']
         lines.append(
             f"  '{alias}': {{ key: '{alias}', file: '{e['file']}', w: {e['w']}, h: {e['h']}, "
             f"family: '{family}', colliders: {json.dumps(colliders)}, openings: {json.dumps(e['openings'])} }},"

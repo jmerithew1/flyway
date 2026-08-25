@@ -152,6 +152,35 @@ def occupancy_colliders(piece, max_rects=14):
     return rects[:max_rects]
 
 
+def coverage_bands(piece, thresh=0.55):
+    """2.5D passability: y-bands where opaque coverage across the piece's width
+    exceeds `thresh` become full-width colliders (crowns, beams, solid masses);
+    rows dominated by narrow verticals (arch legs, mullions) stay open — the
+    flock visually passes 'through' those in depth."""
+    w, h = piece.size
+    a = piece.getchannel('A')
+    row_h = 10
+    gh = max(1, h // row_h)
+    small = a.resize((64, gh), Image.BILINEAR)
+    px = small.load()
+    bands = []
+    y = 0
+    while y < gh:
+        cov = sum(1 for x in range(64) if px[x, y] > 110) / 64
+        if cov >= thresh:
+            y2 = y
+            while y2 + 1 < gh:
+                c2 = sum(1 for x in range(64) if px[x, y2 + 1] > 110) / 64
+                if c2 < thresh:
+                    break
+                y2 += 1
+            bands.append({'x': 0, 'y': round(y * h / gh), 'w': w, 'h': round((y2 - y + 1) * h / gh)})
+            y = y2 + 1
+        else:
+            y += 1
+    return [b for b in bands if b['h'] >= 12]
+
+
 def enclosed_openings(piece):
     """Interior transparent regions (holes the flock can fly through)."""
     w, h = piece.size
@@ -225,6 +254,8 @@ def segment_sheet(path, category, manifest, thresh=40, gap=MERGE_GAP):
                 'w': piece.size[0],
                 'h': piece.size[1],
                 'colliders': occupancy_colliders(piece),
+                'bands': coverage_bands(piece),
+                'bands40': coverage_bands(piece, 0.4),
                 'openings': enclosed_openings(piece),
             }
         )

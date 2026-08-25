@@ -31,20 +31,21 @@ export class ScatterSystem {
     const sprite = this.scene.add.image(x, y, 'bird-mid')
     sprite.setScale(0.3)
     const m = Math.hypot(awayX, awayY) || 1
-    const recoverable = Math.random() < 0.3
+    const recoverable = Math.random() < 0.45
     this.birds.push({
       sprite,
       vx: (awayX / m) * (220 + Math.random() * 160) + (Math.random() - 0.5) * 120,
       vy: (awayY / m) * (220 + Math.random() * 160) + (Math.random() - 0.5) * 120 - 60,
-      life: recoverable ? 7 : 1.6 + Math.random() * 0.8,
+      life: recoverable ? 2.2 : 1.6 + Math.random() * 0.8,
       spin: (Math.random() - 0.5) * 14,
       recoverable,
       phase: Math.random() * Math.PI * 2,
     })
   }
 
-  /** Returns number of birds recovered into the flock this frame. */
-  update(dt: number, time: number, flock: Flock | null): number {
+  /** Returns number of birds recovered into the flock this frame.
+   * `spread01` widens the recollect radius — Spread is the recovery tool. */
+  update(dt: number, time: number, flock: Flock | null, spread01 = 0): number {
     let recovered = 0
     for (let i = this.birds.length - 1; i >= 0; i--) {
       const b = this.birds[i]
@@ -55,16 +56,20 @@ export class ScatterSystem {
         continue
       }
       if (b.recoverable) {
-        // decelerate into a nervous hover
+        // decelerate, then fly loosely alongside the flock (recoverable window)
         b.vx *= Math.exp(-2.5 * dt)
         b.vy *= Math.exp(-2.5 * dt)
+        if (flock) {
+          b.vx += (flock.meanVX * 0.75 - b.vx) * (1 - Math.exp(-1.6 * dt))
+          b.vy += (flock.meanVY * 0.75 - b.vy) * (1 - Math.exp(-1.6 * dt))
+        }
         b.sprite.x += b.vx * dt + Math.sin(time * 5 + b.phase) * 30 * dt
         b.sprite.y += b.vy * dt + Math.cos(time * 4.2 + b.phase) * 26 * dt
         b.sprite.setTexture(birdFrameKey(time, b.phase, 11))
         b.sprite.alpha = Math.min(1, b.life)
         if (flock) {
           const d = Math.hypot(flock.centerX - b.sprite.x, flock.centerY - b.sprite.y)
-          if (d < 150) {
+          if (d < 130 + spread01 * 280) {
             flock.spawnBird(b.sprite.x, b.sprite.y)
             b.sprite.destroy()
             this.birds.splice(i, 1)

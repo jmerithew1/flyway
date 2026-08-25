@@ -11,6 +11,7 @@ import {
   PROMPTS,
   LANDMARKS,
   WIND_ZONES,
+  MOTE_ARCS,
   buildObstacles,
   pieceDisplay,
   PieceFeature,
@@ -33,6 +34,8 @@ export interface DayStats {
   collisionEvents: number
   resets: number
   returned: number
+  flow: number
+  flowTotal: number
 }
 
 interface ActivePrompt {
@@ -46,6 +49,7 @@ interface CheckpointState {
   name: string
   count: number
   found: number
+  flow: number
 }
 
 interface AmbientFlock {
@@ -101,13 +105,15 @@ export class DayScene extends Phaser.Scene {
   private brittleCharge = new Map<Obstacle, number>()
   private stuckTime = new Map<Bird, number>()
   private lossTimes: number[] = []
+  private flowGates = new Map<PieceFeature, { state: 'idle' | 'active' | 'done' | 'failed'; clean: boolean; entryCount: number }>()
+  private motes: { x: number; y: number; img: Phaser.GameObjects.Image }[] = []
   private mouseTravel = 0
   private lastPointer = { x: 0, y: 0 }
   private gatherHeld = 0
   private spreadHeld = 0
 
-  private stats: DayStats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0 }
-  private checkpoint: CheckpointState = { x: 0, name: '', count: START_BIRDS, found: 0 }
+  private stats: DayStats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0, flow: 0, flowTotal: 0 }
+  private checkpoint: CheckpointState = { x: 0, name: '', count: START_BIRDS, found: 0, flow: 0 }
   private failing = false
   private finishing = false
   private finishTimer = 0
@@ -139,8 +145,17 @@ export class DayScene extends Phaser.Scene {
     this.failing = false
     this.finishing = false
     this.finishTimer = 0
-    this.stats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0 }
-    this.checkpoint = { x: 0, name: '', count: START_BIRDS, found: 0 }
+    this.stats = {
+      startCount: 120,
+      found: 0,
+      lost: 0,
+      collisionEvents: 0,
+      resets: 0,
+      returned: 0,
+      flow: 0,
+      flowTotal: FEATURES.filter((f) => f.flow).length,
+    }
+    this.checkpoint = { x: 0, name: '', count: START_BIRDS, found: 0, flow: 0 }
 
     // ---- backdrop: the supplied painted plate, covering the view
     const plate = ART['bg_plate']
@@ -182,6 +197,24 @@ export class DayScene extends Phaser.Scene {
     this.placePieces()
     this.placeWindFx()
     this.drawRoost()
+    this.flowGates.clear()
+    for (const f of FEATURES) if (f.flow) this.flowGates.set(f, { state: 'idle', clean: true, entryCount: 0 })
+    this.motes = []
+    for (const arc of MOTE_ARCS) {
+      for (let i = 0; i < arc.count; i++) {
+        const t = i / (arc.count - 1)
+        const mx = arc.x - arc.spanX / 2 + arc.spanX * t
+        const my = arc.y + Math.sin(t * Math.PI) * -arc.spanY * 0.5 + arc.spanY * 0.18
+        const img = this.add
+          .image(mx, my, 'glow_warm')
+          .setDisplaySize(34, 34)
+          .setAlpha(0.75)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(2.5)
+        this.tweens.add({ targets: img, alpha: 0.45, duration: 900 + i * 90, yoyo: true, repeat: -1 })
+        this.motes.push({ x: mx, y: my, img })
+      }
+    }
 
     this.colliderGfx = this.add.graphics().setDepth(19).setVisible(false)
 
@@ -502,15 +535,16 @@ export class DayScene extends Phaser.Scene {
     this.processCollisions(time)
     this.processBrittle(dt)
     this.cullStragglers(dt)
-    this.scatter.update(dt, time, this.flock)
-
     const spreadAmt = Math.max(-this.flock.form, 0)
+    this.scatter.update(dt, time, this.flock, spreadAmt)
     for (const s of this.strays) {
       if (s.group.depleted) continue
       const joined = s.group.update(dt, time, this.flock, 200 + spreadAmt * 220)
       if (joined > 0) this.stats.found += joined
     }
 
+    this.updateFlowGates()
+    this.updateMotes()
     this.updateRoostSwirl(dt, time)
     this.updateAmbientFlocks(dt)
 
@@ -588,6 +622,96 @@ export class DayScene extends Phaser.Scene {
       this.countText.setColor('#ffd9a0')
       this.time.delayedCall(420, () => this.countText.setColor('#f2e8f5'))
       this.audio.collectBloom(delta)
+    }
+  }
+
+  /**
+   * Perfect Flow: pass a designated gate in the intended formation, with zero
+   * losses across its window and the flock holding together.
+   */
+  private updateFlowGates(): void {
+    const cx = this.flock.centerX
+    for (const [f, g] of this.flowGates) {
+      const enter = f.x - 260
+      const exit = f.x + 260
+      if (g.state === 'idle' && cx > enter && cx < f.x) {
+        g.state = 'active'
+        g.clean = true
+        g.entryCount = this.flock.count
+      } else if (g.state === 'active') {
+        if (this.flock.count < g.entryCount) g.clean = false
+        // formation check near the gate itself
+        if (Math.abs(cx - f.x) < 60) {
+          const formOk = f.flow === 'spread' ? this.flock.form < -0.35 : this.flock.form > 0.35
+          if (!formOk) g.clean = false
+        }
+        if (cx >= exit) {
+          // cohesion: most of the flock made it through together
+          let near = 0
+          for (const b of this.flock.birds) {
+            if (Math.hypot(b.x - this.flock.centerX, b.y - this.flock.centerY) < 420) near++
+          }
+          const cohesive = near >= this.flock.count * 0.8
+          if (g.clean && cohesive) {
+            g.state = 'done'
+            this.stats.flow++
+            this.perfectFlowFeedback()
+          } else {
+            g.state = 'failed'
+          }
+        }
+      }
+    }
+  }
+
+  private perfectFlowFeedback(): void {
+    this.audio.chime(523, 0)
+    const sx = Phaser.Math.Clamp(this.flock.centerX - this.scrollX, 220, VIEW_W - 220)
+    const sy = Phaser.Math.Clamp(this.flock.centerY - 120, 80, VIEW_H - 80)
+    const t = this.add
+      .text(sx, sy, 'PERFECT FLOW', {
+        fontFamily: 'Georgia, serif',
+        fontSize: '21px',
+        color: '#ffe6bf',
+        letterSpacing: 4,
+      } as Phaser.Types.GameObjects.Text.TextStyle)
+      .setOrigin(0.5)
+      .setAlpha(0)
+      .setScrollFactor(0)
+      .setDepth(21)
+    this.tweens.add({ targets: t, alpha: 0.95, y: sy - 26, duration: 700, hold: 900, yoyo: true, onComplete: () => t.destroy() })
+    // restrained ripple: a soft expanding glow through the flock
+    const ring = this.add
+      .image(this.flock.centerX, this.flock.centerY, 'glow_warm')
+      .setDisplaySize(120, 120)
+      .setAlpha(0.5)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(4)
+    this.tweens.add({ targets: ring, displayWidth: 560, displayHeight: 560, alpha: 0, duration: 900, onComplete: () => ring.destroy() })
+  }
+
+  /** Wide rewards: golden motes; a spread flock sweeps far more of them. */
+  private updateMotes(): void {
+    const x0 = this.scrollX - 100
+    const x1 = this.scrollX + VIEW_W + 100
+    for (const m of this.motes) {
+      if (!m.img.visible || m.x < x0 || m.x > x1) continue
+      for (const b of this.flock.birds) {
+        const dx = b.x - m.x
+        const dy = b.y - m.y
+        if (dx * dx + dy * dy < 42 * 42) {
+          m.img.setVisible(false)
+          this.audio.collectBloom(1)
+          const spark = this.add
+            .image(m.x, m.y, 'glow_warm')
+            .setDisplaySize(40, 40)
+            .setAlpha(0.9)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setDepth(4)
+          this.tweens.add({ targets: spark, displayWidth: 110, displayHeight: 110, alpha: 0, duration: 450, onComplete: () => spark.destroy() })
+          break
+        }
+      }
     }
   }
 
@@ -777,7 +901,7 @@ export class DayScene extends Phaser.Scene {
   private checkCheckpoints(): void {
     for (const lm of LANDMARKS) {
       if (lm.x > this.checkpoint.x && this.flock.centerX >= lm.x) {
-        this.checkpoint = { x: lm.x, name: lm.name, count: this.flock.count, found: this.stats.found }
+        this.checkpoint = { x: lm.x, name: lm.name, count: this.flock.count, found: this.stats.found, flow: this.stats.flow }
         if (lm.name) {
           this.showLandmark(`${lm.name} reached`)
           this.audio.landmarkTone(lm.name)
@@ -861,6 +985,10 @@ export class DayScene extends Phaser.Scene {
     this.flock.intentX = cp.x + 200
     this.flock.intentY = 430
     this.stats.found = cp.found
+    this.stats.flow = cp.flow
+    // reset flow gates and motes ahead of the checkpoint
+    for (const [f, g] of this.flowGates) if (f.x > cp.x) { g.state = 'idle'; g.clean = true }
+    for (const m of this.motes) if (m.x > cp.x && !m.img.visible) m.img.setVisible(true)
     for (const s of this.strays) {
       if (s.def.x > cp.x) s.group.reset(s.def.count)
     }

@@ -24,6 +24,8 @@ export interface PieceFeature {
   brittle?: boolean // all colliders become breakable
   wide?: boolean // opt out of the 520px display-width clamp (big set pieces)
   alpha?: number
+  /** Perfect Flow gate: pass cleanly in this formation for Flow credit. */
+  flow?: 'spread' | 'gather'
 }
 
 export interface WindZone {
@@ -111,8 +113,8 @@ export const FEATURES: PieceFeature[] = [
   top(2600, 'root_tangle', 330),
   gnd(2600, 'triple_arcade', 400),
   gnd(3150, 'obelisk_a', 600), // split obelisk
-  gnd(3650, 'gothic_arch', 520), // narrow: gather
-  gnd(4150, 'wall_multi_window', 520), // spread through windows
+  gnd(3650, 'gothic_arch', 520, { flow: 'gather' }), // narrow: gather
+  gnd(4150, 'wall_multi_window', 520, { flow: 'spread' }), // spread through windows
   top(4150, 'leaf_strand', 260),
 
   // ===== EARLY-MID (4600-7100): variety =====================================
@@ -139,7 +141,7 @@ export const FEATURES: PieceFeature[] = [
   gnd(10750, 'wall_circle_bite', 360),
   gnd(11300, 'organic_arch', 500), // vine arch
   top(11300, 'ceiling_pods', 300, { sway: true }),
-  gnd(11800, 'lattice_gate', 480), // lattice: spread through small holes
+  gnd(11800, 'lattice_gate', 480, { flow: 'spread' }), // lattice: spread through small holes
 
   // ===== WIND HEIGHTS (12000-14400): pressure + wind ========================
   gnd(12300, 'colonnade_arch', 480),
@@ -151,7 +153,7 @@ export const FEATURES: PieceFeature[] = [
 
   // ===== RAPID MORPH (14400-17400) ==========================================
   gnd(14700, 'gothic_arch', 500, { flipX: true }),
-  gnd(15300, 'wall_multi_window', 560),
+  gnd(15300, 'wall_multi_window', 560, { flow: 'spread' }),
   gnd(15900, 'arch_fragment', 460),
   top(15900, 'root_tangle', 280, { flipX: true }),
   gnd(16500, 'triple_column', 480, { flipX: true }),
@@ -178,8 +180,8 @@ export const FEATURES: PieceFeature[] = [
   gnd(23000, 'triple_window_wall', 420),
 
   // ===== FINAL FLOW (23200-25400) ===========================================
-  gnd(23600, 'pointed_arch', 520, { flipX: true }), // gather, thread
-  gnd(24250, 'wall_multi_window', 600), // spread through windows
+  gnd(23600, 'pointed_arch', 520, { flipX: true, flow: 'gather' }), // gather, thread
+  gnd(24250, 'wall_multi_window', 600, { flow: 'spread' }), // spread through windows
   gnd(25000, 'aqueduct_run', 520, { wide: true }), // huge final split — the aqueduct run
   top(25000, 'root_tangle', 300, { sway: true }),
   // then open sky to the roost
@@ -206,6 +208,21 @@ export const STRAYS: StrayDef[] = [
   { x: 19360, y: 495, count: 8 },
   { x: 23010, y: 250, count: 9 },
   { x: 24300, y: 160, count: 10 }, // final optional flock
+]
+
+/** Wide-reward mote arcs: broad patterns Spread sweeps better. */
+export interface MoteArc {
+  x: number
+  y: number
+  count: number
+  spanX: number
+  spanY: number
+}
+export const MOTE_ARCS: MoteArc[] = [
+  { x: 4850, y: 330, count: 9, spanX: 460, spanY: 260 },
+  { x: 9950, y: 520, count: 8, spanX: 420, spanY: 300 },
+  { x: 15650, y: 380, count: 9, spanX: 480, spanY: 280 },
+  { x: 24700, y: 360, count: 10, spanX: 520, spanY: 300 },
 ]
 
 export const PROMPTS: PromptDef[] = [
