@@ -234,7 +234,7 @@ export function paintRuinStrip(scene: Phaser.Scene): void {
  * Dark foreground foliage silhouette — tileable strip. Kept LOW: it frames the
  * bottom edge without eating the playfield.
  */
-export function paintFoliageStrip(scene: Phaser.Scene): void {
+export function _unusedPaintFoliageStrip(scene: Phaser.Scene): void {
   const SW = 1536
   const SH = 170
   const canvas = scene.textures.createCanvas('foliage-strip', SW, SH)

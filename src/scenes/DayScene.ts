@@ -3,7 +3,6 @@ import { Flock, Bird } from '../flock'
 import { Obstacle } from '../obstacles'
 import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
-import * as Ruins from '../ruins'
 import { GameAudio } from '../audio'
 import {
   FEATURES,
@@ -23,7 +22,6 @@ import {
 import {
   paintBackdrop,
   paintRuinStrip,
-  paintFoliageStrip,
   paintFogTile,
   W as VIEW_W,
   H as VIEW_H,
@@ -68,8 +66,7 @@ export class DayScene extends Phaser.Scene {
   private obstacles: Obstacle[] = []
   private strays: { group: StrayGroup; def: (typeof STRAYS)[number] }[] = []
   private scatter!: ScatterSystem
-  private ruinsGfx!: Phaser.GameObjects.Graphics
-  private roostGfx!: Phaser.GameObjects.Graphics
+  private ruinSprites: Phaser.GameObjects.Image[] = []
   private roostSwirl: { sprite: Phaser.GameObjects.Image; a: number; r: number; s: number; ph: number }[] = []
   private ambientFlocks: AmbientFlock[] = []
   private audio = new GameAudio()
@@ -78,6 +75,9 @@ export class DayScene extends Phaser.Scene {
   private keyShift!: Phaser.Input.Keyboard.Key
   private ruinStrip!: Phaser.GameObjects.TileSprite
   private foliageStrip!: Phaser.GameObjects.TileSprite
+  private fgGrassA!: Phaser.GameObjects.Image
+  private fgGrassB!: Phaser.GameObjects.Image
+  private fgBranch!: Phaser.GameObjects.Image
   private fogFar!: Phaser.GameObjects.TileSprite
   private fogNear!: Phaser.GameObjects.TileSprite
   private leafEmitter!: Phaser.GameObjects.Particles.ParticleEmitter
@@ -113,7 +113,6 @@ export class DayScene extends Phaser.Scene {
     if (!this.textures.exists('backdrop')) {
       paintBackdrop(this)
       paintRuinStrip(this)
-      paintFoliageStrip(this)
       paintFogTile(this)
     }
 
@@ -149,11 +148,32 @@ export class DayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setAlpha(0.16)
       .setDepth(-4)
+    // Foreground: a few deliberate authored silhouettes at the edges, not a
+    // solid band. Kept to ~12% of the view so the playfield stays open.
     this.foliageStrip = this.add
-      .tileSprite(0, VIEW_H - 170, VIEW_W, 170, 'foliage-strip')
+      .tileSprite(0, VIEW_H - 96, VIEW_W, 96, 'fg-ground')
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(6)
+    this.fgGrassA = this.add
+      .image(0, VIEW_H + 8, 'fg-grass')
+      .setOrigin(0, 1)
+      .setDisplaySize(430, 150)
+      .setScrollFactor(0)
+      .setDepth(6.5)
+    this.fgGrassB = this.add
+      .image(VIEW_W, VIEW_H + 8, 'fg-grass')
+      .setOrigin(1, 1)
+      .setDisplaySize(470, 128)
+      .setFlipX(true)
+      .setScrollFactor(0)
+      .setDepth(6.5)
+    this.fgBranch = this.add
+      .image(-30, -14, 'fg-branch')
+      .setOrigin(0, 0)
+      .setDisplaySize(560, 300)
+      .setScrollFactor(0)
+      .setDepth(6.6)
     this.fogNear = this.add
       .tileSprite(0, VIEW_H - 240, VIEW_W, 200, 'fog-tile')
       .setOrigin(0, 0)
@@ -162,9 +182,8 @@ export class DayScene extends Phaser.Scene {
       .setDepth(7)
 
     this.obstacles = buildObstacles()
-    this.ruinsGfx = this.add.graphics().setDepth(3)
+    this.ruinSprites = []
     this.drawRuins()
-    this.roostGfx = this.add.graphics().setDepth(2)
     this.drawRoost()
 
     this.flock = new Flock(this, 120, 420, 430)
@@ -252,63 +271,87 @@ export class DayScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ visuals
 
+  /**
+   * Place authored ruin SPRITES over the (invisible) colliders. Art is allowed
+   * to overhang, taper and sit off-centre relative to the collider — nothing
+   * here re-derives collision geometry.
+   */
   private drawRuins(): void {
-    const g = this.ruinsGfx
-    g.clear()
+    for (const s of this.ruinSprites) s.destroy()
+    this.ruinSprites = []
+    const add = (
+      key: string,
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      depth = 3,
+      originY = 0.5,
+    ): Phaser.GameObjects.Image => {
+      const img = this.add.image(x, y, key).setOrigin(0.5, originY).setDisplaySize(w, h).setDepth(depth)
+      this.ruinSprites.push(img)
+      return img
+    }
+
     for (const f of FEATURES) {
       if (f.type === 'wall') {
         const edges: number[] = [0]
         for (const o of f.openings) edges.push(o.y0, o.y1)
         edges.push(960)
+        // visible stone occupies 106/140 of the sprite, so scale up to cover the collider
+        const artW = f.hw * 2 * (140 / 106)
         for (let i = 0; i < edges.length; i += 2) {
           const y0 = edges[i]
-          const y1 = edges[i + 1]
+          const y1 = Math.min(edges[i + 1], 866)
           if (y1 - y0 < 8) continue
-          if (y0 >= 780) Ruins.rubble(g, f.x, 860, f.hw * 2 + 90)
-          else Ruins.brokenColumn(g, f.x, y0, Math.min(y1, 850), f.hw)
+          // tiled, not stretched: keeps the stone coursing at natural scale
+          // however tall the span is
+          const body = this.add
+            .tileSprite(f.x, (y0 + y1) / 2, artW, y1 - y0, 'wall-body')
+            .setDepth(3)
+          body.tileScaleX = artW / body.width
+          body.tileScaleY = body.tileScaleX
+          this.ruinSprites.push(body as unknown as Phaser.GameObjects.Image)
+          // authored broken ends, only where the span actually terminates
+          if (y0 > 6) add('crown-top', f.x, y0 + 26, artW, 56, 3.1)
+          if (edges[i + 1] < 954) add('crown-bottom', f.x, y1 - 26, artW, 56, 3.1)
         }
+        // collapsed stone where the wall meets the ground
+        add('rubble', f.x, 900, f.hw * 2 + 150, 116, 3.2)
+
         for (const o of f.openings) {
           if (o.brittle) {
             const match = this.obstacles.find(
               (ob) => ob.kind === 'brittle' && ob.x === f.x && Math.abs(ob.y - (o.y0 + o.y1) / 2) < 1,
             )
-            if (!match?.broken) Ruins.brittleCurtain(g, f.x, o.y0, o.y1, f.hw * 2)
+            if (!match?.broken) add('vines', f.x, o.y0, f.hw * 2 + 30, o.y1 - o.y0, 3.4, 0)
             continue
           }
           const mid = (o.y0 + o.y1) / 2
-          const r = (o.y1 - o.y0) / 2
-          if (o.deco === 'arch') Ruins.archCrown(g, f.x, o.y0, 150)
-          else if (o.deco === 'pointedArch') Ruins.pointedArch(g, f.x, o.y0, 110)
-          else if (o.deco === 'window') Ruins.roundWindow(g, f.x, mid, r)
-          else if (o.deco === 'rose') Ruins.roseWindow(g, f.x, mid, r)
-          else if (o.deco === 'doubleArch') Ruins.doubleArch(g, f.x, o.y0, o.y1, f.hw * 2 + 40)
-          else if (o.deco === 'vines') Ruins.vines(g, f.x, o.y0, f.hw * 2 + 36, 5)
+          const span = o.y1 - o.y0
+          if (o.deco === 'arch' || o.deco === 'pointedArch' || o.deco === 'doubleArch') {
+            add('arch', f.x, o.y0 + 6, span * 1.5 + 90, span * 0.85 + 40, 3.3, 1)
+          } else if (o.deco === 'window' || o.deco === 'rose') {
+            add('rose-window', f.x, mid, span * 1.55, span * 1.55, 3.3)
+          } else if (o.deco === 'vines') {
+            add('vines', f.x, o.y0, f.hw * 2 + 30, Math.min(span * 0.75, 110), 3.4, 0)
+          }
         }
       } else {
-        const capR = f.hw * (f.huge ? 1.15 : 1.45)
-        g.fillStyle(Ruins.STONE, 1)
-        g.fillCircle(f.x, f.top, capR)
-        g.fillStyle(Ruins.RIM, 0.4)
-        g.fillRect(f.x - capR + 6, f.top - capR * 0.55, 7, capR * 1.1)
-        if (f.huge) Ruins.towerCap(g, f.x, f.top - capR * 0.7, f.hw)
-        g.fillStyle(Ruins.STONE, 1)
-        g.fillRect(f.x - f.hw - 16, f.top + capR * 0.75, (f.hw + 16) * 2, 18)
-        Ruins.brokenColumn(g, f.x, f.top + capR * 0.75 + 18, f.bottom, f.hw)
-        Ruins.rubble(g, f.x, 860, f.hw * 2 + 120)
-        Ruins.vines(g, f.x, f.top + capR * 0.75 + 12, f.hw * 2, f.huge ? 5 : 3)
+        const shaftH = f.bottom - f.top + 90
+        add('pillar', f.x, f.top - 40, f.hw * 2.9, shaftH, 3, 0)
+        add('rubble', f.x, 902, f.hw * 2 + 190, 124, 3.2)
+        add('vines', f.x, f.top + 66, f.hw * 2, f.huge ? 120 : 84, 3.4, 0)
       }
     }
   }
 
   private drawRoost(): void {
-    const g = this.roostGfx
-    g.fillStyle(0x241a30, 1)
-    g.fillRect(ROOST_X - 24, ROOST_Y + 60, 48, 420)
-    g.fillCircle(ROOST_X, ROOST_Y, 160)
-    g.fillCircle(ROOST_X - 130, ROOST_Y + 65, 100)
-    g.fillCircle(ROOST_X + 130, ROOST_Y + 60, 106)
-    g.fillCircle(ROOST_X - 45, ROOST_Y - 118, 90)
-    g.fillCircle(ROOST_X + 60, ROOST_Y - 90, 76)
+    this.add
+      .image(ROOST_X, ROOST_Y + 330, 'roost-tree')
+      .setOrigin(0.5, 1)
+      .setDisplaySize(720, 780)
+      .setDepth(2)
     for (let i = 0; i < 30; i++) {
       const sprite = this.add.image(ROOST_X, ROOST_Y, 'bird-mid').setScale(0.2).setTint(0x241a30).setDepth(2)
       this.roostSwirl.push({
@@ -370,6 +413,10 @@ export class DayScene extends Phaser.Scene {
     cam.scrollX = this.scrollX
     this.ruinStrip.tilePositionX = this.scrollX * 0.14
     this.foliageStrip.tilePositionX = this.scrollX * 0.5
+    // foreground drifts faster than the gameplay plane
+    this.fgGrassA.x = -((this.scrollX * 0.85) % 900)
+    this.fgGrassB.x = VIEW_W + 420 - ((this.scrollX * 0.85 + 620) % 1300)
+    this.fgBranch.x = -30 - ((this.scrollX * 0.7) % 2600) * 0.24
     this.fogFar.tilePositionX = this.scrollX * 0.22 + time * 5
     this.fogNear.tilePositionX = this.scrollX * 0.55 + time * 9
 

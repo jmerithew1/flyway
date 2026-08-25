@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="820" viewBox="0 0 760 820">
+  <mask id="holes">
+    <rect width="760" height="820" fill="#fff"/>
+    <ellipse cx="286" cy="212" rx="30" ry="17" transform="rotate(-22 286 212)" fill="#000"/>
+    <ellipse cx="470" cy="196" rx="24" ry="13" transform="rotate(16 470 196)" fill="#000"/>
+    <ellipse cx="214" cy="330" rx="26" ry="14" transform="rotate(-8 214 330)" fill="#000"/>
+    <ellipse cx="556" cy="300" rx="30" ry="15" transform="rotate(24 556 300)" fill="#000"/>
+    <ellipse cx="378" cy="182" rx="19" ry="11" transform="rotate(-40 378 182)" fill="#000"/>
+    <ellipse cx="330" cy="418" rx="34" ry="15" transform="rotate(6 330 418)" fill="#000"/>
+    <ellipse cx="486" cy="420" rx="27" ry="13" transform="rotate(-12 486 420)" fill="#000"/>
+    <ellipse cx="168" cy="440" rx="20" ry="11" transform="rotate(18 168 440)" fill="#000"/>
+    <ellipse cx="614" cy="426" rx="22" ry="12" transform="rotate(-16 614 426)" fill="#000"/>
+    <ellipse cx="404" cy="300" rx="21" ry="12" transform="rotate(30 404 300)" fill="#000"/>
+  </mask>
+  <!-- The roost. Enormous spreading tree silhouette: tapering trunk that forks
+       into splitting boughs, an irregular canopy mass with sky-holes broken
+       through it so it never reads as stacked circles. Near-black. -->
+  <g fill="#1d1628" mask="url(#holes)">
+    <!-- trunk: widens toward the roots, neither edge straight -->
+    <path d="
+      M 342,820
+      C 336,700 348,600 356,520
+      C 360,470 358,430 362,400
+      L 402,400
+      C 406,432 404,472 408,522
+      C 416,602 428,702 422,820
+      Z"/>
+    <!-- root flare -->
+    <path d="M 300,820 C 316,780 334,760 348,752 L 356,790 C 344,798 330,808 322,820 Z"/>
+    <path d="M 464,820 C 448,782 430,762 416,754 L 408,792 C 420,800 434,810 442,820 Z"/>
+
+    <!-- primary boughs forking out of the trunk -->
+    <path d="M 362,404 C 330,368 286,336 232,314 C 226,311 222,320 228,324 C 280,350 320,382 348,420 Z"/>
+    <path d="M 408,404 C 442,366 492,336 548,318 C 554,316 557,325 551,328 C 498,346 456,378 424,418 Z"/>
+    <path d="M 372,398 C 356,344 336,296 306,252 C 302,246 294,251 297,258 C 324,302 344,350 358,404 Z"/>
+    <path d="M 400,398 C 416,342 442,296 476,256 C 480,251 487,257 484,263 C 452,302 428,348 414,402 Z"/>
+    <path d="M 386,396 C 384,334 388,278 398,226 C 399,219 408,220 407,228 C 400,280 398,336 402,396 Z"/>
+    <!-- secondary branches -->
+    <path d="M 268,330 C 244,300 214,278 180,264 C 175,262 172,270 177,272 C 208,286 236,308 258,336 Z"/>
+    <path d="M 502,332 C 528,304 560,284 596,272 C 601,270 604,278 599,280 C 566,292 536,312 514,338 Z"/>
+
+    <!-- canopy: one irregular mass built from overlapping lobes, then punctured -->
+    <path d="
+      M 380,116
+      C 470,104 566,140 620,206
+      C 676,274 690,346 646,392
+      C 700,404 716,452 682,478
+      C 640,510 566,510 500,494
+      C 452,516 386,522 330,506
+      C 268,522 196,514 152,486
+      C 106,456 108,406 156,388
+      C 112,344 128,268 188,208
+      C 244,150 314,120 380,116
+      Z"/>
+    <!-- outer fringe clumps breaking the canopy edge -->
+    <path d="M 116,432 C 88,428 68,444 76,464 C 84,482 116,486 134,472 Z"/>
+    <path d="M 668,300 C 700,294 720,314 710,334 C 700,352 668,352 654,338 Z"/>
+    <path d="M 300,96 C 268,84 234,98 238,120 C 242,140 274,150 296,138 Z"/>
+    <path d="M 556,110 C 590,102 616,120 606,142 C 596,162 562,164 546,150 Z"/>
+  </g>
+
+  <!-- sky-holes punched through the canopy so light shows between the boughs -->
+</svg>
