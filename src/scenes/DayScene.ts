@@ -624,7 +624,7 @@ export class DayScene extends Phaser.Scene {
     }
 
     this.processCollisions(time)
-    this.processBrittle(dt)
+    this.processBrittle(dt, time)
     this.cullStragglers(dt)
     const spreadAmt = Math.max(-this.flock.form, 0)
     this.scatter.update(dt, time, this.flock, spreadAmt)
@@ -937,7 +937,7 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
-  private processBrittle(dt: number): void {
+  private processBrittle(dt: number, time: number): void {
     for (const [o, c] of this.brittleCharge) {
       const next = c * Math.exp(-2.2 * dt)
       if (next < 0.05) this.brittleCharge.delete(o)
@@ -951,10 +951,27 @@ export class DayScene extends Phaser.Scene {
       this.brittleCharge.set(obstacle, charge)
       if (charge >= 8 && this.flock.form > 0.35 && meanSpeed > 230) {
         this.breakFeature(obstacle)
-      } else if (this.flock.form <= 0.1 && Math.random() < 0.1) {
+        continue
+      }
+      // a curtain that doesn't break REPELS: same loss discipline as solid
+      // collisions (per-bird cooldown + global cap + feedback), never a shred
+      const last = this.lastHit.get(bird) ?? -10
+      if (time - last < 0.5) continue
+      this.lastHit.set(bird, time)
+      this.lossTimes = this.lossTimes.filter((t) => time - t < 0.7)
+      const capped = this.lossTimes.length >= 4
+      if (!capped && this.flock.form <= 0.1 && Math.random() < 0.08) {
+        this.lossTimes.push(time)
+        this.stats.collisionEvents++
+        this.stats.lost++
+        this.audio.collisionThump()
         this.scatter.spawn(bird.x, bird.y, -1, -0.3)
         this.flock.removeBird(bird)
-        this.stats.lost++
+        this.lastHit.delete(bird)
+      } else {
+        bird.panic = 1
+        bird.vx = -Math.abs(bird.vx) * 0.7 - 60
+        bird.vy += (bird.y > this.flock.centerY ? 1 : -1) * 40
       }
     }
   }
