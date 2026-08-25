@@ -98,11 +98,15 @@ export class StrayGroup {
           joined++
         }
       } else {
-        // idle loiter: lazy orbit + bob
+        // idle loiter: lazy orbit + bob; when the flock draws near they NOTICE —
+        // the orbit leans toward the approaching murmuration before joining
         b.angle += b.speed * dt * 0.6
+        const noticing = Math.hypot(dx, dy) < attractRadius * 1.6
+        const leanX = noticing ? dx * 0.12 : 0
+        const leanY = noticing ? dy * 0.12 : 0
         const wob = Math.sin(time * 1.3 + b.phase) * 8
-        const px = this.x + Math.cos(b.angle) * (b.radius + wob)
-        const py = this.y + Math.sin(b.angle * 0.9 + b.phase) * (b.radius * 0.55) + wob * 0.4
+        const px = this.x + leanX + Math.cos(b.angle) * (b.radius + wob)
+        const py = this.y + leanY + Math.sin(b.angle * 0.9 + b.phase) * (b.radius * 0.55) + wob * 0.4
         b.sprite.rotation = Math.atan2(py - b.sprite.y, px - b.sprite.x)
         b.sprite.x = px
         b.sprite.y = py

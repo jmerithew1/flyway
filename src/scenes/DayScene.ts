@@ -4,6 +4,7 @@ import { Obstacle } from '../obstacles'
 import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
 import { GameAudio } from '../audio'
+import { scoreFeathers } from '../result'
 import { FalconSystem } from '../falcon'
 import { birdFrameKey } from '../textures'
 import { ART } from '../artManifest'
@@ -27,7 +28,7 @@ import {
   SKY_BOTTOM,
 } from '../level'
 import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
-import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS } from '../config'
+import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS } from '../config'
 
 export interface DayStats {
   startCount: number
@@ -38,6 +39,7 @@ export interface DayStats {
   returned: number
   flow: number
   flowTotal: number
+  recovered: number
 }
 
 interface ActivePrompt {
@@ -104,6 +106,8 @@ export class DayScene extends Phaser.Scene {
   private promptText!: Phaser.GameObjects.Text
   private landmarkText!: Phaser.GameObjects.Text
   private deltaText!: Phaser.GameObjects.Text
+  private scatteredText!: Phaser.GameObjects.Text
+  private recoveredText!: Phaser.GameObjects.Text
   private duskOverlay!: Phaser.GameObjects.Rectangle
   private failTexts: Phaser.GameObjects.Text[] = []
   private lastShownCount = START_BIRDS
@@ -122,12 +126,13 @@ export class DayScene extends Phaser.Scene {
     phase: number
   }[] = []
   private motes: { x: number; y: number; img: Phaser.GameObjects.Image }[] = []
+  private flowStreak = 0
   private mouseTravel = 0
   private lastPointer = { x: 0, y: 0 }
   private gatherHeld = 0
   private spreadHeld = 0
 
-  private stats: DayStats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0, flow: 0, flowTotal: 0 }
+  private stats: DayStats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0, flow: 0, flowTotal: 0, recovered: 0 }
   private checkpoint: CheckpointState = { x: 0, name: '', count: START_BIRDS, found: 0, flow: 0 }
   private failing = false
   private finishing = false
@@ -171,6 +176,7 @@ export class DayScene extends Phaser.Scene {
       returned: 0,
       flow: 0,
       flowTotal: FEATURES.filter((f) => f.flow).length,
+      recovered: 0,
     }
     this.checkpoint = { x: 0, name: '', count: START_BIRDS, found: 0, flow: 0 }
 
@@ -405,6 +411,18 @@ export class DayScene extends Phaser.Scene {
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
+    this.scatteredText = this.add
+      .text(52, 46, '', { fontFamily: 'Georgia, serif', fontSize: '14px', color: '#d8c0a8' })
+      .setOrigin(0, 0.5)
+      .setAlpha(0)
+      .setScrollFactor(0)
+      .setDepth(20)
+    this.recoveredText = this.add
+      .text(52, 68, '', { fontFamily: 'Georgia, serif', fontSize: '14px', color: '#ffd9a0' })
+      .setOrigin(0, 0.5)
+      .setAlpha(0)
+      .setScrollFactor(0)
+      .setDepth(20)
     this.lastShownCount = START_BIRDS
     // dusk tint used by the failure sequence (and later, journey warmth)
     this.duskOverlay = this.add
@@ -588,7 +606,7 @@ export class DayScene extends Phaser.Scene {
       this.visibleObstacles(),
     )
 
-    this.falcon.update(dt, this.flock, this.scrollX, VIEW_W)
+    this.falcon.update(dt, this.flock, this.scrollX, VIEW_W, this.visibleObstacles())
     if (this.falcon.inWarning && this.falcon.firstEncounter) {
       this.showPrompt('falcon', 'Gather!', () => !this.falcon.inWarning)
       this.falcon.firstEncounter = false
@@ -643,6 +661,10 @@ export class DayScene extends Phaser.Scene {
           this.showPrompt('spread', pr.text, () => this.stats.found > 0 || this.spreadHeld > 1.6)
       }
     }
+    // teach Neutral once, right after the spread lesson lands
+    if (this.shownPrompts.has('spread') && !this.prompt && !this.shownPrompts.has('regroup') && this.scrollX > 1900) {
+      this.showPrompt('regroup', 'release — regroup', () => Math.abs(this.flock.form) < 0.15 && this.flock.gatherStrain < 0.1)
+    }
     const zoneAhead = this.windZoneAt(this.flock.centerX + 500)
     if (zoneAhead) {
       this.showPrompt('wind', 'wind ahead — Gather cuts through it', () => this.flock.centerX > zoneAhead.x0 + 600)
@@ -654,7 +676,7 @@ export class DayScene extends Phaser.Scene {
     this.checkFinish(dt)
 
     const meanSpeed = Math.hypot(this.flock.meanVX, this.flock.meanVY) / 430
-    this.audio.musicTick(dt, Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1))
+    this.audio.musicTick(dt, Phaser.Math.Clamp(this.flock.centerX / ROOST_X + this.flowStreak * 0.08, 0, 1))
     this.audio.setStrain(this.flock.gatherStrain, this.flock.spreadStrain)
     this.audio.setFlockState(this.flock.form, Phaser.Math.Clamp(meanSpeed, 0, 1))
     // first-time strain hints, once each, fading on recovery
@@ -665,6 +687,15 @@ export class DayScene extends Phaser.Scene {
     if (this.finishing) this.audio.warmth(Math.min(1, this.finishTimer / 4))
 
     this.updateHudCount()
+    const displayed = this.flock.count + this.scatter.recoverableCount
+    if (displayed <= WARN_BIRDS && !this.finishing) {
+      this.countText.setColor('#e0a898')
+      this.audio.setThin(true)
+      this.showPrompt('lowflock', 'the flock is too small to hold together', () => displayed > WARN_BIRDS + 6)
+    } else if (displayed > WARN_BIRDS) {
+      this.audio.setThin(false)
+      if (this.countText.style.color === '#e0a898') this.countText.setColor('#f2e8f5')
+    }
     if (this.debugVisible) {
       this.debugText.setText(
         `fps ${Math.round(this.game.loop.actualFps)}  form ${this.flock.form.toFixed(2)}  x ${Math.round(this.scrollX)}  cp ${this.checkpoint.x}`,
@@ -676,7 +707,19 @@ export class DayScene extends Phaser.Scene {
 
   /** Count ticks with a visible ±N so every change has a readable cause. */
   private updateHudCount(): void {
-    const n = this.flock.count
+    // scattered-but-recoverable birds still count — they aren't lost yet
+    const n = this.flock.count + this.scatter.recoverableCount
+    if (this.scatter.recoverableCount > 0) {
+      this.scatteredText.setText(`${this.scatter.recoverableCount} scattered`).setAlpha(0.85)
+    } else {
+      this.scatteredText.setAlpha(0)
+    }
+    if (this.scatter.recoveredThisFrame > 0) {
+      this.stats.recovered += this.scatter.recoveredThisFrame
+      this.tweens.killTweensOf(this.recoveredText)
+      this.recoveredText.setText(`Recovered ${this.scatter.recoveredThisFrame}`).setAlpha(1)
+      this.tweens.add({ targets: this.recoveredText, alpha: 0, duration: 1400, delay: 500 })
+    }
     if (n === this.lastShownCount) return
     const delta = n - this.lastShownCount
     this.lastShownCount = n
@@ -750,12 +793,10 @@ export class DayScene extends Phaser.Scene {
         g.clean = true
         g.entryCount = this.flock.count
       } else if (g.state === 'active') {
-        if (this.flock.count < g.entryCount) g.clean = false
-        // formation check near the gate itself
-        if (Math.abs(cx - f.x) < 60) {
-          const formOk = f.flow === 'spread' ? this.flock.form < -0.35 : this.flock.form > 0.35
-          if (!formOk) g.clean = false
-        }
+        // outcome-based: permanent losses or losing control voids the pass —
+        // HOW the player flew it (gather, spread, neutral) is their choice
+        if (this.flock.count + this.scatter.recoverableCount < g.entryCount) g.clean = false
+        if (Math.max(this.flock.gatherStrain, this.flock.spreadStrain) > 0.85) g.clean = false
         if (cx >= exit) {
           // cohesion: most of the flock made it through together
           let near = 0
@@ -766,8 +807,10 @@ export class DayScene extends Phaser.Scene {
           if (g.clean && cohesive) {
             g.state = 'done'
             this.stats.flow++
+            this.flowStreak++
             this.perfectFlowFeedback()
           } else {
+            this.flowStreak = 0
             g.state = 'failed'
           }
         }
@@ -926,9 +969,11 @@ export class DayScene extends Phaser.Scene {
     } else {
       o.broken = true
     }
+    const mvx = this.flock.meanVX
+    const mvy = this.flock.meanVY
     const emitter = this.add.particles(o.x, o.y, 'leaf', {
-      speed: { min: 80, max: 320 },
-      angle: { min: -180, max: 180 },
+      speedX: { min: mvx * 0.5 - 90, max: mvx * 0.9 + 90 },
+      speedY: { min: mvy * 0.6 - 110, max: mvy * 0.6 + 110 },
       lifespan: { min: 500, max: 1400 },
       quantity: 44,
       scale: { start: 0.9, end: 0.2 },
@@ -1127,7 +1172,7 @@ export class DayScene extends Phaser.Scene {
       if (this.joinTimer <= 0) {
         this.joinTimer = 0.35
         // real sim birds up to a perf-safe cap...
-        if (this.flock.count < 320) {
+        if (this.flock.count < 220) {
           for (let i = 0; i < 5; i++) {
             const side = Math.random() < 0.5 ? -1 : 1
             this.flock.spawnBird(
@@ -1139,7 +1184,7 @@ export class DayScene extends Phaser.Scene {
           }
         }
         // ...plus echo birds for visual mass into the hundreds
-        if (this.echoes.length < 260 && this.flock.birds.length > 0) {
+        if (this.echoes.length < 120 && this.flock.birds.length > 0) {
           for (let i = 0; i < 9; i++) {
             const leader = this.flock.birds[(Math.random() * this.flock.birds.length) | 0]
             const img = this.add
@@ -1171,7 +1216,19 @@ export class DayScene extends Phaser.Scene {
       this.finishTimer += dt
       if (this.finishTimer > 7.5) {
         this.stats.returned = this.flock.count
-        this.scene.start('Results', this.stats)
+        const result = scoreFeathers({
+          flightId: 'ancient-ruins',
+          startingBirds: this.stats.startCount,
+          strayBirdsFound: this.stats.found,
+          scatteredBirdsRecovered: this.stats.recovered,
+          birdsPermanentlyLost: this.stats.lost,
+          birdsArrived: this.flock.count,
+          perfectFlows: this.stats.flow,
+          totalFlowOpportunities: this.stats.flowTotal,
+          collisionEvents: this.stats.collisionEvents,
+          checkpointsUsed: this.stats.resets,
+        })
+        this.scene.start('Results', result)
       }
       return
     }

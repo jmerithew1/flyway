@@ -162,6 +162,15 @@ export class GameAudio {
   private gStrain = 0
   private sStrain = 0
 
+  private thin = false
+
+  /** Low-flock warning: the bed audibly thins when few birds remain. */
+  setThin(on: boolean): void {
+    if (this.thin === on || !this.ctx) return
+    this.thin = on
+    this.noiseGain.gain.setTargetAtTime(on ? 0.2 : 0.4, this.ctx.currentTime, 0.8)
+  }
+
   /** Hidden formation strain shapes the wing bed: faster/tenser under gather
    * strain, thinner/fragmented under spread strain. */
   setStrain(gatherStrain: number, spreadStrain: number): void {

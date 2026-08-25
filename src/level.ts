@@ -134,7 +134,7 @@ export const FEATURES: PieceFeature[] = [
   gnd(8950, 'triple_column', 460), // triple split
   top(8950, 'leaf_strand', 240, { flipX: true }),
   gnd(9450, 'wall_two_window', 500), // window threading
-  top(9450, 'wisteria_curtain', 300, { brittle: true }), // brittle shortcut above
+  top(9450, 'wisteria_curtain', 300, { brittle: true, motion: { kind: 'pendulum', amp: 46, period: 4.2 } }), // brittle shortcut above, visibly loose
 
   // ===== OVERGROWN RUINS (9600-12000): the organic turn =====================
   mid(10200, 420, 'thorn_ring', 430, { motion: { kind: 'bob', amp: 70, period: 3.8 } }), // drifting ring
@@ -178,6 +178,7 @@ export const FEATURES: PieceFeature[] = [
   mid(21900, 320, 'wheel_diagonal', 360), // diagonal wheel high
   gnd(21900, 'wall_arch_inset', 380, { flipX: true }),
   gnd(22500, 'tall_gate', 580, { flipX: true }),
+  top(22500, 'ceiling_pods', 300, { sway: true }), // canopy cover for the falcon zone
   top(23000, 'wisteria_curtain', 360, { brittle: true }),
   gnd(23000, 'triple_window_wall', 420),
 

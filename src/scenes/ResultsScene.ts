@@ -1,19 +1,22 @@
 import Phaser from 'phaser'
-import { DayStats } from './DayScene'
 import { W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { ART } from '../artManifest'
 import { DAY_NAME, FLOCK_STAR_RETURNED, FLOW_STAR_FRACTION } from '../config'
+import { FlightResult, FLOW_COLLISION_CAP, recordBest } from '../result'
 
 /**
- * End-of-day rating. Every star shows WHY it was earned or missed — the
- * player should leave knowing exactly what to improve.
+ * End-of-flight rating, fed ONLY by the FlightResult record. Feathers (bird
+ * glyphs in our own art) instead of arcade stars; every feather shows WHY it
+ * was earned or missed so the replay goal is obvious.
  */
 export class ResultsScene extends Phaser.Scene {
   constructor() {
     super('Results')
   }
 
-  create(stats: DayStats): void {
+  create(result: FlightResult): void {
+    const prevBest = recordBest(result)
+
     const plate = ART['bg_plate']
     const cover = Math.max(VIEW_W / plate.w, VIEW_H / plate.h)
     this.add.image(VIEW_W / 2, VIEW_H / 2, 'bg_plate').setDisplaySize(plate.w * cover, plate.h * cover)
@@ -23,61 +26,72 @@ export class ResultsScene extends Phaser.Scene {
     const style = (size: number, color = '#f2e8f5', ls = 0) =>
       ({ fontFamily: 'Georgia, serif', fontSize: `${size}px`, color, letterSpacing: ls }) as Phaser.Types.GameObjects.Text.TextStyle
 
-    const title = this.add.text(cx, 128, `${DAY_NAME} — HOME`, style(38, '#f7f0ea', 6)).setOrigin(0.5).setAlpha(0)
+    const title = this.add.text(cx, 118, `${DAY_NAME} — HOME`, style(38, '#f7f0ea', 6)).setOrigin(0.5).setAlpha(0)
 
-    // ---- the three numbers that tell the story of the run
     const rows: Array<[string, string, string]> = [
-      ['Returned', String(stats.returned), '#f2e8f5'],
-      ['Found', `+${stats.found}`, '#ffd9a0'],
-      ['Lost', String(stats.lost), '#c9a2a2'],
+      ['Returned', String(result.birdsArrived), '#f2e8f5'],
+      ['Found', `+${result.strayBirdsFound}`, '#ffd9a0'],
+      ['Recovered', `+${result.scatteredBirdsRecovered}`, '#e8d9b8'],
+      ['Lost', String(result.birdsPermanentlyLost), '#c9a2a2'],
     ]
     const rowObjs: Phaser.GameObjects.Text[] = []
     rows.forEach(([k, v, c], i) => {
-      const y = 218 + i * 40
-      rowObjs.push(this.add.text(cx - 30, y, k, style(21, '#cdbdd4')).setOrigin(1, 0.5).setAlpha(0))
-      rowObjs.push(this.add.text(cx + 30, y, v, style(24, c)).setOrigin(0, 0.5).setAlpha(0))
+      const y = 204 + i * 36
+      rowObjs.push(this.add.text(cx - 30, y, k, style(20, '#cdbdd4')).setOrigin(1, 0.5).setAlpha(0))
+      rowObjs.push(this.add.text(cx + 30, y, v, style(22, c)).setOrigin(0, 0.5).setAlpha(0))
     })
 
-    // ---- stars, each with its reason
-    const flowNeeded = Math.max(1, Math.ceil(stats.flowTotal * FLOW_STAR_FRACTION))
-    const homeStar = true // reaching this scene IS reaching the roost
-    const flockStar = stats.returned >= FLOCK_STAR_RETURNED
-    const flowStar = stats.flow >= flowNeeded
-
-    const reasons: Array<[string, boolean, string]> = [
-      ['HOME', homeStar, 'Reached the roost.'],
+    const flowNeeded = Math.max(1, Math.ceil(result.totalFlowOpportunities * FLOW_STAR_FRACTION))
+    const flowReason = result.flowFeather
+      ? `${result.perfectFlows} / ${result.totalFlowOpportunities} Perfect Flow passages`
+      : result.perfectFlows < flowNeeded
+        ? `${result.perfectFlows} / ${flowNeeded} Perfect Flows needed`
+        : `${result.collisionEvents} collisions — ${FLOW_COLLISION_CAP} or fewer for Flow`
+    const feathers: Array<[string, boolean, string]> = [
+      ['HOME', result.homeFeather, 'Reached the roost.'],
       [
         'FLOCK',
-        flockStar,
-        flockStar ? `Returned with ${stats.returned} birds.` : `${stats.returned} / ${FLOCK_STAR_RETURNED} required`,
+        result.flockFeather,
+        result.flockFeather
+          ? `Returned with ${result.birdsArrived} birds.`
+          : `${result.birdsArrived} / ${FLOCK_STAR_RETURNED} required`,
       ],
-      ['FLOW', flowStar, `${stats.flow} / ${stats.flowTotal} Perfect Flow passages`],
+      ['FLOW', result.flowFeather, flowReason],
     ]
 
-    const starRow = this.add.container(cx, 452).setAlpha(0)
-    reasons.forEach(([label, earned, why], i) => {
+    const row = this.add.container(cx, 448).setAlpha(0)
+    feathers.forEach(([label, earned, why], i) => {
       const x = (i - 1) * 320
-      starRow.add(
-        this.add
-          .text(x, 0, earned ? '★' : '☆', { fontFamily: 'Georgia, serif', fontSize: '46px', color: earned ? '#f6d9b8' : '#5c5270' })
-          .setOrigin(0.5),
-      )
-      starRow.add(this.add.text(x, 46, label, style(15, '#dccce0', 4)).setOrigin(0.5))
-      starRow.add(this.add.text(x, 74, why, style(13, earned ? '#c9b8a2' : '#a08f96')).setOrigin(0.5))
+      // feather glyph: our own bird silhouette, warm-lit when earned
+      const icon = this.add
+        .image(x, 0, 'bird-up')
+        .setScale(0.42)
+        .setAngle(-18)
+      if (earned) icon.setTintFill(0xf6d9b8)
+      else icon.setTintFill(0x504664).setAlpha(0.8)
+      row.add(icon)
+      row.add(this.add.text(x, 52, label, style(15, earned ? '#f2e4d5' : '#8d8298', 4)).setOrigin(0.5))
+      row.add(this.add.text(x, 80, why, style(13, earned ? '#c9b8a2' : '#a08f96')).setOrigin(0.5))
     })
 
-    const earnedCount = [homeStar, flockStar, flowStar].filter(Boolean).length
+    const earnedCount = feathers.filter(([, e]) => e).length
     const overall = this.add
-      .text(cx, 588, '★'.repeat(earnedCount) + '☆'.repeat(3 - earnedCount), style(32, '#f6d9b8'))
+      .text(cx, 592, `${earnedCount} of 3 feathers`, style(20, '#f6d9b8', 2))
       .setOrigin(0.5)
       .setAlpha(0)
 
+    const bestLine =
+      prevBest && (prevBest.birdsArrived > result.birdsArrived || (prevBest.birdsArrived === result.birdsArrived && prevBest.perfectFlows >= result.perfectFlows))
+        ? `Best: ${prevBest.birdsArrived} birds · ${prevBest.perfectFlows} flows`
+        : 'New best flight'
+    const best = this.add.text(cx, 622, bestLine, style(14, '#a597ae')).setOrigin(0.5).setAlpha(0)
+
     const replay = this.add
-      .text(cx, 680, 'REPLAY DAY', style(22, '#f7f0ea', 5))
+      .text(cx, 692, 'REPLAY DAY', style(22, '#f7f0ea', 5))
       .setOrigin(0.5)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true })
-    const replayHint = this.add.text(cx, 712, 'click, or press R', style(13, '#a597ae')).setOrigin(0.5).setAlpha(0)
+    const replayHint = this.add.text(cx, 724, 'click, or press R', style(13, '#a597ae')).setOrigin(0.5).setAlpha(0)
     replay.on('pointerover', () => replay.setColor('#ffe6bf'))
     replay.on('pointerout', () => replay.setColor('#f7f0ea'))
     const restart = () => this.scene.start('Day')
@@ -86,8 +100,8 @@ export class ResultsScene extends Phaser.Scene {
 
     this.tweens.add({ targets: title, alpha: 0.96, duration: 900 })
     this.tweens.add({ targets: rowObjs, alpha: 0.92, duration: 800, delay: 500 })
-    this.tweens.add({ targets: starRow, alpha: 1, duration: 900, delay: 1100 })
-    this.tweens.add({ targets: overall, alpha: 1, duration: 700, delay: 1900 })
+    this.tweens.add({ targets: row, alpha: 1, duration: 900, delay: 1100 })
+    this.tweens.add({ targets: [overall, best], alpha: 1, duration: 700, delay: 1900 })
     this.tweens.add({ targets: [replay, replayHint], alpha: 0.9, duration: 700, delay: 2400 })
   }
 }

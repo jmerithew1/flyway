@@ -21,6 +21,11 @@ interface ScatterBird {
 export class ScatterSystem {
   private scene: Phaser.Scene
   private birds: ScatterBird[] = []
+  /** birds still in their recovery window — shown as 'scattered', not lost */
+  recoverableCount = 0
+  /** per-frame events for HUD messaging */
+  recoveredThisFrame = 0
+  expiredThisFrame = 0
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene
@@ -36,7 +41,7 @@ export class ScatterSystem {
       sprite,
       vx: (awayX / m) * (220 + Math.random() * 160) + (Math.random() - 0.5) * 120,
       vy: (awayY / m) * (220 + Math.random() * 160) + (Math.random() - 0.5) * 120 - 60,
-      life: recoverable ? 2.2 : 1.6 + Math.random() * 0.8,
+      life: recoverable ? 2.0 : 1.6 + Math.random() * 0.8,
       spin: (Math.random() - 0.5) * 14,
       recoverable,
       phase: Math.random() * Math.PI * 2,
@@ -47,10 +52,13 @@ export class ScatterSystem {
    * `spread01` widens the recollect radius — Spread is the recovery tool. */
   update(dt: number, time: number, flock: Flock | null, spread01 = 0): number {
     let recovered = 0
+    this.recoveredThisFrame = 0
+    this.expiredThisFrame = 0
     for (let i = this.birds.length - 1; i >= 0; i--) {
       const b = this.birds[i]
       b.life -= dt
       if (b.life <= 0) {
+        if (b.recoverable) this.expiredThisFrame++
         b.sprite.destroy()
         this.birds.splice(i, 1)
         continue
@@ -74,6 +82,7 @@ export class ScatterSystem {
             b.sprite.destroy()
             this.birds.splice(i, 1)
             recovered++
+            this.recoveredThisFrame++
           }
         }
       } else {
@@ -85,10 +94,14 @@ export class ScatterSystem {
         b.sprite.alpha = Math.min(1, b.life / 1.2)
       }
     }
+    this.recoverableCount = this.birds.filter((b) => b.recoverable).length
     return recovered
   }
 
   clear(): void {
+    this.recoverableCount = 0
+    this.recoveredThisFrame = 0
+    this.expiredThisFrame = 0
     for (const b of this.birds) b.sprite.destroy()
     this.birds = []
   }

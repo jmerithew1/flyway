@@ -1,8 +1,9 @@
 import Phaser from 'phaser'
 import { Flock, Bird } from './flock'
+import { Obstacle } from './obstacles'
 import { GameAudio } from './audio'
 import {
-  FALCON_WINDOW,
+  FALCON_WINDOWS,
   FALCON_TAKE_SPREAD,
   FALCON_TAKE_NEUTRAL,
   FALCON_TAKE_GATHER,
@@ -11,6 +12,7 @@ import {
 export interface FalconZone {
   x: number
   done: boolean
+  window: number
 }
 
 type Phase = 'idle' | 'unease' | 'shadow' | 'window' | 'strike' | 'exit'
@@ -32,6 +34,8 @@ export class FalconSystem {
   private shadow!: Phaser.GameObjects.Image
   private falcon!: Phaser.GameObjects.Image
   private strikeX = 0
+  private window = 1.0
+  private obstacles: Obstacle[] = []
   private strikeTargets: Bird[] = []
   private carried: { sprite: Phaser.GameObjects.Image; dx: number; dy: number }[] = []
   firstEncounter = true
@@ -42,7 +46,7 @@ export class FalconSystem {
   constructor(scene: Phaser.Scene, audio: GameAudio, zoneXs: number[]) {
     this.scene = scene
     this.audio = audio
-    this.zones = zoneXs.map((x) => ({ x, done: false }))
+    this.zones = zoneXs.map((x, i) => ({ x, done: false, window: FALCON_WINDOWS[Math.min(i, FALCON_WINDOWS.length - 1)] }))
 
     // shadow: soft dark silhouette decal, screen-space, upper sky
     this.shadow = scene.add
@@ -62,12 +66,14 @@ export class FalconSystem {
     this.shadow.setScale((span * 1.45) / tex.width)
   }
 
-  update(dt: number, flock: Flock, scrollX: number, viewW: number): void {
+  update(dt: number, flock: Flock, scrollX: number, viewW: number, obstacles: Obstacle[] = []): void {
+    this.obstacles = obstacles
     // arm the next zone when the flock approaches
     if (this.phase === 'idle') {
       for (const z of this.zones) {
         if (!z.done && flock.centerX > z.x - 150 && flock.centerX < z.x + 600) {
           z.done = true
+          this.window = z.window
           this.phase = 'unease'
           this.timer = 0
         }
@@ -103,7 +109,7 @@ export class FalconSystem {
       }
     } else if (this.phase === 'window') {
       this.shadow.setAlpha(Math.max(0, 0.34 - this.timer * 0.5))
-      if (t > FALCON_WINDOW) {
+      if (t > this.window) {
         this.phase = 'strike'
         this.timer = 0
         this.beginStrike(flock)
@@ -148,8 +154,26 @@ export class FalconSystem {
     const range = gathered ? FALCON_TAKE_GATHER : spreadOrFrayed ? FALCON_TAKE_SPREAD : FALCON_TAKE_NEUTRAL
     let want = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1))
 
-    // targets: the most exposed birds (furthest above/outside the core)
+    // strike lane varies a little — reading the flock's position matters
+    this.strikeX += (Math.random() - 0.5) * 180
+
+    // stone overhead is COVER: birds under a solid band within ~300px above
+    // cannot be taken — steering under an arch beats the falcon
+    const covered = (b: Bird): boolean => {
+      for (const o of this.obstacles) {
+        if (o.shape !== 'rect' || o.kind !== 'solid') continue
+        if (b.x > o.x - o.hw && b.x < o.x + o.hw) {
+          const bandBottom = o.y + o.hh
+          if (bandBottom < b.y && b.y - bandBottom < 300) return true
+        }
+      }
+      return false
+    }
+
+    // targets: the most exposed birds (furthest above/outside the core),
+    // excluding anything sheltered by architecture
     const exposed = [...flock.birds]
+      .filter((b) => !covered(b))
       .map((b) => ({ b, d: Math.hypot(b.x - flock.centerX, b.y - flock.centerY) + (flock.centerY - b.y) * 0.6 }))
       .sort((a, bb) => bb.d - a.d)
     this.strikeTargets = exposed.slice(0, want).map((e) => e.b)
