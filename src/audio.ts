@@ -46,6 +46,16 @@ export class GameAudio {
     src.start()
   }
 
+  private gStrain = 0
+  private sStrain = 0
+
+  /** Hidden formation strain shapes the wing bed: faster/tenser under gather
+   * strain, thinner/fragmented under spread strain. */
+  setStrain(gatherStrain: number, spreadStrain: number): void {
+    this.gStrain = gatherStrain
+    this.sStrain = spreadStrain
+  }
+
   /** form: -1 spread .. 0 neutral .. 1 gather. speed: rough flock speed 0..1 normalized. */
   setFlockState(form: number, speed: number): void {
     if (!this.ctx) return
@@ -53,11 +63,12 @@ export class GameAudio {
     const gather = Math.max(form, 0)
     const spread = Math.max(-form, 0)
     // gather: brighter, tighter, faster rush. spread: lower, airier, wider (via Q)
-    const freq = 380 + gather * 420 - spread * 140 + speed * 160
-    const q = 0.5 + gather * 1.6 + spread * 0.3
+    // strain: wingbeats speed up and tense (freq/Q up); over-spread thins the bed
+    const freq = 380 + gather * 420 - spread * 140 + speed * 160 + this.gStrain * 260
+    const q = 0.5 + gather * 1.6 + spread * 0.3 + this.gStrain * 1.4
     this.noiseFilter.frequency.setTargetAtTime(freq, t, 0.4)
     this.noiseFilter.Q.setTargetAtTime(q, t, 0.4)
-    this.noiseGain.gain.setTargetAtTime(0.35 + gather * 0.25 + speed * 0.15, t, 0.5)
+    this.noiseGain.gain.setTargetAtTime(0.35 + gather * 0.25 + speed * 0.15 - this.sStrain * 0.12, t, 0.5)
   }
 
   /** Soft thud/scatter sound on a bird-loss event. */

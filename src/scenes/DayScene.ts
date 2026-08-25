@@ -534,7 +534,13 @@ export class DayScene extends Phaser.Scene {
     this.checkFinish(dt)
 
     const meanSpeed = Math.hypot(this.flock.meanVX, this.flock.meanVY) / 430
+    this.audio.setStrain(this.flock.gatherStrain, this.flock.spreadStrain)
     this.audio.setFlockState(this.flock.form, Phaser.Math.Clamp(meanSpeed, 0, 1))
+    // first-time strain hints, once each, fading on recovery
+    if (this.flock.gatherStrain > 0.55)
+      this.showPrompt('strain-g', 'too tight — release to regroup', () => this.flock.gatherStrain < 0.2)
+    if (this.flock.spreadStrain > 0.55)
+      this.showPrompt('strain-s', 'the flock is losing cohesion', () => this.flock.spreadStrain < 0.2)
     if (this.finishing) this.audio.warmth(Math.min(1, this.finishTimer / 4))
 
     this.updateHudCount()

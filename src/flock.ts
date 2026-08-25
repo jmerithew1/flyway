@@ -1,6 +1,13 @@
 import Phaser from 'phaser'
 import { Obstacle, avoidSteer, obstacleField } from './obstacles'
 import { birdFrameKey } from './textures'
+import {
+  GATHER_HEALTHY,
+  GATHER_OVER,
+  SPREAD_HEALTHY,
+  SPREAD_OVER,
+  STRAIN_RECOVERY_RATE,
+} from './config'
 
 /**
  * The heart of the game: a lightweight boid flock with personality variation,
@@ -72,6 +79,7 @@ export interface Bird {
   depth: number // 0.75..1.15 pseudo-depth for scale/alpha richness
   // transient
   panic: number // 0..1, spikes on close calls, adds flutter
+  fray: number // 0..1, strained birds squeezed loose from the formation
   sprite: Phaser.GameObjects.Image
 }
 
@@ -114,6 +122,13 @@ export class Flock {
   centerY = 0
   meanVX = 1
   meanVY = 0
+  /** hidden formation strain: 0 = healthy, 1 = at the OVER threshold */
+  gatherStrain = 0
+  spreadStrain = 0
+  private gatherTime = 0
+  private spreadTime = 0
+  private fraySelect = 0
+
   /** birds that scraped an obstacle interior this frame (for loss rules later) */
   collisions: Bird[] = []
   breakthroughHits: { bird: Bird; obstacle: Obstacle }[] = []
@@ -159,6 +174,7 @@ export class Flock {
       renderAngle: 0,
       depth,
       panic: 0,
+      fray: 0,
       sprite,
     }
     bird.intentLagRate = lerp(2.2, 10, (bird.speedFactor - 0.92) / 0.18) + rand(-0.8, 0.8)
@@ -201,11 +217,36 @@ export class Flock {
 
     // gather/spread axis — quick to respond, slow to relax (shape memory)
     const formTarget = input.gather ? 1 : input.spread ? -1 : 0
-    const formRate = formTarget === 0 ? TUNING.formLerpRelease : TUNING.formLerpAttack
+    const strainRelief = 1 + Math.max(this.gatherStrain, this.spreadStrain) * 0.8
+    const formRate = formTarget === 0 ? TUNING.formLerpRelease * strainRelief : TUNING.formLerpAttack
     this.form += (formTarget - this.form) * (1 - Math.exp(-formRate * dt))
     const f = this.form
     const gather = Math.max(f, 0)
     const spread = Math.max(-f, 0)
+
+    // ---- hidden strain clocks: holding a formation past its healthy window
+    // squeezes birds loose (gather) or lets the edges drift (spread).
+    // Neutral is REGROUP: strain drains fast and loose birds return.
+    if (f > 0.5) this.gatherTime += dt
+    else this.gatherTime = Math.max(0, this.gatherTime - dt * STRAIN_RECOVERY_RATE)
+    if (f < -0.5) this.spreadTime += dt
+    else this.spreadTime = Math.max(0, this.spreadTime - dt * STRAIN_RECOVERY_RATE)
+    this.gatherStrain = clamp((this.gatherTime - GATHER_HEALTHY) / (GATHER_OVER - GATHER_HEALTHY), 0, 1)
+    this.spreadStrain = clamp((this.spreadTime - SPREAD_HEALTHY) / (SPREAD_OVER - SPREAD_HEALTHY), 0, 1)
+    const gStrain = this.gatherStrain
+    const sStrain = this.spreadStrain
+
+    // recruit a rotating subset of frayed birds while strain is high
+    this.fraySelect -= dt
+    const activeStrain = Math.max(gStrain, sStrain)
+    if (activeStrain > 0.4 && this.fraySelect <= 0) {
+      this.fraySelect = 0.35
+      const want = Math.ceil(this.birds.length * (0.03 + activeStrain * 0.09))
+      for (let k = 0; k < want; k++) {
+        const b = this.birds[(Math.random() * this.birds.length) | 0]
+        if (b) b.fray = Math.min(1, b.fray + 0.6 + Math.random() * 0.4)
+      }
+    }
 
     const sepRadius =
       f >= 0
@@ -215,7 +256,7 @@ export class Flock {
     const wCoh = TUNING.wCohesion * lerp(0.35, 1, Math.abs(f)) * (1 + gather * 2.1 - spread * 0.6)
     const wSep = TUNING.wSeparation * (1 + spread * 0.5 - gather * 0.25)
     const wInt = TUNING.wIntent * (1 + gather * 0.35)
-    const wJit = TUNING.wJitter * (1 + spread * 0.9)
+    const wJit = TUNING.wJitter * (1 + spread * 0.9) * (1 + gStrain * 1.2 + sStrain * 0.5)
 
     this.rebuildGrid()
     this.updateMeanState()
@@ -317,6 +358,23 @@ export class Flock {
         ay += (iy / idist) * pull
       }
 
+      // --- strain effects on frayed birds: they are REAL birds pushed loose,
+      // exposed to real dangers; nothing kills them directly
+      if (b.fray > 0.01) {
+        const rx = b.x - this.centerX
+        const ry = b.y - this.centerY
+        const rd = Math.hypot(rx, ry) || 1
+        if (gStrain > 0.01 && gather > 0.3) {
+          // squeezed outward, cohesion saps
+          const push = 240 * b.fray * gStrain
+          ax += (rx / rd) * push
+          ay += (ry / rd) * push
+        }
+        b.panic = Math.max(b.panic, 0.45 * b.fray)
+        const calm = Math.max(gStrain, sStrain) < 0.2
+        b.fray = Math.max(0, b.fray - dt * (calm ? 1.6 : 0.12))
+      }
+
       // --- weak global pull toward the flock centroid (anti-fragmentation / reunion)
       // The envelope is a living ellipse: wider than tall at neutral, and
       // stretched along the direction of travel when gathered (streams/spears).
@@ -349,6 +407,8 @@ export class Flock {
       // per-bird leash variation ragged-edges the boundary instead of
       // cutting every bird off at the same clean radius
       homeR *= b.homeBias
+      // over-spread: loose birds drift on a much longer leash
+      if (sStrain > 0.01 && spread > 0.3) homeR *= 1 + 1.7 * b.fray * sStrain
 
       if (gcd > homeR) {
         const homePull = Math.min((gcd - homeR) * TUNING.wHome, TUNING.homeMax)
@@ -445,8 +505,9 @@ export class Flock {
   }
 
   private alignScale(f: number): number {
-    // spread flocks align noticeably less (loose, independent edges)
-    return 1 - Math.max(-f, 0) * 0.5
+    // spread flocks align noticeably less (loose, independent edges);
+    // spread STRAIN fragments alignment further
+    return (1 - Math.max(-f, 0) * 0.5) * (1 - this.spreadStrain * 0.35)
   }
 
   private updateMeanState(): void {
