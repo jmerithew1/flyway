@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DRAINED — key art</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#000}
+  canvas{display:block;width:100vw;height:100vh}
+  #t{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);color:#cfeef0;opacity:.8;
+     font:16px Georgia,serif;letter-spacing:.55em;text-transform:uppercase;text-shadow:0 0 16px rgba(120,230,235,.45)}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="t">Drained</div>
+<script>
+const cv = document.getElementById('cv');
+const gl = cv.getContext('webgl2');
+function fit(){ cv.width=innerWidth*Math.min(devicePixelRatio,2); cv.height=innerHeight*Math.min(devicePixelRatio,2); gl.viewport(0,0,cv.width,cv.height); }
+fit(); addEventListener('resize', fit);
+const VS = `#version 300 es
+in vec2 p; void main(){ gl_Position=vec4(p,0.,1.); }`;
+const FS = `#version 300 es
+precision highp float;
+uniform vec2 R; uniform float T;
+out vec4 O;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
+float fbm(vec2 p){ float v=0.,a=.5; for(int i=0;i<4;i++){ v+=a*noise(p); p*=2.1; a*=.5; } return v; }
+
+// tiled wall shading for a room, p in room-local 0..1
+vec3 tiles(vec2 p, float grime, float tint){
+  vec3 base = mix(vec3(0.72,0.76,0.75), vec3(0.55,0.63,0.64), tint);
+  // tile grid
+  vec2 g = p*vec2(14.,10.);
+  vec2 f = fract(g);
+  float line = smoothstep(0.045,0.020,min(min(f.x,1.-f.x),min(f.y,1.-f.y)));
+  base *= mix(1.0, 0.62, line);
+  // per-tile variance
+  base *= 0.92 + 0.08*hash(floor(g));
+  // grime creeping from edges
+  float gr = fbm(p*6.0)*grime;
+  base = mix(base, vec3(0.20,0.24,0.23), gr*0.7);
+  return base;
+}
+
+void main(){
+  vec2 uv = gl_FragCoord.xy/R;
+  vec2 q = uv; q.x *= R.x/R.y;
+  float t = T;
+  float ASP = R.x/R.y;
+
+  vec3 col = vec3(0.008,0.012,0.014);
+
+  // ---------------- cross-section: rooms in a 3x2 grid, concrete between ----------------
+  // room layout in uv space
+  // columns x: [0.03,0.34],[0.37,0.66],[0.69,0.97]  rows y: [0.52,0.92],[0.08,0.46]
+  vec2 cols[3]; cols[0]=vec2(0.03,0.34); cols[1]=vec2(0.37,0.66); cols[2]=vec2(0.69,0.97);
+  vec2 rows[2]; rows[0]=vec2(0.52,0.92); rows[1]=vec2(0.08,0.46);
+  // water level per room (0=empty..1=full): top row mostly dry, bottom row drowned
+  float lvl[6];
+  lvl[0]=0.0;  lvl[1]=0.35; lvl[2]=0.0;     // top row rooms
+  lvl[3]=1.0;  lvl[4]=1.0;  lvl[5]=0.72;    // bottom row rooms
+
+  // concrete backdrop
+  col = vec3(0.030,0.036,0.040) * (0.8+0.4*fbm(uv*8.0));
+
+  for (int ri=0; ri<2; ri++)
+  for (int ci=0; ci<3; ci++){
+    vec2 cx = cols[ci], ry = rows[ri];
+    if (uv.x<cx.x || uv.x>cx.y || uv.y<ry.x || uv.y>ry.y) continue;
+    vec2 lp = vec2((uv.x-cx.x)/(cx.y-cx.x), (uv.y-ry.x)/(ry.y-ry.x));
+    int id = ri*3+ci;
+    float wl = lvl[id];
+
+    float grime = 0.35 + 0.45*float(ri);       // lower rooms grimier
+    vec3 wall = tiles(lp, grime, float(ri)*0.5);
+
+    // depth shading: rooms get darker toward edges + lower rooms dimmer
+    wall *= mix(1.0, 0.45, float(ri));
+    wall *= 0.75 + 0.5*smoothstep(1.0,0.4,abs(lp.x-0.5)*2.0);
+    if (id==0) wall *= 0.40;          // dead room, lights out
+    if (id==2) wall *= 0.55;
+
+    bool under = lp.y < wl;
+    if (under){
+      // submerged: teal tint, caustic light webs, darker with depth
+      wall *= vec3(0.30,0.62,0.66);
+      float ca = fbm(lp*17.0 + vec2(t*0.16, t*0.12));
+      float cb = fbm(lp*19.0 - vec2(t*0.13, t*0.18));
+      float caus = smoothstep(0.55,0.68, ca*cb*2.2);
+      wall += vec3(0.10,0.40,0.45)*caus*0.55*(0.4+0.6*(1.0-lp.y/max(wl,0.001)));
+      wall *= 0.55 + 0.45*(lp.y/max(wl,0.001));
+      // drifting particulates
+      vec2 pg = lp*40.0 + vec2(0.0, t*0.5);
+      if (hash(floor(pg)+float(id)) > 0.987) wall += vec3(0.3,0.5,0.5)*0.4;
+    }
+    // water surface line
+    if (wl>0.01 && wl<0.99){
+      float sd = abs(lp.y-wl - sin(lp.x*30.0+t*2.0)*0.004);
+      wall += vec3(0.55,0.95,1.0)*exp(-sd*160.0)*0.8;
+      // reflection sheen just below surface
+      wall += vec3(0.20,0.45,0.50)*exp(-max(0.0,wl-lp.y)*14.0)*0.35*step(lp.y,wl);
+    }
+    col = wall;
+
+    // doorway gaps to rooms below (dark rectangles at floor)
+    if (ri==0){
+      float door = step(abs(lp.x-0.82),0.055)*step(lp.y,0.16);
+      col = mix(col, vec3(0.006,0.010,0.012), door);
+    }
+    // ladder hint in mid rooms
+    if (ci==1){
+      float lad = step(abs(lp.x-0.12),0.012)*step(0.05,lp.y)*step(lp.y,0.9);
+      float rung = step(abs(lp.x-0.12),0.035)*smoothstep(0.02,0.0,abs(fract(lp.y*9.0)-0.5)-0.42)*step(0.05,lp.y)*step(lp.y,0.9);
+      col = mix(col, vec3(0.10,0.12,0.12), max(lad,rung)*0.9);
+    }
+
+    // -------- room-specific set dressing --------
+    if (id==1){
+      // flickering fluorescent: bar on ceiling + cone + hard pool
+      float flick = 0.65 + 0.35*step(0.15, fract(t*1.7)) * step(0.4, hash(vec2(floor(t*7.0),1.0)));
+      float bar = step(abs(lp.x-0.5),0.16)*step(0.955,lp.y);
+      col += vec3(0.9,0.95,0.9)*bar*flick*1.6;
+      float cone = smoothstep(0.5,0.0,abs(lp.x-0.5)/(0.22+ (1.0-lp.y)*0.45))* (lp.y*0.8+0.2);
+      col += vec3(0.55,0.62,0.58)*cone*flick*0.30;
+    }
+    if (id==3){
+      // the diver: warm dive light in drowned room
+      vec2 dp = lp - vec2(0.62, 0.55);
+      // light cone pointing left
+      vec2 ld = normalize(vec2(-1.0,-0.15));
+      float along = dot(dp, ld);
+      float acrs = abs(dp.x*ld.y - dp.y*ld.x);
+      float cone = smoothstep(0.30,0.0,acrs/(0.06+along*0.55))*step(0.0,along)*smoothstep(0.9,0.2,along);
+      col += vec3(1.0,0.75,0.40)*cone*0.9;
+      // diver silhouette
+      float body = length((dp-vec2(0.03,0.0))*vec2(7.0,16.0));
+      float headd = length((dp-vec2(-0.015,0.035))*vec2(22.0,22.0));
+      float finn = length((dp-vec2(0.09,-0.02))*vec2(9.0,30.0));
+      float dv = min(min(body,headd),finn);
+      col = mix(col, vec3(0.01,0.02,0.025), smoothstep(1.1,0.7,dv));
+      // lamp point
+      col += vec3(1.0,0.85,0.55)*exp(-length(dp-vec2(-0.035,0.02))*90.0)*1.2;
+      // rising bubbles
+      float bub = smoothstep(0.015,0.0,abs(lp.x-0.60 - sin(lp.y*20.0+t*2.0)*0.01)) *
+                  smoothstep(0.0,0.008,abs(fract(lp.y*7.0 - t*0.5)-0.5)-0.44);
+      col += vec3(0.5,0.8,0.85)*bub*0.6;
+    }
+    if (id==5){
+      // something pale in the far drowned room: long shape + two dim eyes
+      vec2 sp = lp - vec2(0.42, 0.35);
+      float mass = length(sp*vec2(3.2,9.0)) - 0.35 - fbm(sp*8.0+t*0.05)*0.12;
+      float m = smoothstep(0.05,-0.1,mass);
+      col = mix(col, vec3(0.30,0.36,0.34)*0.5, m*0.8);
+      col += vec3(0.9,0.9,0.75)*exp(-length((sp-vec2(-0.10,0.02))*vec2(60.,60.)))*0.5;
+      col += vec3(0.9,0.9,0.75)*exp(-length((sp-vec2(-0.10,-0.045))*vec2(60.,60.)))*0.5;
+    }
+  }
+
+  // hairline concrete seams around rooms (soft shadowed edges)
+  // darken outside all rooms already; add drips
+  float drip = smoothstep(0.008,0.0,abs(fract(uv.x*17.0)-0.5)-0.46) * fbm(vec2(uv.x*40.0, uv.y*3.0));
+  col = mix(col, col*0.7, drip*0.4);
+
+  // grade: cold, clinical, with grain + vignette
+  col = col/(col+0.85);
+  col = pow(col, vec3(1.02,0.98,0.96));
+  float vd = length(uv-vec2(0.5,0.5));
+  col *= 1.0 - smoothstep(0.5,0.95,vd)*0.55;
+  col += (hash(uv*R.xy+fract(t))-0.5)*0.028;
+  O = vec4(col,1.0);
+}`;
+function compile(ty,src){ const s=gl.createShader(ty); gl.shaderSource(s,src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s)); return s; }
+const pr = gl.createProgram();
+gl.attachShader(pr, compile(gl.VERTEX_SHADER,VS));
+gl.attachShader(pr, compile(gl.FRAGMENT_SHADER,FS));
+gl.linkProgram(pr); gl.useProgram(pr);
+const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,b);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const lo = gl.getAttribLocation(pr,'p'); gl.enableVertexAttribArray(lo); gl.vertexAttribPointer(lo,2,gl.FLOAT,false,0,0);
+const uR=gl.getUniformLocation(pr,'R'), uT=gl.getUniformLocation(pr,'T');
+(function f(ts){ gl.uniform2f(uR,cv.width,cv.height); gl.uniform1f(uT,ts/1000);
+  gl.drawArrays(gl.TRIANGLES,0,3); requestAnimationFrame(f); })(0);
+</script>
+</body>
+</html>

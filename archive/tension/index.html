@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TENSION</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #05070f; }
+    canvas { display: block; }
+    #title {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; pointer-events: none;
+      transition: opacity 2.5s ease; z-index: 3;
+    }
+    #title h1 {
+      color: #e8ecf8; font: 42px Georgia, serif; font-weight: normal;
+      letter-spacing: 0.6em; margin: 0 0 10px 0.6em;
+      text-shadow: 0 0 30px rgba(150,180,255,0.6);
+    }
+    #title p {
+      color: #8fa0c8; font: 14px Georgia, serif; letter-spacing: 0.3em;
+      margin: 0; opacity: 0.8;
+    }
+    #prompt {
+      position: fixed; left: 50%; bottom: 9vh; transform: translateX(-50%);
+      color: #d8e0f2; font: 15px Georgia, serif; letter-spacing: 0.18em;
+      text-shadow: 0 0 12px rgba(140,170,240,0.6); opacity: 0;
+      transition: opacity 0.8s ease; pointer-events: none; z-index: 2;
+    }
+    #prompt b { color: #ffd9a0; font-weight: normal; }
+  </style>
+</head>
+<body>
+  <div id="title"><h1>T E N S I O N</h1><p>a web, a hunt, a rescue</p></div>
+  <div id="prompt"></div>
+  <div style="position:fixed;inset:0;pointer-events:none;z-index:1;
+    background:radial-gradient(ellipse at 50% 42%, transparent 52%, rgba(3,4,12,0.55) 100%)"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SIGNAL — key art</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#000}
+  canvas{display:block;width:100vw;height:100vh}
+  #t{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);color:#8fe8a8;opacity:.8;
+     font:16px Georgia,serif;letter-spacing:.55em;text-transform:uppercase;text-shadow:0 0 16px rgba(90,255,140,.5)}
+  #log{position:fixed;left:12px;top:12px;color:#7ee29a;opacity:.85;font:11px "Courier New",monospace;
+      letter-spacing:.10em;line-height:2.0;text-align:left;text-shadow:0 0 8px rgba(90,255,140,.6)}
+  #log b{color:#d6ffb0;font-weight:normal}
+  #log .warn{color:#ffd27a;text-shadow:0 0 8px rgba(255,190,90,.6)}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="log">
+STATION K-9 &nbsp;·&nbsp; SHIFT 4 OF 5<br>
+DEPTH 3,882 M<br>
+<br>
+CONTACT &nbsp;<b>BRG 214°</b><br>
+RANGE &nbsp;<b>850 M</b> <span class="warn">▼ CLOSING</span><br>
+DISPLACEMENT &nbsp;<b>UNKNOWN</b><br>
+<br>
+<span class="warn">IT ANSWERS THE PING NOW</span>
+</div>
+<div id="t">Signal</div>
+<script>
+const cv = document.getElementById('cv');
+const gl = cv.getContext('webgl2');
+function fit(){ cv.width=innerWidth*Math.min(devicePixelRatio,2); cv.height=innerHeight*Math.min(devicePixelRatio,2); gl.viewport(0,0,cv.width,cv.height); }
+fit(); addEventListener('resize', fit);
+
+const VS = `#version 300 es
+in vec2 p; void main(){ gl_Position=vec4(p,0.,1.); }`;
+
+const FS = `#version 300 es
+precision highp float;
+uniform vec2 R; uniform float T;
+out vec4 O;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+float noise(vec2 p){
+  vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y);
+}
+float fbm(vec2 p){ float v=0.,a=.5; for(int i=0;i<4;i++){ v+=a*noise(p); p*=2.1; a*=.5; } return v; }
+
+void main(){
+  vec2 uv = gl_FragCoord.xy/R;
+  vec2 q = uv; q.x *= R.x/R.y;
+  float t = T;
+
+  // room: near-black with a whisper of desk
+  vec3 col = vec3(0.004,0.006,0.006);
+
+  // ------------ the scope ------------
+  vec2 sc = vec2(0.62, 0.52);              // center (aspect space)
+  float SR = 0.40;                          // radius
+  vec2 d = q - sc;
+  // subtle CRT glass curvature
+  vec2 dc = d * (1.0 + dot(d,d)*0.55);
+  float r = length(dc);
+  float ang = atan(dc.y, dc.x);             // -pi..pi
+
+  if (r < SR){
+    // phosphor base — dark glass
+    vec3 ph = vec3(0.004,0.016,0.008);
+    // radial sweep: bright leading edge, decaying trail
+    float sweep = mod(t*0.7, 6.28318);
+    float da = mod(sweep - ang, 6.28318);
+    float trail = exp(-da*2.8);
+    ph += vec3(0.08,0.60,0.26) * trail * 0.30;
+    ph += vec3(0.45,1.0,0.55) * smoothstep(0.045,0.0,da) * 0.5;
+    // range rings
+    float rr = r/SR;
+    float rings = smoothstep(0.012,0.0,abs(fract(rr*4.0)-0.5)-0.47);
+    ph += vec3(0.06,0.32,0.15)*rings*(0.25 + 0.5*trail);
+    // bearing ticks
+    float ticks = smoothstep(0.02,0.0,abs(fract(ang/6.28318*36.0)-0.5)-0.44) * smoothstep(0.93,0.97,rr) ;
+    ph += vec3(0.10,0.5,0.22)*ticks*0.7;
+    // crosshair
+    ph += vec3(0.08,0.4,0.18)*(smoothstep(0.0035,0.0,abs(dc.x)) + smoothstep(0.0035,0.0,abs(dc.y)))*0.35;
+    // noise speckle floor
+    float sp = hash(floor(dc*230.)+floor(t*8.));
+    ph += vec3(0.06,0.4,0.18) * step(0.982, sp) * trail;
+
+    // seabed clutter returns (static blobs, painted only by the sweep)
+    for (int i=0;i<6;i++){
+      float fi = float(i);
+      vec2 bp = vec2(cos(fi*2.4+1.0), sin(fi*1.7+2.0)) * SR * (0.35+0.1*fract(fi*0.618));
+      float bd = length(dc-bp);
+      float ba = mod(sweep - atan(dc.y-bp.y, dc.x-bp.x), 6.28318);
+      ph += vec3(0.10,0.65,0.28) * exp(-bd*90.0) * exp(-da*1.2) * 0.6;
+    }
+
+    // THE CONTACT: large irregular return, bearing 214°, ring 3
+    {
+      float ca = 3.735;                                    // 214 deg
+      vec2 cp = vec2(cos(ca), sin(ca)) * SR * 0.62;
+      vec2 cd = dc - cp;
+      // irregular mass via fbm-distorted ellipse — too big to be a fish
+      float mass = length(cd*vec2(5.5,8.0)) - 0.42 - fbm(cd*30.+t*0.1)*0.35;
+      float m = smoothstep(0.08,-0.15,mass);
+      ph += vec3(0.35,1.0,0.45) * m * (0.35 + 0.65*exp(-mod(t*0.7-ca,6.28318)*0.8));
+      // lock bracket
+      float bx = max(abs(cd.x),abs(cd.y));
+      float brk = smoothstep(0.004,0.0,abs(bx-0.085)) * step(0.05, max(abs(cd.x),abs(cd.y)));
+      float blink = step(0.5, fract(t*1.4));
+      ph += vec3(1.0,0.75,0.25) * brk * blink * 0.9;
+    }
+    // scanlines + glass
+    ph *= 0.82 + 0.18*sin(uv.y*R.y*1.6);
+    ph *= 1.0 - smoothstep(SR*0.86, SR, r)*0.55;          // edge falloff
+    col = ph;
+    // glass glint top-left
+    float gl2 = exp(-length(dc-vec2(-0.16,0.18))*7.0);
+    col += vec3(0.35,0.6,0.45)*gl2*0.14;
+  }
+
+  // bezel
+  float bez = smoothstep(SR+0.012, SR, r) * smoothstep(SR-0.03, SR+0.05, r);
+  col += vec3(0.05,0.055,0.05)*bez*2.0;
+  float bezEdge = smoothstep(0.006,0.0,abs(r-SR-0.016));
+  col += vec3(0.10,0.16,0.12)*bezEdge*0.8;
+
+  // scope glow spilling into the dark room
+  float spill = exp(-max(0.0, r-SR)*6.0);
+  col += vec3(0.05,0.30,0.14)*spill*0.35;
+
+  // desk edge catching the glow, bottom of frame
+  if (uv.y < 0.20){
+    float desk = smoothstep(0.20,0.19,uv.y);
+    vec3 deskCol = vec3(0.020,0.045,0.030)*(1.5-uv.y*4.0);
+    deskCol *= 0.6 + 0.4*fbm(vec2(q.x*30.,uv.y*60.));
+    col = mix(col, deskCol, desk*0.9);
+  }
+
+  // reel-to-reel hinted far left: two dim circles
+  for (int i=0;i<2;i++){
+    vec2 rc = vec2(0.13, 0.62 + float(i)*0.17);
+    float rd = length(q-rc);
+    float ring = smoothstep(0.004,0.0,abs(rd-0.045));
+    col += vec3(0.04,0.10,0.06)*ring*(0.5+0.3*sin(t*3.0+float(i)));
+    float spoke = smoothstep(0.02,0.0,abs(mod(atan(q.y-rc.y,q.x-rc.x)+t*(0.8+0.3*float(i)),1.047)-0.52))*step(rd,0.04);
+    col += vec3(0.03,0.08,0.05)*spoke;
+  }
+
+  // grade
+  col = col/(col+0.75);
+  float vd = length(uv-vec2(0.55,0.5));
+  col *= 1.0 - smoothstep(0.4,0.95,vd)*0.7;
+  col += (hash(uv*R.xy+fract(t))-0.5)*0.035;
+  O = vec4(col,1.0);
+}`;
+
+function compile(ty,src){ const s=gl.createShader(ty); gl.shaderSource(s,src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s)); return s; }
+const pr = gl.createProgram();
+gl.attachShader(pr, compile(gl.VERTEX_SHADER,VS));
+gl.attachShader(pr, compile(gl.FRAGMENT_SHADER,FS));
+gl.linkProgram(pr); gl.useProgram(pr);
+const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,b);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const lo = gl.getAttribLocation(pr,'p'); gl.enableVertexAttribArray(lo); gl.vertexAttribPointer(lo,2,gl.FLOAT,false,0,0);
+const uR=gl.getUniformLocation(pr,'R'), uT=gl.getUniformLocation(pr,'T');
+(function f(ts){ gl.uniform2f(uR,cv.width,cv.height); gl.uniform1f(uT,ts/1000);
+  gl.drawArrays(gl.TRIANGLES,0,3); requestAnimationFrame(f); })(0);
+</script>
+</body>
+</html>
