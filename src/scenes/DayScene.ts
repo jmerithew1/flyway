@@ -5,6 +5,7 @@ import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
 import { GameAudio } from '../audio'
 import { FalconSystem } from '../falcon'
+import { birdFrameKey } from '../textures'
 import { ART } from '../artManifest'
 import {
   FEATURES,
@@ -90,6 +91,11 @@ export class DayScene extends Phaser.Scene {
   private fgBranch!: Phaser.GameObjects.Image
   private fgColumn!: Phaser.GameObjects.Image
   private colliderGfx!: Phaser.GameObjects.Graphics
+  private roostHorizon!: Phaser.GameObjects.Image
+  private warmth!: Phaser.GameObjects.Rectangle
+  /** decorative echo birds that swell the final murmuration into the hundreds */
+  private echoes: { img: Phaser.GameObjects.Image; leader: Bird; dx: number; dy: number; ph: number }[] = []
+  private joinTimer = 0
 
   private scrollX = 0
   private countText!: Phaser.GameObjects.Text
@@ -144,6 +150,8 @@ export class DayScene extends Phaser.Scene {
     this.strays = []
     this.ambientFlocks = []
     this.roostSwirl = []
+    this.echoes = []
+    this.joinTimer = 0
     this.parallax = []
     this.featureSprites.clear()
     this.obstacleFeature.clear()
@@ -196,6 +204,23 @@ export class DayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setAlpha(0.14)
       .setDepth(-4)
+
+    // the roost, faint on the horizon from mid-game — WE'RE GETTING CLOSE
+    this.roostHorizon = this.add
+      .image(VIEW_W * 0.82, 742, 'roost_tree')
+      .setOrigin(0.5, 1)
+      .setDisplaySize(90, 64)
+      .setAlpha(0)
+      .setScrollFactor(0)
+      .setDepth(-5)
+    // dusk warms across the day (screen-space, restrained)
+    this.warmth = this.add
+      .rectangle(0, 0, VIEW_W, VIEW_H, 0xff9a5c)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setBlendMode(Phaser.BlendModes.OVERLAY)
+      .setDepth(7.5)
+      .setAlpha(0)
 
     // ---- obstacles: colliders from the manifest, sprites placed over them
     const built = buildObstacles()
@@ -463,8 +488,6 @@ export class DayScene extends Phaser.Scene {
     // soft distant swirl behind the tree, then the tree itself
     this.add.image(ROOST_X - 60, ROOST_Y - 190, 'flock_swirl').setDisplaySize(420, 420).setAlpha(0.5).setDepth(1.6)
     this.add.image(ROOST_X, 892, 'roost_tree').setOrigin(0.5, 1).setDisplaySize(860, 600).setDepth(2)
-    this.add.image(ROOST_X - 260, 806, 'spark_strand').setDisplaySize(46, 140).setAlpha(0.8).setDepth(2.1)
-    this.add.image(ROOST_X + 300, 780, 'spark_strand').setDisplaySize(40, 120).setAlpha(0.7).setDepth(2.1)
     for (let i = 0; i < 30; i++) {
       const sprite = this.add.image(ROOST_X, ROOST_Y, 'bird-mid').setScale(0.16).setDepth(2)
       this.roostSwirl.push({
@@ -596,6 +619,16 @@ export class DayScene extends Phaser.Scene {
     this.updateMovers(time)
     this.updateFlowGates()
     this.updateMotes()
+    // environmental progress storytelling: roost clarifies, light warms,
+    // distant flocks appear late — never a progress bar
+    const prog = Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1)
+    if (prog > 0.42) {
+      const t01 = Phaser.Math.Clamp((prog - 0.42) / 0.5, 0, 1)
+      this.roostHorizon.setAlpha(Math.min(0.55, t01 * 0.55))
+      const grow = 90 + t01 * 130
+      this.roostHorizon.setDisplaySize(grow, grow * 0.72)
+    }
+    this.warmth.setAlpha(prog * 0.16)
     this.updateRoostSwirl(dt, time)
     this.updateAmbientFlocks(dt)
 
@@ -1084,18 +1117,68 @@ export class DayScene extends Phaser.Scene {
   }
 
   private checkFinish(dt: number): void {
+    // FINAL MURMURATION: distant flocks converge and JOIN the player's flock
+    const cx = this.flock.centerX
+    if (!this.finishing && cx > ROOST_X - 1500 && cx < ROOST_X - 200) {
+      this.joinTimer -= dt
+      if (this.joinTimer <= 0) {
+        this.joinTimer = 0.35
+        // real sim birds up to a perf-safe cap...
+        if (this.flock.count < 320) {
+          for (let i = 0; i < 5; i++) {
+            const side = Math.random() < 0.5 ? -1 : 1
+            this.flock.spawnBird(
+              cx + rand(300, 700) * side * 0.6 + 200,
+              this.flock.centerY + rand(-320, 320),
+              180,
+              rand(-40, 40),
+            )
+          }
+        }
+        // ...plus echo birds for visual mass into the hundreds
+        if (this.echoes.length < 260 && this.flock.birds.length > 0) {
+          for (let i = 0; i < 9; i++) {
+            const leader = this.flock.birds[(Math.random() * this.flock.birds.length) | 0]
+            const img = this.add
+              .image(leader.x + rand(-60, 60), leader.y + rand(-50, 50), 'bird-mid')
+              .setScale(rand(0.13, 0.2))
+              .setAlpha(rand(0.5, 0.8))
+              .setDepth(3.5)
+            this.echoes.push({ img, leader, dx: rand(-70, 70), dy: rand(-56, 56), ph: rand(0, 6) })
+          }
+        }
+        if (this.echoes.length === 9) this.audio.homeSwell()
+      }
+    }
+    // echoes trail their leaders — hundreds of birds for the cost of a lerp
+    const t = this.game.loop.time / 1000
+    for (const e of this.echoes) {
+      if (!e.leader.alive) {
+        if (this.flock.birds.length === 0) continue
+        e.leader = this.flock.birds[(Math.random() * this.flock.birds.length) | 0]
+      }
+      const wob = Math.sin(t * 2.2 + e.ph) * 7
+      e.img.x += (e.leader.x + e.dx + wob - e.img.x) * 0.12
+      e.img.y += (e.leader.y + e.dy + wob * 0.6 - e.img.y) * 0.12
+      e.img.rotation = e.leader.sprite.rotation
+      e.img.setTexture(birdFrameKey(t, e.ph, 9))
+    }
+
     if (this.finishing) {
       this.finishTimer += dt
-      if (this.finishTimer > 6) {
+      if (this.finishTimer > 7.5) {
         this.stats.returned = this.flock.count
         this.scene.start('Results', this.stats)
       }
       return
     }
-    if (this.flock.centerX >= ROOST_X - 280) {
+    if (cx >= ROOST_X - 240) {
       this.finishing = true
+      this.promptText.setAlpha(0)
+      this.prompt = null
       this.showPrompt('home', 'home', () => this.finishTimer > 3)
       this.audio.chime(392, 0.3)
+      this.audio.warmth(1)
     }
   }
 }

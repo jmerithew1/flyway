@@ -88,6 +88,32 @@ export class GameAudio {
     o.stop(t + 0.25)
   }
 
+  /** The homecoming: the fullest musical moment — a slow warm chord swell. */
+  homeSwell(): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    this.master.gain.setTargetAtTime(0.3, t, 2.0)
+    // slow major-add9 pad blooming under everything
+    const notes = [196, 246.9, 293.7, 392, 440]
+    notes.forEach((f, i) => {
+      const o = ctx.createOscillator()
+      o.type = 'triangle'
+      o.frequency.value = f
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0, t + i * 0.4)
+      g.gain.linearRampToValueAtTime(0.035, t + i * 0.4 + 2.2)
+      g.gain.linearRampToValueAtTime(0.022, t + 12)
+      g.gain.linearRampToValueAtTime(0.0001, t + 16)
+      const lp = ctx.createBiquadFilter()
+      lp.type = 'lowpass'
+      lp.frequency.value = 900
+      o.connect(lp).connect(g).connect(this.master)
+      o.start(t + i * 0.4)
+      o.stop(t + 16.2)
+    })
+  }
+
   /** Falcon telegraph: distant descending screech; the music thins under it. */
   falconScreech(): void {
     if (!this.ctx) return
