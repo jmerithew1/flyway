@@ -1,0 +1,171 @@
+"""Generate src/artManifest.ts from assets_raw/manifest_draft.json.
+
+Curated selection: semantic alias -> extracted piece id. Colliders/openings come
+from the draft (alpha-derived); hand corrections belong in the OVERRIDES table
+here so the file can be regenerated safely.
+"""
+
+import json
+import os
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+R = 'ruined_violet_arch_tileset'
+A = 'pastel_ruins_obstacle_sprite_sheet'
+B = 'pastel_ruined_architecture_sprite_sheet'
+O = 'murmuration_ruins_organic_obstacle_asset_sheet'
+E = 'dreamy_ruins_flock_asset_sheet'
+F = 'dreamy_pastel_wind_fx_sprite_sheet'
+P = 'ethereal_violet_ruins_panorama'
+BIRD = 'navy_bird_flight_sprite_sheet'
+
+# alias -> (piece id, family)
+CURATED = {
+    # ---- birds (trio 09/10/11: full-bodied starling silhouettes)
+    'bird-up': (f'{BIRD}__09', 'bird'),
+    'bird-mid': (f'{BIRD}__10', 'bird'),
+    'bird-down': (f'{BIRD}__11', 'bird'),
+    # ---- ruins: walls & multi-opening pieces
+    'aqueduct_run': (f'{R}__00', 'wall'),
+    'rose_wall': (f'{R}__02', 'windows'),
+    'gate_double': (f'{R}__04', 'split'),
+    'wall_four_arch': (f'{R}__05', 'windows'),
+    'window_column': (f'{R}__06', 'column'),
+    'wall_multi_window': (f'{R}__08', 'windows'),
+    'aqueduct_slope': (f'{R}__09', 'wall'),
+    'wall_arch_window': (f'{R}__12', 'windows'),
+    'colonnade_arch': (f'{R}__15', 'arch'),
+    'wall_two_window': (f'{R}__18', 'windows'),
+    'wall_double_arch': (f'{R}__21', 'wall'),
+    'wheel_diagonal': (f'{R}__24', 'wall'),
+    'triple_column': (f'{R}__31', 'split'),
+    'twin_arch': (f'{R}__34', 'arch'),
+    'arch_fragment': (f'{R}__36', 'arch'),
+    'bridge_span': (f'{R}__41', 'wall'),
+    'pillar_a': (f'{R}__28', 'column'),
+    'pillar_b': (f'{R}__39', 'column'),
+    'pillar_c': (f'{R}__43', 'column'),
+    'ceiling_stub_a': (f'{R}__27', 'hang'),
+    'ceiling_stub_b': (f'{R}__35', 'hang'),
+    'ceiling_stub_c': (f'{R}__45', 'hang'),
+    # ---- ruins: pastel obstacle sheet (bigger set pieces)
+    'grand_arch': (f'{A}__00', 'arch'),
+    'gothic_arch': (f'{A}__01', 'arch'),
+    'double_arch_wall': (f'{A}__02', 'split'),
+    'triple_window_wall': (f'{A}__06', 'windows'),
+    'rose_window_big': (f'{A}__07', 'windows'),
+    'tall_shard': (f'{A}__08', 'column'),
+    'pointed_arch': (f'{A}__12', 'arch'),
+    'triple_arcade': (f'{A}__13', 'split'),
+    'bent_arch': (f'{A}__14', 'arch'),
+    'wall_arch_inset': (f'{A}__16', 'arch'),
+    'wall_circle_bite': (f'{A}__19', 'windows'),
+    'oval_window_wall': (f'{A}__20', 'windows'),
+    'tall_gate': (f'{A}__21', 'arch'),
+    'obelisk_a': (f'{B}__08', 'column'),
+    'obelisk_b': (f'{B}__07', 'column'),
+    'column_ring': (f'{B}__18', 'column'),
+    'column_broken': (f'{B}__12', 'column'),
+    'column_pair': (f'{B}__31', 'split'),
+    'column_clean': (f'{B}__06', 'column'),
+    'keyhole_arch': (f'{B}__56', 'arch'),
+    # ---- organic
+    'wisteria_curtain': (f'{O}__01', 'organic-brittle'),
+    'wisteria_dense': (f'{O}__02', 'organic-brittle'),
+    'root_tangle': (f'{O}__03', 'organic-hang'),
+    'leaf_strand': (f'{O}__04', 'organic-hang'),
+    'ceiling_pods': (f'{O}__05', 'organic-hang'),
+    'thorn_arc': (f'{O}__06', 'organic'),
+    'thorn_ring': (f'{O}__07', 'organic'),
+    'lattice_gate': (f'{O}__09', 'organic'),
+    'wisteria_arch': (f'{O}__10', 'organic'),
+    'web_column_a': (f'{O}__11', 'organic'),
+    'web_column_b': (f'{O}__12', 'organic'),
+    'web_net': (f'{O}__13', 'organic-brittle'),
+    'branch_cluster': (f'{O}__14', 'organic'),
+    'organic_arch': (f'{O}__15', 'organic'),
+    # ---- ending / decoration
+    'roost_tree': (f'{E}__08', 'deco'),
+    'flock_swirl': (f'{E}__16', 'deco'),
+    'flock_decal_a': (f'{E}__11', 'deco'),
+    'flock_decal_b': (f'{E}__14', 'deco'),
+    'stray_glow': (f'{E}__17', 'deco'),
+    'spark_strand': (f'{E}__20', 'deco'),
+    # ---- fx
+    'wind_stream_long': (f'{F}__01', 'fx'),
+    'wind_stream_wave': (f'{F}__11', 'fx'),
+    'wind_cross': (f'{F}__04', 'fx'),
+    'cloud_curl': (f'{F}__14', 'fx'),
+    'cloud_s': (f'{F}__15', 'fx'),
+    'glow_warm': (f'{F}__16', 'fx'),
+    'wisp_a': (f'{F}__02', 'fx'),
+    'wisp_b': (f'{F}__09', 'fx'),
+    # ---- environment / parallax
+    'panorama_0': (f'{P}__00', 'deco'),
+    'panorama_1': (f'{P}__01', 'deco'),
+    'panorama_2': (f'{P}__02', 'deco'),
+    'panorama_3': (f'{P}__03', 'deco'),
+    'panorama_4': (f'{P}__04', 'deco'),
+    'panorama_5': (f'{P}__05', 'deco'),
+    'panorama_6': (f'{P}__06', 'deco'),
+    'bg_plate': ('ancient_ruins_bg', 'deco'),
+    # ---- foreground
+    'fg_tl_branch': ('garden_tl_branch', 'deco'),
+    'fg_tr_column': ('garden_tr_column', 'deco'),
+    'fg_bl_arch': ('garden_bl_arch', 'deco'),
+    'fg_br_column': ('garden_br_column', 'deco'),
+    'fg_ground': ('garden_ground_strip', 'deco'),
+}
+
+
+def main():
+    with open(os.path.join(ROOT, 'assets_raw', 'manifest_draft.json'), encoding='utf-8') as f:
+        draft = {e['id']: e for e in json.load(f)}
+
+    lines = [
+        '// GENERATED by tools/build_manifest.py — regenerate rather than hand-editing',
+        '// entries. Colliders are alpha-derived native-px rects relative to the piece',
+        "// top-left; 'deco'/'bird'/'fx' families never collide.",
+        '',
+        'export interface ArtRect {',
+        '  x: number',
+        '  y: number',
+        '  w: number',
+        '  h: number',
+        '}',
+        '',
+        'export interface ArtPiece {',
+        '  key: string',
+        '  file: string',
+        '  w: number',
+        '  h: number',
+        "  family: 'bird' | 'arch' | 'windows' | 'split' | 'column' | 'wall' | 'hang' | 'organic' | 'organic-brittle' | 'organic-hang' | 'fx' | 'deco'",
+        '  colliders: ArtRect[]',
+        '  openings: ArtRect[]',
+        '}',
+        '',
+        'export const ART: Record<string, ArtPiece> = {',
+    ]
+    missing = []
+    for alias, (pid, family) in CURATED.items():
+        e = draft.get(pid)
+        if not e:
+            missing.append(pid)
+            continue
+        no_collide = family in ('bird', 'fx', 'deco')
+        colliders = [] if no_collide else e['colliders']
+        lines.append(
+            f"  '{alias}': {{ key: '{alias}', file: '{e['file']}', w: {e['w']}, h: {e['h']}, "
+            f"family: '{family}', colliders: {json.dumps(colliders)}, openings: {json.dumps(e['openings'])} }},"
+        )
+    lines.append('}')
+    lines.append('')
+    assert not missing, f'missing draft ids: {missing}'
+    out = os.path.join(ROOT, 'src', 'artManifest.ts')
+    with open(out, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines))
+    print(f'wrote {out}: {len(CURATED)} pieces')
+
+
+if __name__ == '__main__':
+    main()

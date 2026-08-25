@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { DayStats } from './DayScene'
-import { paintBackdrop, W as VIEW_W, H as VIEW_H } from '../backdrop'
+import { W as VIEW_W, H as VIEW_H } from '../backdrop'
+import { ART } from '../artManifest'
 
 /**
  * Restrained end-of-day rating. HOME always lights (you only arrive here by
@@ -13,8 +14,9 @@ export class ResultsScene extends Phaser.Scene {
   }
 
   create(stats: DayStats): void {
-    if (!this.textures.exists('backdrop')) paintBackdrop(this)
-    this.add.image(0, 0, 'backdrop').setOrigin(0)
+    const plate = ART['bg_plate']
+    const cover = Math.max(VIEW_W / plate.w, VIEW_H / plate.h)
+    this.add.image(VIEW_W / 2, VIEW_H / 2, 'bg_plate').setDisplaySize(plate.w * cover, plate.h * cover)
     this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x1a1530, 0.35).setOrigin(0)
 
     const cx = VIEW_W / 2

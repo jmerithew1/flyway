@@ -4,33 +4,26 @@ import { Obstacle } from '../obstacles'
 import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
 import { GameAudio } from '../audio'
+import { ART } from '../artManifest'
 import {
   FEATURES,
   STRAYS,
   PROMPTS,
   CHECKPOINTS,
+  WIND_ZONES,
   buildObstacles,
+  pieceScale,
+  PieceFeature,
+  WindZone,
   SCROLL_SPEED,
   PRESSURE_SPEED,
   PRESSURE_START,
   ROOST_X,
   ROOST_Y,
-  SLICE_END,
   SKY_TOP,
   SKY_BOTTOM,
 } from '../level'
-import {
-  paintBackdrop,
-  paintRuinStrip,
-  paintFogTile,
-  W as VIEW_W,
-  H as VIEW_H,
-} from '../backdrop'
-
-/** Crosswind zone: adds a reason to change formation without a new control. */
-const WIND_START = 12000
-const WIND_END = 17400
-const WIND_STRENGTH = 46
+import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
 
 export interface DayStats {
   startCount: number
@@ -61,26 +54,34 @@ interface AmbientFlock {
   vy: number
 }
 
+interface ParallaxImg {
+  img: Phaser.GameObjects.Image
+  factor: number
+  spacing: number
+  baseX: number
+  y: number
+}
+
 export class DayScene extends Phaser.Scene {
   private flock!: Flock
   private obstacles: Obstacle[] = []
+  private featureSprites = new Map<PieceFeature, Phaser.GameObjects.Image>()
+  private obstacleFeature = new Map<Obstacle, PieceFeature>()
   private strays: { group: StrayGroup; def: (typeof STRAYS)[number] }[] = []
   private scatter!: ScatterSystem
-  private ruinSprites: Phaser.GameObjects.Image[] = []
   private roostSwirl: { sprite: Phaser.GameObjects.Image; a: number; r: number; s: number; ph: number }[] = []
   private ambientFlocks: AmbientFlock[] = []
   private audio = new GameAudio()
 
   private keySpace!: Phaser.Input.Keyboard.Key
   private keyShift!: Phaser.Input.Keyboard.Key
-  private ruinStrip!: Phaser.GameObjects.TileSprite
-  private foliageStrip!: Phaser.GameObjects.TileSprite
-  private fgGrassA!: Phaser.GameObjects.Image
-  private fgGrassB!: Phaser.GameObjects.Image
-  private fgBranch!: Phaser.GameObjects.Image
   private fogFar!: Phaser.GameObjects.TileSprite
-  private fogNear!: Phaser.GameObjects.TileSprite
   private leafEmitter!: Phaser.GameObjects.Particles.ParticleEmitter
+  private parallax: ParallaxImg[] = []
+  private fgGround!: Phaser.GameObjects.TileSprite
+  private fgBranch!: Phaser.GameObjects.Image
+  private fgColumn!: Phaser.GameObjects.Image
+  private colliderGfx!: Phaser.GameObjects.Graphics
 
   private scrollX = 0
   private countText!: Phaser.GameObjects.Text
@@ -110,11 +111,7 @@ export class DayScene extends Phaser.Scene {
   }
 
   create(): void {
-    if (!this.textures.exists('backdrop')) {
-      paintBackdrop(this)
-      paintRuinStrip(this)
-      paintFogTile(this)
-    }
+    if (!this.textures.exists('fog-tile')) paintFogTile(this)
 
     this.scrollX = 0
     this.shownPrompts.clear()
@@ -125,6 +122,9 @@ export class DayScene extends Phaser.Scene {
     this.strays = []
     this.ambientFlocks = []
     this.roostSwirl = []
+    this.parallax = []
+    this.featureSprites.clear()
+    this.obstacleFeature.clear()
     this.prompt = null
     this.mouseTravel = 0
     this.gatherHeld = 0
@@ -135,62 +135,54 @@ export class DayScene extends Phaser.Scene {
     this.stats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0 }
     this.checkpoint = { x: 0, count: 120, found: 0 }
 
-    this.add.image(0, 0, 'backdrop').setOrigin(0).setScrollFactor(0).setDepth(-10)
-    this.ruinStrip = this.add
-      .tileSprite(0, VIEW_H - 470, VIEW_W, 340, 'ruin-strip')
-      .setOrigin(0, 0)
+    // ---- backdrop: the supplied painted plate, covering the view
+    const plate = ART['bg_plate']
+    const cover = Math.max(VIEW_W / plate.w, VIEW_H / plate.h)
+    this.add
+      .image(VIEW_W / 2, VIEW_H / 2, 'bg_plate')
+      .setDisplaySize(plate.w * cover, plate.h * cover)
       .setScrollFactor(0)
-      .setAlpha(0.5)
-      .setDepth(-6)
+      .setDepth(-10)
+
+    // ---- slow parallax: misty ruin clusters from the panorama sheet
+    const clusters: Array<[string, number, number, number, number]> = [
+      // key, factor, spacing, y, alpha
+      ['panorama_1', 0.08, 2600, 742, 0.5],
+      ['panorama_3', 0.12, 3400, 726, 0.55],
+      ['panorama_5', 0.16, 2900, 748, 0.6],
+      ['panorama_0', 0.12, 4100, 734, 0.5],
+    ]
+    for (const [key, factor, spacing, y, alpha] of clusters) {
+      const art = ART[key]
+      const scale = 235 / art.h
+      const img = this.add.image(0, y, key).setScale(scale).setAlpha(alpha).setScrollFactor(0).setDepth(-6)
+      this.parallax.push({ img, factor, spacing, baseX: Math.random() * spacing, y })
+    }
+
     this.fogFar = this.add
       .tileSprite(0, VIEW_H - 400, VIEW_W, 200, 'fog-tile')
       .setOrigin(0, 0)
       .setScrollFactor(0)
-      .setAlpha(0.16)
+      .setAlpha(0.14)
       .setDepth(-4)
-    // Foreground: a few deliberate authored silhouettes at the edges, not a
-    // solid band. Kept to ~12% of the view so the playfield stays open.
-    this.foliageStrip = this.add
-      .tileSprite(0, VIEW_H - 96, VIEW_W, 96, 'fg-ground')
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(6)
-    this.fgGrassA = this.add
-      .image(0, VIEW_H + 8, 'fg-grass')
-      .setOrigin(0, 1)
-      .setDisplaySize(430, 150)
-      .setScrollFactor(0)
-      .setDepth(6.5)
-    this.fgGrassB = this.add
-      .image(VIEW_W, VIEW_H + 8, 'fg-grass')
-      .setOrigin(1, 1)
-      .setDisplaySize(470, 128)
-      .setFlipX(true)
-      .setScrollFactor(0)
-      .setDepth(6.5)
-    this.fgBranch = this.add
-      .image(-30, -14, 'fg-branch')
-      .setOrigin(0, 0)
-      .setDisplaySize(560, 300)
-      .setScrollFactor(0)
-      .setDepth(6.6)
-    this.fogNear = this.add
-      .tileSprite(0, VIEW_H - 240, VIEW_W, 200, 'fog-tile')
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setAlpha(0.2)
-      .setDepth(7)
 
-    this.obstacles = buildObstacles()
-    this.ruinSprites = []
-    this.drawRuins()
+    // ---- obstacles: colliders from the manifest, sprites placed over them
+    const built = buildObstacles()
+    this.obstacles = built.obstacles
+    for (const [feature, obs] of built.byFeature) {
+      for (const o of obs) this.obstacleFeature.set(o, feature)
+    }
+    this.placePieces()
+    this.placeWindFx()
     this.drawRoost()
+
+    this.colliderGfx = this.add.graphics().setDepth(19).setVisible(false)
 
     this.flock = new Flock(this, 120, 420, 430)
     this.flock.intentX = 600
     this.flock.intentY = 430
     this.scatter = new ScatterSystem(this)
-    for (const def of STRAYS) this.strays.push({ group: new StrayGroup(this, def.x, def.y, def.count, 0x533c4a), def })
+    for (const def of STRAYS) this.strays.push({ group: new StrayGroup(this, def.x, def.y, def.count), def })
 
     this.leafEmitter = this.add
       .particles(0, 0, 'leaf', {
@@ -200,7 +192,7 @@ export class DayScene extends Phaser.Scene {
         speedX: { min: -60, max: -25 },
         speedY: { min: -8, max: 14 },
         scale: { min: 0.25, max: 0.6 },
-        alpha: { start: 0, end: 0.35, ease: 'Quad.easeOut' },
+        alpha: { start: 0, end: 0.3, ease: 'Quad.easeOut' },
         rotate: { min: 0, max: 360 },
         quantity: 1,
         frequency: 700,
@@ -224,12 +216,37 @@ export class DayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(-3)
 
+    // ---- foreground: garden overlay pieces, edges only (≤ ~12% coverage)
+    this.fgGround = this.add
+      .tileSprite(0, VIEW_H - 86, VIEW_W, 86, 'fg_ground')
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(6)
+    const groundArt = ART['fg_ground']
+    this.fgGround.tileScaleY = 86 / groundArt.h
+    this.fgGround.tileScaleX = this.fgGround.tileScaleY
+    this.fgBranch = this.add
+      .image(-20, -16, 'fg_tl_branch')
+      .setOrigin(0, 0)
+      .setDisplaySize(430, 210)
+      .setScrollFactor(0)
+      .setDepth(6.6)
+      .setAlpha(0.96)
+    this.fgColumn = this.add
+      .image(VIEW_W + 20, -14, 'fg_tr_column')
+      .setOrigin(1, 0)
+      .setDisplaySize(215, 175)
+      .setScrollFactor(0)
+      .setDepth(6.6)
+      .setAlpha(0.96)
+
     const kb = this.input.keyboard!
     this.keySpace = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
     this.keyShift = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
     kb.on('keydown-D', () => {
       this.debugVisible = !this.debugVisible
       this.debugText.setVisible(this.debugVisible)
+      this.colliderGfx.setVisible(this.debugVisible)
     })
     this.input.once('pointermove', () => this.audio.start())
     kb.once('keydown', () => this.audio.start())
@@ -242,7 +259,13 @@ export class DayScene extends Phaser.Scene {
       .setAlpha(0)
 
     // ---- minimal HUD: bird icon + count only
-    this.add.image(30, 32, 'bird-mid').setScale(0.42).setTint(0xf2e8f5).setAlpha(0.9).setScrollFactor(0).setDepth(20)
+    this.add
+      .image(30, 32, 'bird-mid')
+      .setScale(0.34)
+      .setTintFill(0xf2e8f5)
+      .setAlpha(0.9)
+      .setScrollFactor(0)
+      .setDepth(20)
     this.countText = this.add
       .text(52, 18, '120', { fontFamily: 'Georgia, serif', fontSize: '28px', color: '#f2e8f5' })
       .setAlpha(0.92)
@@ -271,89 +294,63 @@ export class DayScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ visuals
 
-  /**
-   * Place authored ruin SPRITES over the (invisible) colliders. Art is allowed
-   * to overhang, taper and sit off-centre relative to the collider — nothing
-   * here re-derives collision geometry.
-   */
-  private drawRuins(): void {
-    for (const s of this.ruinSprites) s.destroy()
-    this.ruinSprites = []
-    const add = (
-      key: string,
-      x: number,
-      y: number,
-      w: number,
-      h: number,
-      depth = 3,
-      originY = 0.5,
-    ): Phaser.GameObjects.Image => {
-      const img = this.add.image(x, y, key).setOrigin(0.5, originY).setDisplaySize(w, h).setDepth(depth)
-      this.ruinSprites.push(img)
-      return img
-    }
-
+  /** Place one sprite per feature. Art overhangs its simple colliders freely. */
+  private placePieces(): void {
     for (const f of FEATURES) {
-      if (f.type === 'wall') {
-        const edges: number[] = [0]
-        for (const o of f.openings) edges.push(o.y0, o.y1)
-        edges.push(960)
-        // visible stone occupies 106/140 of the sprite, so scale up to cover the collider
-        const artW = f.hw * 2 * (140 / 106)
-        for (let i = 0; i < edges.length; i += 2) {
-          const y0 = edges[i]
-          const y1 = Math.min(edges[i + 1], 866)
-          if (y1 - y0 < 8) continue
-          // tiled, not stretched: keeps the stone coursing at natural scale
-          // however tall the span is
-          const body = this.add
-            .tileSprite(f.x, (y0 + y1) / 2, artW, y1 - y0, 'wall-body')
-            .setDepth(3)
-          body.tileScaleX = artW / body.width
-          body.tileScaleY = body.tileScaleX
-          this.ruinSprites.push(body as unknown as Phaser.GameObjects.Image)
-          // authored broken ends, only where the span actually terminates
-          if (y0 > 6) add('crown-top', f.x, y0 + 26, artW, 56, 3.1)
-          if (edges[i + 1] < 954) add('crown-bottom', f.x, y1 - 26, artW, 56, 3.1)
-        }
-        // collapsed stone where the wall meets the ground
-        add('rubble', f.x, 900, f.hw * 2 + 150, 116, 3.2)
+      const s = pieceScale(f)
+      const img = this.add
+        .image(f.x, f.y, f.art)
+        .setScale(s)
+        .setFlipX(!!f.flipX)
+        .setDepth(3)
+        .setAlpha(f.alpha ?? 1)
+      if (f.sway) {
+        img.setAngle(-2)
+        this.tweens.add({
+          targets: img,
+          angle: 2,
+          duration: 2600 + Math.random() * 1200,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        })
+      }
+      this.featureSprites.set(f, img)
+    }
+  }
 
-        for (const o of f.openings) {
-          if (o.brittle) {
-            const match = this.obstacles.find(
-              (ob) => ob.kind === 'brittle' && ob.x === f.x && Math.abs(ob.y - (o.y0 + o.y1) / 2) < 1,
-            )
-            if (!match?.broken) add('vines', f.x, o.y0, f.hw * 2 + 30, o.y1 - o.y0, 3.4, 0)
-            continue
-          }
-          const mid = (o.y0 + o.y1) / 2
-          const span = o.y1 - o.y0
-          if (o.deco === 'arch' || o.deco === 'pointedArch' || o.deco === 'doubleArch') {
-            add('arch', f.x, o.y0 + 6, span * 1.5 + 90, span * 0.85 + 40, 3.3, 1)
-          } else if (o.deco === 'window' || o.deco === 'rose') {
-            add('rose-window', f.x, mid, span * 1.55, span * 1.55, 3.3)
-          } else if (o.deco === 'vines') {
-            add('vines', f.x, o.y0, f.hw * 2 + 30, Math.min(span * 0.75, 110), 3.4, 0)
-          }
-        }
-      } else {
-        const shaftH = f.bottom - f.top + 90
-        add('pillar', f.x, f.top - 40, f.hw * 2.9, shaftH, 3, 0)
-        add('rubble', f.x, 902, f.hw * 2 + 190, 124, 3.2)
-        add('vines', f.x, f.top + 66, f.hw * 2, f.huge ? 120 : 84, 3.4, 0)
+  /** Wind FX sprites make each wind zone readable before the flock enters it. */
+  private placeWindFx(): void {
+    for (const z of WIND_ZONES) {
+      const streamKey = z.kind === 'cross' ? 'wind_stream_long' : 'wind_stream_wave'
+      const angle = z.kind === 'updraft' ? -18 : z.kind === 'down' ? 16 : 0
+      const ys = z.kind === 'down' ? [260, 520] : [220, 430, 640]
+      let i = 0
+      for (let x = z.x0 + 240; x < z.x1; x += 520) {
+        const y = ys[i % ys.length]
+        i++
+        const img = this.add.image(x, y, streamKey).setDisplaySize(560, 96).setAngle(angle).setAlpha(0.5).setDepth(2)
+        this.tweens.add({
+          targets: img,
+          alpha: 0.28,
+          x: x + 46,
+          duration: 1500 + (i % 3) * 400,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        })
       }
     }
   }
 
   private drawRoost(): void {
-    this.add
-      .image(ROOST_X, ROOST_Y + 330, 'roost-tree')
-      .setOrigin(0.5, 1)
-      .setDisplaySize(720, 780)
-      .setDepth(2)
+    // soft distant swirl behind the tree, then the tree itself
+    this.add.image(ROOST_X - 60, ROOST_Y - 190, 'flock_swirl').setDisplaySize(420, 420).setAlpha(0.5).setDepth(1.6)
+    this.add.image(ROOST_X, 892, 'roost_tree').setOrigin(0.5, 1).setDisplaySize(860, 600).setDepth(2)
+    this.add.image(ROOST_X - 260, 806, 'spark_strand').setDisplaySize(46, 140).setAlpha(0.8).setDepth(2.1)
+    this.add.image(ROOST_X + 300, 780, 'spark_strand').setDisplaySize(40, 120).setAlpha(0.7).setDepth(2.1)
     for (let i = 0; i < 30; i++) {
-      const sprite = this.add.image(ROOST_X, ROOST_Y, 'bird-mid').setScale(0.2).setTint(0x241a30).setDepth(2)
+      const sprite = this.add.image(ROOST_X, ROOST_Y, 'bird-mid').setScale(0.16).setDepth(2)
       this.roostSwirl.push({
         sprite,
         a: Math.random() * Math.PI * 2,
@@ -411,14 +408,19 @@ export class DayScene extends Phaser.Scene {
       this.scrollX += (targetScroll - this.scrollX) * Math.min(dt * 1.1, 1)
     }
     cam.scrollX = this.scrollX
-    this.ruinStrip.tilePositionX = this.scrollX * 0.14
-    this.foliageStrip.tilePositionX = this.scrollX * 0.5
-    // foreground drifts faster than the gameplay plane
-    this.fgGrassA.x = -((this.scrollX * 0.85) % 900)
-    this.fgGrassB.x = VIEW_W + 420 - ((this.scrollX * 0.85 + 620) % 1300)
-    this.fgBranch.x = -30 - ((this.scrollX * 0.7) % 2600) * 0.24
+
+    // parallax clusters loop across the view at their own depths
+    for (const p of this.parallax) {
+      const span = p.spacing
+      let x = ((p.baseX - this.scrollX * p.factor) % span) + span / 2
+      if (x < -400) x += span
+      if (x > span) x -= span
+      p.img.x = x
+    }
+    this.fgGround.tilePositionX = this.scrollX * 0.62
+    this.fgBranch.x = -20 - ((this.scrollX * 0.3) % 2200) * 0.12
+    this.fgColumn.x = VIEW_W + 20 + ((this.scrollX * 0.24) % 1800) * 0.1
     this.fogFar.tilePositionX = this.scrollX * 0.22 + time * 5
-    this.fogNear.tilePositionX = this.scrollX * 0.55 + time * 9
 
     // input → flock
     const p = this.input.activePointer
@@ -437,7 +439,9 @@ export class DayScene extends Phaser.Scene {
     this.flock.update(
       dt,
       {
-        intentX: this.finishing ? ROOST_X : Phaser.Math.Clamp(world.x, this.scrollX + VIEW_W * 0.07, this.scrollX + VIEW_W * 0.82),
+        intentX: this.finishing
+          ? ROOST_X
+          : Phaser.Math.Clamp(world.x, this.scrollX + VIEW_W * 0.07, this.scrollX + VIEW_W * 0.82),
         intentY: this.finishing ? ROOST_Y : Phaser.Math.Clamp(world.y, SKY_TOP + 20, SKY_BOTTOM),
         gather,
         spread,
@@ -479,8 +483,9 @@ export class DayScene extends Phaser.Scene {
         else if (pr.key === 'spread') this.showPrompt('spread', pr.text, () => this.spreadHeld > 0.7)
       }
     }
-    if (this.scrollX > WIND_START && this.scrollX < WIND_END) {
-      this.showPrompt('wind', 'crosswind — Gather cuts through it', () => this.scrollX > WIND_START + 700)
+    const zoneAhead = this.windZoneAt(this.flock.centerX + 500)
+    if (zoneAhead) {
+      this.showPrompt('wind', 'wind ahead — Gather cuts through it', () => this.flock.centerX > zoneAhead.x0 + 600)
     }
     this.updatePrompt()
 
@@ -497,8 +502,20 @@ export class DayScene extends Phaser.Scene {
       this.debugText.setText(
         `fps ${Math.round(this.game.loop.actualFps)}  form ${this.flock.form.toFixed(2)}  x ${Math.round(this.scrollX)}  cp ${this.checkpoint.x}`,
       )
+      this.drawColliderOverlay()
     }
     void timeMs
+  }
+
+  /** Debug: outline every active collider so art/collision mismatch is visible. */
+  private drawColliderOverlay(): void {
+    const g = this.colliderGfx
+    g.clear()
+    g.lineStyle(2, 0xff5577, 0.9)
+    for (const o of this.visibleObstacles()) {
+      if (o.shape === 'rect') g.strokeRect(o.x - o.hw, o.y - o.hh, o.hw * 2, o.hh * 2)
+      else g.strokeCircle(o.x, o.y, o.r)
+    }
   }
 
   // --------------------------------------------------------------- subsystems
@@ -512,18 +529,23 @@ export class DayScene extends Phaser.Scene {
     })
   }
 
+  private windZoneAt(x: number): WindZone | null {
+    for (const z of WIND_ZONES) if (x >= z.x0 && x <= z.x1) return z
+    return null
+  }
+
   private applyWind(dt: number): void {
-    const x = this.flock.centerX
-    if (x < WIND_START || x > WIND_END) return
+    const zone = this.windZoneAt(this.flock.centerX)
+    if (!zone) return
     const gather = Math.max(this.flock.form, 0)
-    const resist = 1 - gather * 0.72
-    const wx = Math.sin(x * 0.0006) * WIND_STRENGTH * resist
-    const wy = Math.cos(x * 0.0009 + 1) * WIND_STRENGTH * 0.4 * resist
+    const spread = Math.max(-this.flock.form, 0)
+    // gathered flocks cut through; spread flocks catch the full push
+    const resist = (1 - gather * 0.72) * (1 + spread * 0.6)
     for (const b of this.flock.birds) {
-      b.vx += wx * dt
-      b.vy += wy * dt
+      b.vx += zone.vx * resist * dt
+      b.vy += zone.vy * resist * dt
     }
-    this.leafEmitter.setParticleSpeed({ min: -60 - wx, max: -25 - wx * 0.6 } as never)
+    this.leafEmitter.setParticleSpeed({ min: -60 + zone.vx, max: -25 + zone.vx * 0.6 } as never)
   }
 
   private processCollisions(time: number): void {
@@ -566,7 +588,7 @@ export class DayScene extends Phaser.Scene {
       const charge = (this.brittleCharge.get(obstacle) ?? 0) + 1
       this.brittleCharge.set(obstacle, charge)
       if (charge >= 8 && this.flock.form > 0.35 && meanSpeed > 230) {
-        this.breakObstacle(obstacle)
+        this.breakFeature(obstacle)
       } else if (this.flock.form <= 0.1 && Math.random() < 0.1) {
         this.scatter.spawn(bird.x, bird.y, -1, -0.3)
         this.flock.removeBird(bird)
@@ -575,9 +597,16 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
-  private breakObstacle(o: Obstacle): void {
-    o.broken = true
-    this.drawRuins()
+  /** Breaking one brittle collider clears the whole curtain it belongs to. */
+  private breakFeature(o: Obstacle): void {
+    const feature = this.obstacleFeature.get(o)
+    if (feature) {
+      for (const [ob, f] of this.obstacleFeature) if (f === feature) ob.broken = true
+      const sprite = this.featureSprites.get(feature)
+      if (sprite) this.tweens.add({ targets: sprite, alpha: 0, duration: 450 })
+    } else {
+      o.broken = true
+    }
     const emitter = this.add.particles(o.x, o.y, 'leaf', {
       speed: { min: 80, max: 320 },
       angle: { min: -180, max: 180 },
@@ -586,7 +615,7 @@ export class DayScene extends Phaser.Scene {
       scale: { start: 0.9, end: 0.2 },
       alpha: { start: 0.9, end: 0 },
       rotate: { min: 0, max: 360 },
-      tint: [0x2f3a2a, 0x46523a],
+      tint: [0x2a2440, 0x3a2f55],
       emitting: false,
     })
     emitter.setDepth(3)
@@ -619,7 +648,7 @@ export class DayScene extends Phaser.Scene {
       const sy = SKY_TOP + Math.random() * 260
       for (let i = 0; i < n; i++) {
         const s = this.add.image(sx + (Math.random() - 0.5) * 60, sy + (Math.random() - 0.5) * 40, 'bird-mid')
-        s.setScale(0.24).setTint(0x2a2038).setAlpha(0.7).setDepth(1)
+        s.setScale(0.18).setAlpha(0.65).setDepth(1)
         birds.push(s)
       }
       this.ambientFlocks.push({ birds, x: sx, y: sy, vx: 60, vy: 0 })
@@ -709,14 +738,18 @@ export class DayScene extends Phaser.Scene {
     for (const s of this.strays) {
       if (s.def.x > cp.x) s.group.reset(s.def.count)
     }
-    let redraw = false
-    for (const o of this.obstacles) {
-      if (o.broken && o.x > cp.x) {
-        o.broken = false
-        redraw = true
+    // un-break brittle features ahead of the checkpoint and restore their art
+    for (const [f, sprite] of this.featureSprites) {
+      if (f.x <= cp.x) continue
+      let restored = false
+      for (const [ob, feat] of this.obstacleFeature) {
+        if (feat === f && ob.broken) {
+          ob.broken = false
+          restored = true
+        }
       }
+      if (restored) sprite.setAlpha(f.alpha ?? 1)
     }
-    if (redraw) this.drawRuins()
   }
 
   private checkFinish(dt: number): void {

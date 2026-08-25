@@ -1,46 +1,37 @@
 import { Obstacle } from './obstacles'
+import { ART } from './artManifest'
 
 /**
- * DAY 1 — ANCIENT RUINS. Declarative world layout.
+ * DAY — ANCIENT RUINS, built from the supplied art kit.
  *
- * A "wall" is a vertical stone face at x pierced by openings. Anything NOT
- * listed as an opening is solid stone. An opening is either a true gap or,
- * if `brittle`, a breakable curtain a fast gathered flock can punch through.
+ * A feature is a PLACED ART PIECE: the sprite is the visual, and its colliders
+ * come from the manifest's alpha-derived rects, scaled with the piece. Art and
+ * collision stay decoupled — nothing visible is collision geometry.
  *
- * ---------------------------------------------------------------------------
- * PACING RULE (this is what the spacing numbers below are derived from):
- * the player must read every obstacle 2-4 seconds before reaching it. At
- * SCROLL_SPEED that is 356-712px of clearance; at PRESSURE_SPEED it is
- * 448-896px. Nothing is spaced tighter than that floor — difficulty comes
- * from transition timing and route choice, never from stolen reaction time.
+ * PACING RULE: every obstacle must be readable 2-4s before arrival. At
+ * SCROLL_SPEED that is >=356px of clearance between event x positions; at
+ * PRESSURE_SPEED >=428px. pacingReport() asserts this.
  */
 
-export type GapDeco = 'arch' | 'pointedArch' | 'window' | 'rose' | 'vines' | 'doubleArch' | 'none'
-
-export interface Opening {
-  y0: number
-  y1: number
-  deco: GapDeco
-  brittle?: boolean
+export interface PieceFeature {
+  x: number // center x
+  y: number // center y ('bottom' pieces may use yBottom instead)
+  art: keyof typeof ART & string
+  h: number // display height in px (scale = h / native h)
+  flipX?: boolean
+  sway?: boolean // gentle rotation tween (visual only)
+  brittle?: boolean // all colliders become breakable
+  wide?: boolean // opt out of the 520px display-width clamp (big set pieces)
+  alpha?: number
 }
 
-export interface WallFeature {
-  type: 'wall'
-  x: number
-  hw: number
-  openings: Opening[]
+export interface WindZone {
+  x0: number
+  x1: number
+  vx: number // push, px/s^2-ish (applied like the old crosswind)
+  vy: number
+  kind: 'cross' | 'updraft' | 'down'
 }
-
-export interface PillarFeature {
-  type: 'pillar'
-  x: number
-  top: number
-  bottom: number
-  hw: number
-  huge?: boolean
-}
-
-export type Feature = WallFeature | PillarFeature
 
 export interface StrayDef {
   x: number
@@ -63,172 +54,139 @@ export const SLICE_END = ROOST_X + 700
 export const SKY_TOP = 40
 export const SKY_BOTTOM = 830
 
-/** ~45-60s apart at the speed of the section each one sits in. */
 export const CHECKPOINTS = [0, 2100, 4600, 7100, 9600, 12000, 14400, 17400, 20400, 23200]
 
-const w = (x: number, hw: number, openings: Opening[]): WallFeature => ({ type: 'wall', x, hw, openings })
-const p = (x: number, top: number, bottom: number, hw: number, huge = false): PillarFeature => ({
-  type: 'pillar',
+const GROUND = 880 // visual ground line where bottom-mounted pieces sit
+
+/** bottom-mounted piece: y = GROUND - h/2 */
+const gnd = (x: number, art: PieceFeature['art'], h: number, extra: Partial<PieceFeature> = {}): PieceFeature => ({
   x,
-  top,
-  bottom,
-  hw,
-  huge,
+  y: GROUND - h / 2,
+  art,
+  h,
+  ...extra,
+})
+/** top-mounted piece: hangs from above the sky line */
+const top = (x: number, art: PieceFeature['art'], h: number, extra: Partial<PieceFeature> = {}): PieceFeature => ({
+  x,
+  y: h / 2 - 26,
+  art,
+  h,
+  ...extra,
+})
+/** free-floating piece at explicit center y */
+const mid = (x: number, y: number, art: PieceFeature['art'], h: number, extra: Partial<PieceFeature> = {}): PieceFeature => ({
+  x,
+  y,
+  art,
+  h,
+  ...extra,
 })
 
-export const FEATURES: Feature[] = [
-  // ===== PHASE 1 — OPENING (0 - 2100): teach steer, gather, spread =========
-  // one generous arch to learn compression on
-  w(900, 44, [{ y0: 300, y1: 640, deco: 'arch' }]),
-  // a wide three-opening comb: spread reads clearly here
-  w(1600, 42, [
-    { y0: 120, y1: 340, deco: 'none' },
-    { y0: 430, y1: 640, deco: 'none' },
-    { y0: 730, y1: 860, deco: 'none' },
-  ]),
+export const FEATURES: PieceFeature[] = [
+  // ===== OPENING (0-2100): open flight, then teach ==========================
+  gnd(900, 'grand_arch', 560, { wide: true }), // generous arch — learn Gather
+  top(1600, 'root_tangle', 300),
+  gnd(1600, 'wall_double_arch', 330), // wide low wall + hang above = 2 easy routes
 
-  // ===== PHASE 2 — SEQUENCE 1 (2100 - 4600) ================================
-  // large ruin, three real routes: safe low arch / medium centre / tight
-  // upper opening guarding 10 strays
-  w(2600, 46, [
-    { y0: 110, y1: 235, deco: 'vines' }, // reward: tight, strays behind
-    { y0: 390, y1: 520, deco: 'window' }, // skill: medium
-    { y0: 630, y1: 860, deco: 'arch' }, // safe: large
-  ]),
-  p(3150, 280, 660, 44), // immediately: pillar forces a split
-  w(3650, 46, [{ y0: 400, y1: 545, deco: 'pointedArch' }]), // narrow: gather
-  w(4150, 40, [
-    // three openings: spread works well
-    { y0: 130, y1: 320, deco: 'none' },
-    { y0: 410, y1: 570, deco: 'none' },
-    { y0: 660, y1: 850, deco: 'none' },
-  ]),
-  // ...then a short recovery before the next sequence
+  // ===== EARLY RUINS (2100-4600): route choices =============================
+  // three-route ruin: hang piece / open middle / low arcade
+  top(2600, 'root_tangle', 330),
+  gnd(2600, 'triple_arcade', 400),
+  gnd(3150, 'obelisk_a', 600), // split obelisk
+  gnd(3650, 'gothic_arch', 520), // narrow: gather
+  gnd(4150, 'wall_multi_window', 520), // spread through windows
+  top(4150, 'leaf_strand', 260),
 
-  // ===== PHASE 3 — SEQUENCE 2 (4600 - 7100) ================================
-  // ruined wall with FIVE irregular holes: gather one, spread several, or
-  // take the small upper gap for the optional birds
-  w(5100, 44, [
-    { y0: 90, y1: 190, deco: 'vines' }, // small upper: strays
-    { y0: 265, y1: 400, deco: 'none' },
-    { y0: 455, y1: 620, deco: 'rose' }, // the one large hole
-    { y0: 680, y1: 780, deco: 'none' },
-    { y0: 830, y1: 900, deco: 'none' },
-  ]),
-  p(5700, 300, 620, 38), // two columns demanding steering adjustment
-  p(6150, 420, 780, 38),
-  w(6650, 46, [{ y0: 380, y1: 530, deco: 'pointedArch' }]),
+  // ===== EARLY-MID (4600-7100): variety =====================================
+  gnd(5100, 'double_arch_wall', 420), // divide or commit
+  top(5100, 'leaf_strand', 300),
+  gnd(5700, 'tall_shard', 560), // steering column
+  gnd(6150, 'column_broken', 520, { flipX: true }),
+  top(6150, 'ceiling_pods', 280, { sway: true }),
+  gnd(6650, 'tall_gate', 620), // tall narrow gate — vertical compression
 
-  // ===== PHASE 4 — SEQUENCE 3 (7100 - 9600) ================================
-  w(7500, 46, [{ y0: 420, y1: 550, deco: 'pointedArch' }]), // tight passage
-  // open area with a stray flock (no wall) around 8000
-  w(8450, 44, [{ y0: 330, y1: 470, deco: 'arch' }]), // narrow arch
-  p(8950, 300, 650, 42), // split pillar
-  w(9450, 42, [
-    // route choice again: brittle shortcut low, safe high
-    { y0: 150, y1: 350, deco: 'none' },
-    { y0: 620, y1: 740, deco: 'vines', brittle: true },
-  ]),
+  // ===== MID RUINS (7100-9600): architecture peaks ==========================
+  gnd(7500, 'pointed_arch', 540),
+  mid(8050, 300, 'rose_window_big', 380), // solid tracery — fly around, strays under
+  gnd(8450, 'keyhole_arch', 520),
+  gnd(8950, 'triple_column', 460), // triple split
+  top(8950, 'leaf_strand', 240, { flipX: true }),
+  gnd(9450, 'wall_two_window', 500), // window threading
+  top(9450, 'wisteria_curtain', 300, { brittle: true }), // brittle shortcut above
 
-  // ===== PHASE 5 — CHOICE CLUSTER (9600 - 12000) ===========================
-  // four genuinely different ways through one big ruin
-  w(10200, 44, [
-    { y0: 90, y1: 240, deco: 'rose' }, // C: reward — 14 strays
-    { y0: 340, y1: 440, deco: 'pointedArch' }, // B: narrow twin arches, fast
-    { y0: 480, y1: 580, deco: 'pointedArch' },
-    { y0: 640, y1: 750, deco: 'vines', brittle: true }, // D: brittle shortcut
-    { y0: 800, y1: 900, deco: 'arch' }, // A: safe
-  ]),
-  w(10900, 42, [
-    { y0: 220, y1: 450, deco: 'none' },
-    { y0: 560, y1: 860, deco: 'none' },
-  ]),
-  p(11500, 280, 640, 40),
+  // ===== OVERGROWN RUINS (9600-12000): the organic turn =====================
+  mid(10200, 420, 'thorn_ring', 430), // precise center opening
+  gnd(10200, 'web_column_a', 360),
+  top(10750, 'wisteria_dense', 420, { brittle: true }), // brittle curtain, safe route under
+  gnd(10750, 'wall_circle_bite', 360),
+  gnd(11300, 'organic_arch', 500), // vine arch
+  top(11300, 'ceiling_pods', 300, { sway: true }),
+  gnd(11800, 'lattice_gate', 480), // lattice: spread through small holes
 
-  // ===== PHASE 6 — PRESSURE (12000 - 14400) ================================
-  // Runs at PRESSURE_SPEED, so spacing widens to ~480-600px to hold the
-  // 2s reaction floor. (The previous 330px spacing here was the grinder.)
-  w(12100, 44, [{ y0: 380, y1: 520, deco: 'pointedArch' }]),
-  p(12650, 260, 620, 38),
-  w(13200, 40, [
-    { y0: 110, y1: 300, deco: 'none' },
-    { y0: 390, y1: 570, deco: 'none' },
-    { y0: 660, y1: 850, deco: 'none' },
-  ]),
-  w(13800, 44, [{ y0: 360, y1: 510, deco: 'arch' }]),
+  // ===== WIND HEIGHTS (12000-14400): pressure + wind ========================
+  gnd(12300, 'colonnade_arch', 480),
+  top(12300, 'root_tangle', 280, { flipX: true, sway: true }),
+  gnd(12900, 'obelisk_b', 580), // split in crosswind
+  mid(13500, 340, 'web_net', 360, { brittle: true, sway: true }), // brittle net high
+  gnd(13500, 'wall_four_arch', 380), // arch row low
+  gnd(14100, 'twin_arch', 440),
 
-  // ===== PHASE 7 — RAPID MORPH CHAIN (14400 - 17400) =======================
-  // alternating tight/wide so neither formation can be held through it
-  w(14500, 46, [{ y0: 400, y1: 540, deco: 'pointedArch' }]),
-  w(15100, 40, [
-    { y0: 120, y1: 310, deco: 'none' },
-    { y0: 400, y1: 580, deco: 'none' },
-    { y0: 670, y1: 860, deco: 'none' },
-  ]),
-  w(15700, 46, [{ y0: 300, y1: 430, deco: 'window' }]),
-  p(16300, 320, 700, 40),
-  w(16850, 44, [
-    { y0: 200, y1: 330, deco: 'vines' },
-    { y0: 560, y1: 780, deco: 'arch' },
-  ]),
+  // ===== RAPID MORPH (14400-17400) ==========================================
+  gnd(14700, 'gothic_arch', 500, { flipX: true }),
+  gnd(15300, 'wall_multi_window', 560),
+  gnd(15900, 'arch_fragment', 460),
+  top(15900, 'root_tangle', 280, { flipX: true }),
+  gnd(16500, 'triple_column', 480, { flipX: true }),
+  top(17000, 'thorn_arc', 320, { sway: true }),
+  gnd(17000, 'wall_arch_window', 420),
 
-  // ===== PHASE 8 — SECOND CHOICE CLUSTER (17400 - 20400) ===================
-  w(17500, 44, [
-    { y0: 100, y1: 210, deco: 'rose' }, // reward, 12 strays
-    { y0: 420, y1: 530, deco: 'pointedArch' }, // skill
-    { y0: 690, y1: 900, deco: 'arch' }, // safe
-  ]),
-  p(18100, 260, 600, 42),
-  w(18700, 42, [{ y0: 430, y1: 600, deco: 'none' }]),
-  w(19300, 40, [
-    { y0: 150, y1: 330, deco: 'none' },
-    { y0: 430, y1: 560, deco: 'vines', brittle: true },
-    { y0: 680, y1: 860, deco: 'none' },
-  ]),
-  w(19950, 46, [{ y0: 360, y1: 500, deco: 'pointedArch' }]),
+  // ===== SECOND CHOICE CLUSTER (17400-20400) ================================
+  top(17700, 'wisteria_arch', 340),
+  gnd(17700, 'aqueduct_slope', 420), // slope + organic above: 3 lanes
+  gnd(18300, 'column_ring', 580, { flipX: true }),
+  gnd(18900, 'oval_window_wall', 440),
+  mid(19500, 380, 'branch_cluster', 300, { sway: true }),
+  gnd(19500, 'wall_double_arch', 340),
+  gnd(20100, 'bent_arch', 500),
 
-  // ===== PHASE 9 — GAUNTLET (20400 - 23200) ================================
-  p(20500, 280, 640, 38),
-  w(21100, 42, [
-    { y0: 130, y1: 300, deco: 'none' },
-    { y0: 400, y1: 540, deco: 'window' },
-    { y0: 650, y1: 850, deco: 'none' },
-  ]),
-  w(21750, 46, [{ y0: 420, y1: 555, deco: 'pointedArch' }]),
-  p(22350, 240, 580, 40),
-  w(22950, 44, [
-    { y0: 180, y1: 320, deco: 'vines' },
-    { y0: 520, y1: 760, deco: 'arch' },
-  ]),
+  // ===== GAUNTLET (20400-23200) =============================================
+  gnd(20700, 'column_pair', 520),
+  top(20700, 'ceiling_pods', 260, { sway: true, flipX: true }),
+  gnd(21300, 'gate_double', 460), // double gate split
+  mid(21900, 320, 'wheel_diagonal', 360), // diagonal wheel high
+  gnd(21900, 'wall_arch_inset', 380, { flipX: true }),
+  gnd(22500, 'tall_gate', 580, { flipX: true }),
+  top(23000, 'wisteria_curtain', 360, { brittle: true }),
+  gnd(23000, 'triple_window_wall', 420),
 
-  // ===== PHASE 10 — FINAL FLOW (23200 - 25400) =============================
-  w(23600, 46, [{ y0: 400, y1: 540, deco: 'pointedArch' }]), // gather, thread
-  w(24250, 36, [
-    // spread through several openings
-    { y0: 90, y1: 230, deco: 'window' },
-    { y0: 320, y1: 440, deco: 'window' },
-    { y0: 530, y1: 650, deco: 'window' },
-    { y0: 740, y1: 870, deco: 'window' },
-  ]),
-  p(25000, 200, 780, 64, true), // split around a huge tower
+  // ===== FINAL FLOW (23200-25400) ===========================================
+  gnd(23600, 'pointed_arch', 520, { flipX: true }), // gather, thread
+  gnd(24250, 'wall_multi_window', 600), // spread through windows
+  gnd(25000, 'aqueduct_run', 520, { wide: true }), // huge final split — the aqueduct run
+  top(25000, 'root_tangle', 300, { sway: true }),
   // then open sky to the roost
 ]
 
+export const WIND_ZONES: WindZone[] = [
+  { x0: 12000, x1: 13300, vx: -52, vy: 0, kind: 'cross' },
+  { x0: 13500, x1: 14400, vx: -30, vy: -46, kind: 'updraft' },
+  { x0: 20400, x1: 21600, vx: -46, vy: 34, kind: 'down' },
+]
+
 export const STRAYS: StrayDef[] = [
-  { x: 1700, y: 230, count: 6 }, // phase 1 comb
-  { x: 2860, y: 170, count: 10 }, // seq 1 reward route
-  { x: 4350, y: 720, count: 5 }, // seq 1 spread openings
-  { x: 5260, y: 140, count: 12 }, // seq 2 small upper gap
-  { x: 5950, y: 200, count: 6 }, // seq 2 between the columns
-  { x: 8000, y: 430, count: 8 }, // seq 3 open area
-  { x: 9600, y: 690, count: 7 }, // beyond the brittle shortcut
-  { x: 10380, y: 165, count: 14 }, // choice cluster reward route
+  { x: 1700, y: 230, count: 6 },
+  { x: 2860, y: 170, count: 10 }, // above the early ruin
+  { x: 4350, y: 720, count: 5 },
+  { x: 5260, y: 140, count: 12 }, // over the double-arch wall
+  { x: 5950, y: 200, count: 6 },
+  { x: 8050, y: 620, count: 8 }, // beneath the rose window
+  { x: 9650, y: 150, count: 7 }, // beyond the brittle wisteria
+  { x: 10200, y: 420, count: 14 }, // INSIDE the thorn ring's reward line
   { x: 11000, y: 330, count: 6 },
-  { x: 13250, y: 480, count: 7 }, // pressure comb
-  { x: 16900, y: 265, count: 6 }, // rapid-morph chain
-  { x: 17580, y: 155, count: 12 }, // second cluster reward route
-  { x: 19360, y: 495, count: 8 }, // beyond the second brittle shortcut
-  { x: 21160, y: 470, count: 7 }, // gauntlet
+  { x: 13350, y: 480, count: 7 }, // mid-wind
+  { x: 16900, y: 265, count: 6 },
+  { x: 19360, y: 495, count: 8 },
   { x: 23010, y: 250, count: 9 },
   { x: 24300, y: 160, count: 10 }, // final optional flock
 ]
@@ -239,41 +197,53 @@ export const PROMPTS: PromptDef[] = [
   { key: 'spread', x: 1250, text: 'hold SHIFT — spread' },
 ]
 
-/** Build collidable Obstacle[] from FEATURES. */
-export function buildObstacles(): Obstacle[] {
-  const obstacles: Obstacle[] = []
-  for (const f of FEATURES) {
-    if (f.type === 'wall') {
-      const edges: number[] = [0]
-      for (const o of f.openings) edges.push(o.y0, o.y1)
-      edges.push(960)
-      for (let i = 0; i < edges.length; i += 2) {
-        const y0 = edges[i]
-        const y1 = edges[i + 1]
-        if (y1 - y0 < 8) continue
-        obstacles.push({ shape: 'rect', kind: 'solid', x: f.x, y: (y0 + y1) / 2, hw: f.hw, hh: (y1 - y0) / 2 })
-      }
-      for (const o of f.openings) {
-        if (!o.brittle) continue
-        obstacles.push({ shape: 'rect', kind: 'brittle', x: f.x, y: (o.y0 + o.y1) / 2, hw: f.hw, hh: (o.y1 - o.y0) / 2 })
-      }
-    } else {
-      const capR = f.hw * (f.huge ? 1.15 : 1.45)
-      obstacles.push({ shape: 'circle', kind: 'solid', x: f.x, y: f.top, r: capR })
-      obstacles.push({
-        shape: 'rect',
-        kind: 'solid',
-        x: f.x,
-        y: (f.top + 30 + f.bottom) / 2,
-        hw: f.hw,
-        hh: (f.bottom - f.top - 30) / 2,
-      })
-    }
-  }
-  return obstacles
+/**
+ * Final scale for a placed piece: the requested display height, clamped so the
+ * displayed width never exceeds ~520px (unless the piece opts out via wide).
+ * Used by BOTH sprite placement and collider generation so they always agree.
+ */
+export function pieceScale(f: PieceFeature): number {
+  const art = ART[f.art]
+  let s = f.h / art.h
+  const maxW = f.wide ? 10000 : 520
+  if (art.w * s > maxW) s = maxW / art.w
+  // never blow small fragments up into blur — cap the upscale
+  return Math.min(s, 2.2)
 }
 
-/** Dev assertion: no obstacle may sit closer than the 2s reaction floor. */
+/** World-space colliders for a placed piece. */
+export function pieceObstacles(f: PieceFeature): Obstacle[] {
+  const art = ART[f.art]
+  const s = pieceScale(f)
+  const w = art.w * s
+  const tlx = f.x - w / 2
+  const tly = f.y - f.h / 2
+  const kind = f.brittle || art.family === 'organic-brittle' ? 'brittle' : 'solid'
+  return art.colliders.map((r) => {
+    const rx = f.flipX ? art.w - r.x - r.w : r.x
+    return {
+      shape: 'rect' as const,
+      kind: kind as 'solid' | 'brittle',
+      x: tlx + (rx + r.w / 2) * s,
+      y: tly + (r.y + r.h / 2) * s,
+      hw: (r.w * s) / 2,
+      hh: (r.h * s) / 2,
+    }
+  })
+}
+
+export function buildObstacles(): { obstacles: Obstacle[]; byFeature: Map<PieceFeature, Obstacle[]> } {
+  const obstacles: Obstacle[] = []
+  const byFeature = new Map<PieceFeature, Obstacle[]>()
+  for (const f of FEATURES) {
+    const obs = pieceObstacles(f)
+    byFeature.set(f, obs)
+    obstacles.push(...obs)
+  }
+  return { obstacles, byFeature }
+}
+
+/** Dev assertion: no obstacle event closer than the 2s reaction floor. */
 export function pacingReport(): { gaps: number[]; violations: string[] } {
   const xs = [...new Set(FEATURES.map((f) => f.x))].sort((a, b) => a - b)
   const gaps: number[] = []

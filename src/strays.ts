@@ -25,6 +25,7 @@ export class StrayGroup {
   private scene: Phaser.Scene
   private joinTimer = 0
   private tint: number
+  private glow: Phaser.GameObjects.Image | null = null
 
   constructor(scene: Phaser.Scene, x: number, y: number, count: number, tint = 0x2a2038) {
     this.scene = scene
@@ -32,10 +33,12 @@ export class StrayGroup {
     this.y = y
     this.tint = tint
     this.remaining = count
+    // warm glow marker: signals "optional birds here" from a distance
+    this.glow = scene.add.image(x, y, 'stray_glow').setDisplaySize(88, 88).setAlpha(0.45).setDepth(1.5)
+    scene.tweens.add({ targets: this.glow, alpha: 0.3, scale: this.glow.scale * 1.15, duration: 1600, yoyo: true, repeat: -1 })
     for (let i = 0; i < count; i++) {
       const sprite = scene.add.image(x, y, 'bird-mid')
-      sprite.setScale(0.3)
-      sprite.setTint(tint)
+      sprite.setScale(0.24)
       sprite.setAlpha(0.85)
       this.birds.push({
         sprite,
@@ -102,18 +105,25 @@ export class StrayGroup {
       }
     }
     this.remaining = this.birds.length
+    if (this.remaining === 0 && this.glow) {
+      const g = this.glow
+      this.glow = null
+      this.scene.tweens.add({ targets: g, alpha: 0, duration: 700, onComplete: () => g.destroy() })
+    }
     return joined
   }
 
   reset(count: number): void {
     // re-populate after a checkpoint restart
+    if (!this.glow) {
+      this.glow = this.scene.add.image(this.x, this.y, 'stray_glow').setDisplaySize(88, 88).setAlpha(0.45).setDepth(1.5)
+    }
     for (const b of this.birds) b.sprite.destroy()
     this.birds = []
     this.joinTimer = 0
     for (let i = 0; i < count; i++) {
       const sprite = this.scene.add.image(this.x, this.y, 'bird-mid')
-      sprite.setScale(0.3)
-      sprite.setTint(this.tint)
+      sprite.setScale(0.24)
       sprite.setAlpha(0.85)
       this.birds.push({
         sprite,
@@ -130,5 +140,7 @@ export class StrayGroup {
   destroy(): void {
     for (const b of this.birds) b.sprite.destroy()
     this.birds = []
+    this.glow?.destroy()
+    this.glow = null
   }
 }

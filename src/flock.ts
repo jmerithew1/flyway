@@ -97,18 +97,9 @@ const BIRD_PX = 27
  * stays the right size regardless of what resolution the SVG was rasterized at.
  */
 function birdScale(scene: Phaser.Scene): number {
-  const tex = scene.textures.get('bird-mid')?.getSourceImage() as { width?: number } | undefined
-  return BIRD_PX / (tex?.width || 128)
-}
-
-/** ±8%-ish per-channel tint variation so the flock isn't one flat stamp. */
-function varyTint(base: number): number {
-  const r = (base >> 16) & 0xff
-  const g = (base >> 8) & 0xff
-  const b = base & 0xff
-  const v = () => 0.92 + Math.random() * 0.18
-  const clamp8 = (n: number) => Math.max(0, Math.min(255, Math.round(n)))
-  return (clamp8(r * v()) << 16) | (clamp8(g * v()) << 8) | clamp8(b * v())
+  // poses are normalized onto a 128px canvas; the mid pose's wingspan is ~116px
+  void scene
+  return BIRD_PX / 116
 }
 
 export class Flock {
@@ -144,7 +135,6 @@ export class Flock {
     const sprite = this.scene.add.image(x, y, 'bird-mid')
     const depth = rand(0.75, 1.15)
     sprite.setScale(this.scale * depth)
-    sprite.setTint(varyTint(this.tint))
     sprite.setAlpha(0.82 + (depth - 0.75) * 0.45)
     const bird: Bird = {
       x,

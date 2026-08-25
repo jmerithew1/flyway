@@ -1,0 +1,12111 @@
+[
+ {
+  "id": "ancient_ruins_bg",
+  "category": "environment",
+  "file": "assets/processed/environment/ancient_ruins_bg.png",
+  "w": 1672,
+  "h": 941,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "ethereal_violet_ruins_panorama__00",
+  "category": "environment",
+  "file": "assets/processed/environment/ethereal_violet_ruins_panorama__00.png",
+  "w": 1060,
+  "h": 340,
+  "colliders": [
+   {
+    "x": 146,
+    "y": 0,
+    "w": 37,
+    "h": 264
+   },
+   {
+    "x": 110,
+    "y": 76,
+    "w": 37,
+    "h": 189
+   },
+   {
+    "x": 183,
+    "y": 113,
+    "w": 37,
+    "h": 151
+   },
+   {
+    "x": 292,
+    "y": 113,
+    "w": 73,
+    "h": 189
+   },
+   {
+    "x": 439,
+    "y": 113,
+    "w": 37,
+    "h": 227
+   },
+   {
+    "x": 512,
+    "y": 113,
+    "w": 37,
+    "h": 227
+   },
+   {
+    "x": 37,
+    "y": 151,
+    "w": 73,
+    "h": 113
+   },
+   {
+    "x": 219,
+    "y": 151,
+    "w": 73,
+    "h": 113
+   },
+   {
+    "x": 366,
+    "y": 189,
+    "w": 73,
+    "h": 113
+   },
+   {
+    "x": 475,
+    "y": 189,
+    "w": 37,
+    "h": 151
+   },
+   {
+    "x": 731,
+    "y": 189,
+    "w": 183,
+    "h": 38
+   },
+   {
+    "x": 548,
+    "y": 227,
+    "w": 183,
+    "h": 113
+   },
+   {
+    "x": 768,
+    "y": 227,
+    "w": 219,
+    "h": 76
+   },
+   {
+    "x": 731,
+    "y": 264,
+    "w": 37,
+    "h": 76
+   }
+  ],
+  "openings": [
+   {
+    "x": 332,
+    "y": 152,
+    "w": 112,
+    "h": 36
+   },
+   {
+    "x": 712,
+    "y": 232,
+    "w": 80,
+    "h": 28
+   }
+  ]
+ },
+ {
+  "id": "ethereal_violet_ruins_panorama__01",
+  "category": "environment",
+  "file": "assets/processed/environment/ethereal_violet_ruins_panorama__01.png",
+  "w": 96,
+  "h": 28,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 60,
+    "h": 28
+   },
+   {
+    "x": 72,
+    "y": 14,
+    "w": 24,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ethereal_violet_ruins_panorama__02",
+  "category": "environment",
+  "file": "assets/processed/environment/ethereal_violet_ruins_panorama__02.png",
+  "w": 674,
+  "h": 340,
+  "colliders": [
+   {
+    "x": 187,
+    "y": 0,
+    "w": 37,
+    "h": 340
+   },
+   {
+    "x": 337,
+    "y": 76,
+    "w": 37,
+    "h": 264
+   },
+   {
+    "x": 449,
+    "y": 76,
+    "w": 75,
+    "h": 189
+   },
+   {
+    "x": 412,
+    "y": 113,
+    "w": 37,
+    "h": 151
+   },
+   {
+    "x": 150,
+    "y": 151,
+    "w": 37,
+    "h": 189
+   },
+   {
+    "x": 374,
+    "y": 151,
+    "w": 37,
+    "h": 113
+   },
+   {
+    "x": 562,
+    "y": 151,
+    "w": 75,
+    "h": 113
+   },
+   {
+    "x": 262,
+    "y": 189,
+    "w": 75,
+    "h": 151
+   },
+   {
+    "x": 524,
+    "y": 189,
+    "w": 37,
+    "h": 76
+   },
+   {
+    "x": 225,
+    "y": 227,
+    "w": 37,
+    "h": 113
+   },
+   {
+    "x": 112,
+    "y": 264,
+    "w": 37,
+    "h": 76
+   },
+   {
+    "x": 37,
+    "y": 302,
+    "w": 75,
+    "h": 38
+   }
+  ],
+  "openings": [
+   {
+    "x": 364,
+    "y": 116,
+    "w": 64,
+    "h": 36
+   },
+   {
+    "x": 216,
+    "y": 184,
+    "w": 56,
+    "h": 36
+   }
+  ]
+ },
+ {
+  "id": "ethereal_violet_ruins_panorama__03",
+  "category": "environment",
+  "file": "assets/processed/environment/ethereal_violet_ruins_panorama__03.png",
+  "w": 104,
+  "h": 36,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 52,
+    "h": 36
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 13,
+    "h": 24
+   },
+   {
+    "x": 65,
+    "y": 12,
+    "w": 26,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ethereal_violet_ruins_panorama__04",
+  "category": "environment",
+  "file": "assets/processed/environment/ethereal_violet_ruins_panorama__04.png",
+  "w": 28,
+  "h": 80,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 14,
+    "h": 80
+   },
+   {
+    "x": 14,
+    "y": 27,
+    "w": 14,
+    "h": 27
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ethereal_violet_ruins_panorama__05",
+  "category": "environment",
+  "file": "assets/processed/environment/ethereal_violet_ruins_panorama__05.png",
+  "w": 922,
+  "h": 288,
+  "colliders": [
+   {
+    "x": 340,
+    "y": 48,
+    "w": 49,
+    "h": 144
+   },
+   {
+    "x": 0,
+    "y": 96,
+    "w": 97,
+    "h": 144
+   },
+   {
+    "x": 146,
+    "y": 96,
+    "w": 49,
+    "h": 144
+   },
+   {
+    "x": 243,
+    "y": 96,
+    "w": 97,
+    "h": 96
+   },
+   {
+    "x": 97,
+    "y": 144,
+    "w": 49,
+    "h": 96
+   },
+   {
+    "x": 194,
+    "y": 144,
+    "w": 49,
+    "h": 96
+   },
+   {
+    "x": 582,
+    "y": 144,
+    "w": 49,
+    "h": 144
+   },
+   {
+    "x": 485,
+    "y": 192,
+    "w": 97,
+    "h": 96
+   },
+   {
+    "x": 631,
+    "y": 192,
+    "w": 243,
+    "h": 48
+   },
+   {
+    "x": 631,
+    "y": 240,
+    "w": 194,
+    "h": 48
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ethereal_violet_ruins_panorama__06",
+  "category": "environment",
+  "file": "assets/processed/environment/ethereal_violet_ruins_panorama__06.png",
+  "w": 766,
+  "h": 256,
+  "colliders": [
+   {
+    "x": 584,
+    "y": 37,
+    "w": 73,
+    "h": 146
+   },
+   {
+    "x": 511,
+    "y": 73,
+    "w": 73,
+    "h": 110
+   },
+   {
+    "x": 182,
+    "y": 110,
+    "w": 73,
+    "h": 146
+   },
+   {
+    "x": 365,
+    "y": 110,
+    "w": 146,
+    "h": 73
+   },
+   {
+    "x": 657,
+    "y": 110,
+    "w": 36,
+    "h": 73
+   },
+   {
+    "x": 109,
+    "y": 146,
+    "w": 73,
+    "h": 110
+   },
+   {
+    "x": 255,
+    "y": 146,
+    "w": 36,
+    "h": 110
+   },
+   {
+    "x": 328,
+    "y": 146,
+    "w": 36,
+    "h": 110
+   },
+   {
+    "x": 693,
+    "y": 146,
+    "w": 73,
+    "h": 37
+   },
+   {
+    "x": 36,
+    "y": 183,
+    "w": 73,
+    "h": 37
+   },
+   {
+    "x": 292,
+    "y": 183,
+    "w": 36,
+    "h": 73
+   },
+   {
+    "x": 365,
+    "y": 183,
+    "w": 36,
+    "h": 73
+   },
+   {
+    "x": 401,
+    "y": 219,
+    "w": 73,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__00",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__00.png",
+  "w": 116,
+  "h": 152,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 13,
+    "w": 13,
+    "h": 25
+   },
+   {
+    "x": 52,
+    "y": 25,
+    "w": 13,
+    "h": 101
+   },
+   {
+    "x": 64,
+    "y": 38,
+    "w": 13,
+    "h": 89
+   },
+   {
+    "x": 77,
+    "y": 63,
+    "w": 13,
+    "h": 63
+   },
+   {
+    "x": 90,
+    "y": 101,
+    "w": 26,
+    "h": 13
+   },
+   {
+    "x": 26,
+    "y": 114,
+    "w": 26,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__01",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__01.png",
+  "w": 112,
+  "h": 60,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 12,
+    "w": 37,
+    "h": 36
+   },
+   {
+    "x": 75,
+    "y": 24,
+    "w": 25,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__02",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__02.png",
+  "w": 111,
+  "h": 91,
+  "colliders": [
+   {
+    "x": 49,
+    "y": 0,
+    "w": 49,
+    "h": 26
+   },
+   {
+    "x": 25,
+    "y": 13,
+    "w": 25,
+    "h": 13
+   },
+   {
+    "x": 62,
+    "y": 26,
+    "w": 25,
+    "h": 39
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__03",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__03.png",
+  "w": 104,
+  "h": 140,
+  "colliders": [
+   {
+    "x": 52,
+    "y": 13,
+    "w": 13,
+    "h": 115
+   },
+   {
+    "x": 39,
+    "y": 25,
+    "w": 13,
+    "h": 102
+   },
+   {
+    "x": 65,
+    "y": 38,
+    "w": 13,
+    "h": 89
+   },
+   {
+    "x": 13,
+    "y": 115,
+    "w": 26,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__04",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__04.png",
+  "w": 112,
+  "h": 64,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 0,
+    "w": 12,
+    "h": 51
+   },
+   {
+    "x": 50,
+    "y": 13,
+    "w": 25,
+    "h": 38
+   },
+   {
+    "x": 75,
+    "y": 26,
+    "w": 12,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__05",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__05.png",
+  "w": 100,
+  "h": 86,
+  "colliders": [
+   {
+    "x": 38,
+    "y": 0,
+    "w": 50,
+    "h": 37
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 38,
+    "h": 12
+   },
+   {
+    "x": 50,
+    "y": 37,
+    "w": 38,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__06",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__06.png",
+  "w": 128,
+  "h": 124,
+  "colliders": [
+   {
+    "x": 51,
+    "y": 12,
+    "w": 26,
+    "h": 12
+   },
+   {
+    "x": 64,
+    "y": 25,
+    "w": 26,
+    "h": 62
+   },
+   {
+    "x": 90,
+    "y": 50,
+    "w": 13,
+    "h": 37
+   },
+   {
+    "x": 51,
+    "y": 74,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__07",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__07.png",
+  "w": 104,
+  "h": 54,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 0,
+    "w": 26,
+    "h": 14
+   },
+   {
+    "x": 39,
+    "y": 14,
+    "w": 52,
+    "h": 14
+   },
+   {
+    "x": 26,
+    "y": 27,
+    "w": 52,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__08",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__08.png",
+  "w": 100,
+  "h": 92,
+  "colliders": [
+   {
+    "x": 38,
+    "y": 0,
+    "w": 50,
+    "h": 26
+   },
+   {
+    "x": 50,
+    "y": 26,
+    "w": 25,
+    "h": 39
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__09",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__09.png",
+  "w": 112,
+  "h": 116,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 13,
+    "w": 25,
+    "h": 77
+   },
+   {
+    "x": 25,
+    "y": 26,
+    "w": 12,
+    "h": 39
+   },
+   {
+    "x": 62,
+    "y": 39,
+    "w": 12,
+    "h": 52
+   },
+   {
+    "x": 75,
+    "y": 52,
+    "w": 25,
+    "h": 13
+   },
+   {
+    "x": 12,
+    "y": 90,
+    "w": 37,
+    "h": 13
+   },
+   {
+    "x": 0,
+    "y": 103,
+    "w": 25,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__10",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__10.png",
+  "w": 116,
+  "h": 56,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 0,
+    "w": 13,
+    "h": 42
+   },
+   {
+    "x": 52,
+    "y": 14,
+    "w": 26,
+    "h": 42
+   },
+   {
+    "x": 13,
+    "y": 28,
+    "w": 26,
+    "h": 14
+   },
+   {
+    "x": 77,
+    "y": 28,
+    "w": 26,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__11",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__11.png",
+  "w": 112,
+  "h": 84,
+  "colliders": [
+   {
+    "x": 50,
+    "y": 0,
+    "w": 50,
+    "h": 24
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 37,
+    "h": 12
+   },
+   {
+    "x": 50,
+    "y": 24,
+    "w": 37,
+    "h": 48
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__12",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__12.png",
+  "w": 112,
+  "h": 136,
+  "colliders": [
+   {
+    "x": 50,
+    "y": 12,
+    "w": 25,
+    "h": 99
+   },
+   {
+    "x": 37,
+    "y": 37,
+    "w": 12,
+    "h": 74
+   },
+   {
+    "x": 75,
+    "y": 74,
+    "w": 25,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__13",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__13.png",
+  "w": 108,
+  "h": 68,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 12,
+    "h": 27
+   },
+   {
+    "x": 24,
+    "y": 14,
+    "w": 36,
+    "h": 14
+   },
+   {
+    "x": 36,
+    "y": 27,
+    "w": 48,
+    "h": 27
+   },
+   {
+    "x": 36,
+    "y": 54,
+    "w": 36,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__14",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__14.png",
+  "w": 108,
+  "h": 99,
+  "colliders": [
+   {
+    "x": 60,
+    "y": 0,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 36,
+    "y": 12,
+    "w": 48,
+    "h": 25
+   },
+   {
+    "x": 48,
+    "y": 37,
+    "w": 36,
+    "h": 25
+   },
+   {
+    "x": 84,
+    "y": 50,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 60,
+    "y": 62,
+    "w": 24,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__15",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__15.png",
+  "w": 112,
+  "h": 112,
+  "colliders": [
+   {
+    "x": 50,
+    "y": 12,
+    "w": 25,
+    "h": 75
+   },
+   {
+    "x": 37,
+    "y": 25,
+    "w": 12,
+    "h": 62
+   },
+   {
+    "x": 75,
+    "y": 25,
+    "w": 12,
+    "h": 62
+   },
+   {
+    "x": 87,
+    "y": 50,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 12,
+    "y": 75,
+    "w": 25,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__16",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__16.png",
+  "w": 104,
+  "h": 68,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 26,
+    "h": 27
+   },
+   {
+    "x": 39,
+    "y": 14,
+    "w": 26,
+    "h": 41
+   },
+   {
+    "x": 26,
+    "y": 27,
+    "w": 13,
+    "h": 27
+   },
+   {
+    "x": 65,
+    "y": 27,
+    "w": 26,
+    "h": 14
+   },
+   {
+    "x": 13,
+    "y": 41,
+    "w": 13,
+    "h": 27
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__17",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__17.png",
+  "w": 96,
+  "h": 87,
+  "colliders": [
+   {
+    "x": 36,
+    "y": 0,
+    "w": 48,
+    "h": 25
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 24,
+    "y": 25,
+    "w": 48,
+    "h": 12
+   },
+   {
+    "x": 36,
+    "y": 37,
+    "w": 36,
+    "h": 25
+   },
+   {
+    "x": 48,
+    "y": 62,
+    "w": 24,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__18",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__18.png",
+  "w": 148,
+  "h": 143,
+  "colliders": [
+   {
+    "x": 62,
+    "y": 13,
+    "w": 25,
+    "h": 13
+   },
+   {
+    "x": 74,
+    "y": 26,
+    "w": 25,
+    "h": 26
+   },
+   {
+    "x": 99,
+    "y": 39,
+    "w": 12,
+    "h": 52
+   },
+   {
+    "x": 86,
+    "y": 52,
+    "w": 12,
+    "h": 39
+   },
+   {
+    "x": 111,
+    "y": 52,
+    "w": 12,
+    "h": 39
+   },
+   {
+    "x": 74,
+    "y": 78,
+    "w": 12,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__19",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__19.png",
+  "w": 104,
+  "h": 52,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 52,
+    "h": 13
+   },
+   {
+    "x": 39,
+    "y": 13,
+    "w": 52,
+    "h": 13
+   },
+   {
+    "x": 26,
+    "y": 26,
+    "w": 52,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__20",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__20.png",
+  "w": 104,
+  "h": 95,
+  "colliders": [
+   {
+    "x": 52,
+    "y": 0,
+    "w": 39,
+    "h": 54
+   },
+   {
+    "x": 26,
+    "y": 14,
+    "w": 26,
+    "h": 14
+   },
+   {
+    "x": 65,
+    "y": 54,
+    "w": 26,
+    "h": 27
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__21",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__21.png",
+  "w": 112,
+  "h": 140,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 13,
+    "w": 25,
+    "h": 102
+   },
+   {
+    "x": 25,
+    "y": 38,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 62,
+    "y": 38,
+    "w": 12,
+    "h": 76
+   },
+   {
+    "x": 75,
+    "y": 76,
+    "w": 25,
+    "h": 25
+   },
+   {
+    "x": 25,
+    "y": 102,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 0,
+    "y": 115,
+    "w": 25,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__22",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__22.png",
+  "w": 112,
+  "h": 63,
+  "colliders": [
+   {
+    "x": 25,
+    "y": 0,
+    "w": 12,
+    "h": 63
+   },
+   {
+    "x": 37,
+    "y": 13,
+    "w": 25,
+    "h": 50
+   },
+   {
+    "x": 62,
+    "y": 25,
+    "w": 12,
+    "h": 38
+   },
+   {
+    "x": 75,
+    "y": 38,
+    "w": 25,
+    "h": 13
+   },
+   {
+    "x": 0,
+    "y": 50,
+    "w": 25,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__23",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__23.png",
+  "w": 96,
+  "h": 88,
+  "colliders": [
+   {
+    "x": 36,
+    "y": 0,
+    "w": 48,
+    "h": 63
+   },
+   {
+    "x": 0,
+    "y": 13,
+    "w": 36,
+    "h": 13
+   },
+   {
+    "x": 48,
+    "y": 63,
+    "w": 36,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__24",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__24.png",
+  "w": 124,
+  "h": 140,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 13,
+    "w": 25,
+    "h": 13
+   },
+   {
+    "x": 50,
+    "y": 25,
+    "w": 25,
+    "h": 13
+   },
+   {
+    "x": 62,
+    "y": 38,
+    "w": 25,
+    "h": 64
+   },
+   {
+    "x": 87,
+    "y": 51,
+    "w": 12,
+    "h": 38
+   },
+   {
+    "x": 37,
+    "y": 89,
+    "w": 25,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__25",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__25.png",
+  "w": 116,
+  "h": 51,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 13,
+    "w": 39,
+    "h": 38
+   },
+   {
+    "x": 77,
+    "y": 26,
+    "w": 26,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__26",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__26.png",
+  "w": 100,
+  "h": 86,
+  "colliders": [
+   {
+    "x": 38,
+    "y": 0,
+    "w": 50,
+    "h": 25
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 25,
+    "h": 12
+   },
+   {
+    "x": 50,
+    "y": 25,
+    "w": 38,
+    "h": 25
+   },
+   {
+    "x": 62,
+    "y": 49,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__27",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__27.png",
+  "w": 116,
+  "h": 164,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 13,
+    "w": 13,
+    "h": 50
+   },
+   {
+    "x": 39,
+    "y": 25,
+    "w": 13,
+    "h": 63
+   },
+   {
+    "x": 52,
+    "y": 38,
+    "w": 13,
+    "h": 88
+   },
+   {
+    "x": 64,
+    "y": 63,
+    "w": 13,
+    "h": 50
+   },
+   {
+    "x": 77,
+    "y": 76,
+    "w": 13,
+    "h": 38
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__28",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__28.png",
+  "w": 116,
+  "h": 80,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 13,
+    "w": 39,
+    "h": 13
+   },
+   {
+    "x": 39,
+    "y": 27,
+    "w": 52,
+    "h": 13
+   },
+   {
+    "x": 52,
+    "y": 40,
+    "w": 52,
+    "h": 13
+   },
+   {
+    "x": 26,
+    "y": 53,
+    "w": 39,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__29",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__29.png",
+  "w": 104,
+  "h": 97,
+  "colliders": [
+   {
+    "x": 52,
+    "y": 0,
+    "w": 39,
+    "h": 48
+   },
+   {
+    "x": 26,
+    "y": 12,
+    "w": 26,
+    "h": 12
+   },
+   {
+    "x": 65,
+    "y": 48,
+    "w": 26,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__30",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__30.png",
+  "w": 108,
+  "h": 128,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 13,
+    "w": 24,
+    "h": 64
+   },
+   {
+    "x": 48,
+    "y": 26,
+    "w": 12,
+    "h": 77
+   },
+   {
+    "x": 60,
+    "y": 38,
+    "w": 12,
+    "h": 64
+   },
+   {
+    "x": 72,
+    "y": 64,
+    "w": 24,
+    "h": 13
+   },
+   {
+    "x": 36,
+    "y": 77,
+    "w": 12,
+    "h": 26
+   },
+   {
+    "x": 24,
+    "y": 90,
+    "w": 12,
+    "h": 26
+   },
+   {
+    "x": 0,
+    "y": 102,
+    "w": 24,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__31",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__31.png",
+  "w": 116,
+  "h": 56,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 0,
+    "w": 39,
+    "h": 14
+   },
+   {
+    "x": 39,
+    "y": 14,
+    "w": 52,
+    "h": 28
+   },
+   {
+    "x": 0,
+    "y": 42,
+    "w": 26,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__32",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__32.png",
+  "w": 108,
+  "h": 88,
+  "colliders": [
+   {
+    "x": 48,
+    "y": 0,
+    "w": 48,
+    "h": 13
+   },
+   {
+    "x": 12,
+    "y": 13,
+    "w": 72,
+    "h": 13
+   },
+   {
+    "x": 36,
+    "y": 25,
+    "w": 48,
+    "h": 13
+   },
+   {
+    "x": 48,
+    "y": 38,
+    "w": 48,
+    "h": 25
+   },
+   {
+    "x": 60,
+    "y": 63,
+    "w": 36,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__33",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__33.png",
+  "w": 132,
+  "h": 119,
+  "colliders": [
+   {
+    "x": 72,
+    "y": 13,
+    "w": 24,
+    "h": 79
+   },
+   {
+    "x": 60,
+    "y": 26,
+    "w": 12,
+    "h": 66
+   },
+   {
+    "x": 96,
+    "y": 53,
+    "w": 12,
+    "h": 40
+   },
+   {
+    "x": 36,
+    "y": 79,
+    "w": 24,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__34",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__34.png",
+  "w": 112,
+  "h": 48,
+  "colliders": [
+   {
+    "x": 25,
+    "y": 0,
+    "w": 37,
+    "h": 24
+   },
+   {
+    "x": 62,
+    "y": 12,
+    "w": 37,
+    "h": 24
+   },
+   {
+    "x": 37,
+    "y": 24,
+    "w": 25,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__35",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__35.png",
+  "w": 100,
+  "h": 92,
+  "colliders": [
+   {
+    "x": 62,
+    "y": 0,
+    "w": 25,
+    "h": 79
+   },
+   {
+    "x": 25,
+    "y": 13,
+    "w": 38,
+    "h": 13
+   },
+   {
+    "x": 38,
+    "y": 26,
+    "w": 25,
+    "h": 13
+   },
+   {
+    "x": 50,
+    "y": 39,
+    "w": 12,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__36",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__36.png",
+  "w": 108,
+  "h": 128,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 13,
+    "w": 24,
+    "h": 26
+   },
+   {
+    "x": 36,
+    "y": 26,
+    "w": 24,
+    "h": 77
+   },
+   {
+    "x": 24,
+    "y": 38,
+    "w": 12,
+    "h": 26
+   },
+   {
+    "x": 60,
+    "y": 38,
+    "w": 12,
+    "h": 64
+   },
+   {
+    "x": 72,
+    "y": 64,
+    "w": 24,
+    "h": 13
+   },
+   {
+    "x": 12,
+    "y": 102,
+    "w": 24,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__37",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__37.png",
+  "w": 116,
+  "h": 57,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 0,
+    "w": 52,
+    "h": 43
+   },
+   {
+    "x": 77,
+    "y": 14,
+    "w": 26,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__38",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__38.png",
+  "w": 108,
+  "h": 98,
+  "colliders": [
+   {
+    "x": 48,
+    "y": 0,
+    "w": 48,
+    "h": 24
+   },
+   {
+    "x": 24,
+    "y": 12,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 48,
+    "y": 24,
+    "w": 36,
+    "h": 24
+   },
+   {
+    "x": 60,
+    "y": 49,
+    "w": 24,
+    "h": 24
+   },
+   {
+    "x": 84,
+    "y": 61,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__39",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__39.png",
+  "w": 112,
+  "h": 151,
+  "colliders": [
+   {
+    "x": 25,
+    "y": 13,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 37,
+    "y": 25,
+    "w": 12,
+    "h": 76
+   },
+   {
+    "x": 50,
+    "y": 38,
+    "w": 12,
+    "h": 88
+   },
+   {
+    "x": 62,
+    "y": 50,
+    "w": 12,
+    "h": 76
+   },
+   {
+    "x": 75,
+    "y": 88,
+    "w": 25,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__40",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__40.png",
+  "w": 116,
+  "h": 58,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 0,
+    "w": 26,
+    "h": 29
+   },
+   {
+    "x": 52,
+    "y": 14,
+    "w": 26,
+    "h": 44
+   },
+   {
+    "x": 39,
+    "y": 29,
+    "w": 13,
+    "h": 29
+   },
+   {
+    "x": 77,
+    "y": 29,
+    "w": 26,
+    "h": 14
+   },
+   {
+    "x": 13,
+    "y": 44,
+    "w": 26,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__41",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__41.png",
+  "w": 108,
+  "h": 91,
+  "colliders": [
+   {
+    "x": 48,
+    "y": 0,
+    "w": 48,
+    "h": 26
+   },
+   {
+    "x": 12,
+    "y": 13,
+    "w": 36,
+    "h": 13
+   },
+   {
+    "x": 48,
+    "y": 26,
+    "w": 36,
+    "h": 26
+   },
+   {
+    "x": 60,
+    "y": 52,
+    "w": 36,
+    "h": 13
+   },
+   {
+    "x": 60,
+    "y": 65,
+    "w": 24,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__42",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__42.png",
+  "w": 108,
+  "h": 123,
+  "colliders": [
+   {
+    "x": 36,
+    "y": 12,
+    "w": 24,
+    "h": 86
+   },
+   {
+    "x": 24,
+    "y": 37,
+    "w": 12,
+    "h": 37
+   },
+   {
+    "x": 60,
+    "y": 37,
+    "w": 12,
+    "h": 62
+   },
+   {
+    "x": 72,
+    "y": 62,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 12,
+    "y": 86,
+    "w": 24,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__43",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__43.png",
+  "w": 112,
+  "h": 83,
+  "colliders": [
+   {
+    "x": 25,
+    "y": 0,
+    "w": 12,
+    "h": 42
+   },
+   {
+    "x": 37,
+    "y": 14,
+    "w": 25,
+    "h": 55
+   },
+   {
+    "x": 62,
+    "y": 28,
+    "w": 12,
+    "h": 42
+   },
+   {
+    "x": 87,
+    "y": 28,
+    "w": 12,
+    "h": 28
+   },
+   {
+    "x": 12,
+    "y": 55,
+    "w": 25,
+    "h": 14
+   },
+   {
+    "x": 0,
+    "y": 69,
+    "w": 25,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "navy_bird_flight_sprite_sheet__44",
+  "category": "birds",
+  "file": "assets/processed/birds/navy_bird_flight_sprite_sheet__44.png",
+  "w": 104,
+  "h": 90,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 0,
+    "w": 52,
+    "h": 26
+   },
+   {
+    "x": 13,
+    "y": 13,
+    "w": 26,
+    "h": 13
+   },
+   {
+    "x": 39,
+    "y": 26,
+    "w": 39,
+    "h": 26
+   },
+   {
+    "x": 52,
+    "y": 51,
+    "w": 39,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__00",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__00.png",
+  "w": 348,
+  "h": 276,
+  "colliders": [
+   {
+    "x": 75,
+    "y": 0,
+    "w": 50,
+    "h": 125
+   },
+   {
+    "x": 199,
+    "y": 0,
+    "w": 99,
+    "h": 75
+   },
+   {
+    "x": 50,
+    "y": 25,
+    "w": 25,
+    "h": 251
+   },
+   {
+    "x": 124,
+    "y": 25,
+    "w": 75,
+    "h": 50
+   },
+   {
+    "x": 249,
+    "y": 75,
+    "w": 50,
+    "h": 50
+   },
+   {
+    "x": 25,
+    "y": 125,
+    "w": 25,
+    "h": 151
+   },
+   {
+    "x": 75,
+    "y": 125,
+    "w": 25,
+    "h": 151
+   },
+   {
+    "x": 273,
+    "y": 125,
+    "w": 50,
+    "h": 151
+   },
+   {
+    "x": 323,
+    "y": 176,
+    "w": 25,
+    "h": 100
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__01",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__01.png",
+  "w": 220,
+  "h": 284,
+  "colliders": [
+   {
+    "x": 92,
+    "y": 19,
+    "w": 18,
+    "h": 76
+   },
+   {
+    "x": 73,
+    "y": 38,
+    "w": 18,
+    "h": 57
+   },
+   {
+    "x": 110,
+    "y": 57,
+    "w": 18,
+    "h": 57
+   },
+   {
+    "x": 55,
+    "y": 76,
+    "w": 18,
+    "h": 208
+   },
+   {
+    "x": 37,
+    "y": 95,
+    "w": 18,
+    "h": 189
+   },
+   {
+    "x": 128,
+    "y": 95,
+    "w": 37,
+    "h": 189
+   },
+   {
+    "x": 18,
+    "y": 227,
+    "w": 18,
+    "h": 57
+   },
+   {
+    "x": 165,
+    "y": 227,
+    "w": 18,
+    "h": 57
+   },
+   {
+    "x": 183,
+    "y": 246,
+    "w": 18,
+    "h": 38
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__02",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__02.png",
+  "w": 388,
+  "h": 224,
+  "colliders": [
+   {
+    "x": 48,
+    "y": 0,
+    "w": 24,
+    "h": 224
+   },
+   {
+    "x": 73,
+    "y": 25,
+    "w": 267,
+    "h": 50
+   },
+   {
+    "x": 73,
+    "y": 75,
+    "w": 48,
+    "h": 25
+   },
+   {
+    "x": 170,
+    "y": 75,
+    "w": 73,
+    "h": 25
+   },
+   {
+    "x": 267,
+    "y": 75,
+    "w": 73,
+    "h": 25
+   },
+   {
+    "x": 73,
+    "y": 100,
+    "w": 24,
+    "h": 124
+   },
+   {
+    "x": 170,
+    "y": 100,
+    "w": 48,
+    "h": 124
+   },
+   {
+    "x": 291,
+    "y": 100,
+    "w": 48,
+    "h": 124
+   },
+   {
+    "x": 340,
+    "y": 149,
+    "w": 24,
+    "h": 75
+   },
+   {
+    "x": 24,
+    "y": 174,
+    "w": 24,
+    "h": 50
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__03",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__03.png",
+  "w": 248,
+  "h": 295,
+  "colliders": [
+   {
+    "x": 191,
+    "y": 0,
+    "w": 38,
+    "h": 37
+   },
+   {
+    "x": 134,
+    "y": 18,
+    "w": 57,
+    "h": 37
+   },
+   {
+    "x": 114,
+    "y": 37,
+    "w": 19,
+    "h": 258
+   },
+   {
+    "x": 134,
+    "y": 55,
+    "w": 38,
+    "h": 18
+   },
+   {
+    "x": 76,
+    "y": 74,
+    "w": 38,
+    "h": 221
+   },
+   {
+    "x": 134,
+    "y": 74,
+    "w": 19,
+    "h": 74
+   },
+   {
+    "x": 57,
+    "y": 148,
+    "w": 19,
+    "h": 148
+   },
+   {
+    "x": 19,
+    "y": 203,
+    "w": 38,
+    "h": 74
+   },
+   {
+    "x": 134,
+    "y": 203,
+    "w": 19,
+    "h": 92
+   },
+   {
+    "x": 153,
+    "y": 221,
+    "w": 19,
+    "h": 74
+   },
+   {
+    "x": 172,
+    "y": 240,
+    "w": 19,
+    "h": 55
+   },
+   {
+    "x": 191,
+    "y": 258,
+    "w": 19,
+    "h": 37
+   },
+   {
+    "x": 210,
+    "y": 277,
+    "w": 38,
+    "h": 18
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__04",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__04.png",
+  "w": 300,
+  "h": 260,
+  "colliders": [
+   {
+    "x": 75,
+    "y": 0,
+    "w": 38,
+    "h": 260
+   },
+   {
+    "x": 112,
+    "y": 19,
+    "w": 56,
+    "h": 37
+   },
+   {
+    "x": 169,
+    "y": 37,
+    "w": 56,
+    "h": 37
+   },
+   {
+    "x": 112,
+    "y": 56,
+    "w": 38,
+    "h": 19
+   },
+   {
+    "x": 112,
+    "y": 74,
+    "w": 19,
+    "h": 37
+   },
+   {
+    "x": 188,
+    "y": 74,
+    "w": 38,
+    "h": 167
+   },
+   {
+    "x": 56,
+    "y": 186,
+    "w": 19,
+    "h": 74
+   },
+   {
+    "x": 225,
+    "y": 186,
+    "w": 38,
+    "h": 74
+   },
+   {
+    "x": 38,
+    "y": 204,
+    "w": 19,
+    "h": 56
+   },
+   {
+    "x": 112,
+    "y": 204,
+    "w": 19,
+    "h": 56
+   },
+   {
+    "x": 19,
+    "y": 223,
+    "w": 19,
+    "h": 37
+   },
+   {
+    "x": 262,
+    "y": 223,
+    "w": 19,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__05",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__05.png",
+  "w": 164,
+  "h": 212,
+  "colliders": [
+   {
+    "x": 126,
+    "y": 0,
+    "w": 25,
+    "h": 62
+   },
+   {
+    "x": 88,
+    "y": 12,
+    "w": 38,
+    "h": 50
+   },
+   {
+    "x": 76,
+    "y": 25,
+    "w": 13,
+    "h": 62
+   },
+   {
+    "x": 63,
+    "y": 37,
+    "w": 13,
+    "h": 100
+   },
+   {
+    "x": 151,
+    "y": 50,
+    "w": 13,
+    "h": 25
+   },
+   {
+    "x": 50,
+    "y": 62,
+    "w": 13,
+    "h": 150
+   },
+   {
+    "x": 38,
+    "y": 75,
+    "w": 13,
+    "h": 137
+   },
+   {
+    "x": 25,
+    "y": 137,
+    "w": 13,
+    "h": 75
+   },
+   {
+    "x": 63,
+    "y": 162,
+    "w": 25,
+    "h": 50
+   },
+   {
+    "x": 13,
+    "y": 187,
+    "w": 13,
+    "h": 25
+   },
+   {
+    "x": 88,
+    "y": 187,
+    "w": 13,
+    "h": 25
+   },
+   {
+    "x": 151,
+    "y": 187,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__06",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__06.png",
+  "w": 280,
+  "h": 196,
+  "colliders": [
+   {
+    "x": 127,
+    "y": 0,
+    "w": 51,
+    "h": 74
+   },
+   {
+    "x": 51,
+    "y": 24,
+    "w": 76,
+    "h": 49
+   },
+   {
+    "x": 178,
+    "y": 24,
+    "w": 51,
+    "h": 49
+   },
+   {
+    "x": 229,
+    "y": 49,
+    "w": 51,
+    "h": 147
+   },
+   {
+    "x": 51,
+    "y": 74,
+    "w": 51,
+    "h": 122
+   },
+   {
+    "x": 127,
+    "y": 74,
+    "w": 25,
+    "h": 122
+   },
+   {
+    "x": 178,
+    "y": 74,
+    "w": 25,
+    "h": 122
+   },
+   {
+    "x": 25,
+    "y": 147,
+    "w": 25,
+    "h": 49
+   },
+   {
+    "x": 102,
+    "y": 147,
+    "w": 25,
+    "h": 49
+   },
+   {
+    "x": 153,
+    "y": 147,
+    "w": 25,
+    "h": 49
+   },
+   {
+    "x": 204,
+    "y": 147,
+    "w": 25,
+    "h": 49
+   }
+  ],
+  "openings": [
+   {
+    "x": 92,
+    "y": 64,
+    "w": 24,
+    "h": 100
+   },
+   {
+    "x": 148,
+    "y": 64,
+    "w": 24,
+    "h": 100
+   },
+   {
+    "x": 204,
+    "y": 64,
+    "w": 24,
+    "h": 100
+   }
+  ]
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__07",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__07.png",
+  "w": 292,
+  "h": 236,
+  "colliders": [
+   {
+    "x": 73,
+    "y": 0,
+    "w": 49,
+    "h": 105
+   },
+   {
+    "x": 122,
+    "y": 26,
+    "w": 73,
+    "h": 79
+   },
+   {
+    "x": 49,
+    "y": 52,
+    "w": 24,
+    "h": 184
+   },
+   {
+    "x": 195,
+    "y": 52,
+    "w": 49,
+    "h": 184
+   },
+   {
+    "x": 24,
+    "y": 105,
+    "w": 24,
+    "h": 131
+   },
+   {
+    "x": 73,
+    "y": 105,
+    "w": 24,
+    "h": 105
+   },
+   {
+    "x": 122,
+    "y": 105,
+    "w": 49,
+    "h": 105
+   },
+   {
+    "x": 97,
+    "y": 131,
+    "w": 24,
+    "h": 79
+   },
+   {
+    "x": 170,
+    "y": 131,
+    "w": 24,
+    "h": 79
+   },
+   {
+    "x": 243,
+    "y": 184,
+    "w": 24,
+    "h": 52
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__08",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__08.png",
+  "w": 116,
+  "h": 220,
+  "colliders": [
+   {
+    "x": 90,
+    "y": 0,
+    "w": 13,
+    "h": 220
+   },
+   {
+    "x": 77,
+    "y": 12,
+    "w": 13,
+    "h": 208
+   },
+   {
+    "x": 64,
+    "y": 37,
+    "w": 13,
+    "h": 183
+   },
+   {
+    "x": 52,
+    "y": 49,
+    "w": 13,
+    "h": 171
+   },
+   {
+    "x": 39,
+    "y": 159,
+    "w": 13,
+    "h": 61
+   },
+   {
+    "x": 26,
+    "y": 171,
+    "w": 13,
+    "h": 49
+   },
+   {
+    "x": 13,
+    "y": 196,
+    "w": 13,
+    "h": 24
+   },
+   {
+    "x": 103,
+    "y": 196,
+    "w": 13,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__09",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__09.png",
+  "w": 140,
+  "h": 60,
+  "colliders": [
+   {
+    "x": 64,
+    "y": 0,
+    "w": 38,
+    "h": 60
+   },
+   {
+    "x": 25,
+    "y": 12,
+    "w": 38,
+    "h": 48
+   },
+   {
+    "x": 13,
+    "y": 24,
+    "w": 13,
+    "h": 36
+   },
+   {
+    "x": 0,
+    "y": 36,
+    "w": 13,
+    "h": 24
+   },
+   {
+    "x": 102,
+    "y": 36,
+    "w": 25,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__10",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__10.png",
+  "w": 116,
+  "h": 212,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 0,
+    "w": 13,
+    "h": 212
+   },
+   {
+    "x": 52,
+    "y": 25,
+    "w": 13,
+    "h": 187
+   },
+   {
+    "x": 64,
+    "y": 50,
+    "w": 13,
+    "h": 162
+   },
+   {
+    "x": 77,
+    "y": 75,
+    "w": 13,
+    "h": 25
+   },
+   {
+    "x": 77,
+    "y": 137,
+    "w": 13,
+    "h": 75
+   },
+   {
+    "x": 26,
+    "y": 187,
+    "w": 13,
+    "h": 25
+   },
+   {
+    "x": 90,
+    "y": 187,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__11",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__11.png",
+  "w": 100,
+  "h": 32,
+  "colliders": [
+   {
+    "x": 25,
+    "y": 0,
+    "w": 38,
+    "h": 32
+   },
+   {
+    "x": 0,
+    "y": 16,
+    "w": 25,
+    "h": 16
+   },
+   {
+    "x": 62,
+    "y": 16,
+    "w": 25,
+    "h": 16
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__12",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__12.png",
+  "w": 212,
+  "h": 252,
+  "colliders": [
+   {
+    "x": 77,
+    "y": 0,
+    "w": 19,
+    "h": 72
+   },
+   {
+    "x": 58,
+    "y": 18,
+    "w": 19,
+    "h": 234
+   },
+   {
+    "x": 96,
+    "y": 18,
+    "w": 19,
+    "h": 72
+   },
+   {
+    "x": 116,
+    "y": 54,
+    "w": 19,
+    "h": 198
+   },
+   {
+    "x": 39,
+    "y": 72,
+    "w": 19,
+    "h": 180
+   },
+   {
+    "x": 135,
+    "y": 90,
+    "w": 19,
+    "h": 162
+   },
+   {
+    "x": 154,
+    "y": 144,
+    "w": 19,
+    "h": 108
+   },
+   {
+    "x": 19,
+    "y": 180,
+    "w": 19,
+    "h": 72
+   },
+   {
+    "x": 77,
+    "y": 216,
+    "w": 39,
+    "h": 36
+   },
+   {
+    "x": 173,
+    "y": 216,
+    "w": 19,
+    "h": 36
+   }
+  ],
+  "openings": [
+   {
+    "x": 68,
+    "y": 72,
+    "w": 48,
+    "h": 148
+   }
+  ]
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__13",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__13.png",
+  "w": 308,
+  "h": 216,
+  "colliders": [
+   {
+    "x": 18,
+    "y": 0,
+    "w": 109,
+    "h": 54
+   },
+   {
+    "x": 254,
+    "y": 0,
+    "w": 36,
+    "h": 54
+   },
+   {
+    "x": 127,
+    "y": 18,
+    "w": 72,
+    "h": 36
+   },
+   {
+    "x": 217,
+    "y": 18,
+    "w": 36,
+    "h": 198
+   },
+   {
+    "x": 199,
+    "y": 36,
+    "w": 18,
+    "h": 36
+   },
+   {
+    "x": 18,
+    "y": 54,
+    "w": 54,
+    "h": 18
+   },
+   {
+    "x": 109,
+    "y": 54,
+    "w": 54,
+    "h": 18
+   },
+   {
+    "x": 36,
+    "y": 72,
+    "w": 18,
+    "h": 144
+   },
+   {
+    "x": 127,
+    "y": 72,
+    "w": 36,
+    "h": 18
+   },
+   {
+    "x": 18,
+    "y": 90,
+    "w": 18,
+    "h": 126
+   },
+   {
+    "x": 127,
+    "y": 90,
+    "w": 18,
+    "h": 126
+   },
+   {
+    "x": 254,
+    "y": 180,
+    "w": 18,
+    "h": 36
+   },
+   {
+    "x": 54,
+    "y": 198,
+    "w": 36,
+    "h": 18
+   },
+   {
+    "x": 272,
+    "y": 198,
+    "w": 36,
+    "h": 18
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__14",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__14.png",
+  "w": 192,
+  "h": 228,
+  "colliders": [
+   {
+    "x": 60,
+    "y": 0,
+    "w": 48,
+    "h": 228
+   },
+   {
+    "x": 108,
+    "y": 24,
+    "w": 72,
+    "h": 24
+   },
+   {
+    "x": 108,
+    "y": 48,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 108,
+    "y": 60,
+    "w": 24,
+    "h": 24
+   },
+   {
+    "x": 108,
+    "y": 84,
+    "w": 12,
+    "h": 132
+   },
+   {
+    "x": 48,
+    "y": 144,
+    "w": 12,
+    "h": 84
+   },
+   {
+    "x": 36,
+    "y": 156,
+    "w": 12,
+    "h": 72
+   },
+   {
+    "x": 24,
+    "y": 180,
+    "w": 12,
+    "h": 48
+   },
+   {
+    "x": 120,
+    "y": 180,
+    "w": 24,
+    "h": 36
+   },
+   {
+    "x": 144,
+    "y": 192,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 12,
+    "y": 204,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 156,
+    "y": 204,
+    "w": 24,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__15",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__15.png",
+  "w": 268,
+  "h": 208,
+  "colliders": [
+   {
+    "x": 96,
+    "y": 0,
+    "w": 38,
+    "h": 57
+   },
+   {
+    "x": 134,
+    "y": 19,
+    "w": 57,
+    "h": 38
+   },
+   {
+    "x": 77,
+    "y": 38,
+    "w": 19,
+    "h": 95
+   },
+   {
+    "x": 191,
+    "y": 38,
+    "w": 19,
+    "h": 57
+   },
+   {
+    "x": 172,
+    "y": 57,
+    "w": 19,
+    "h": 38
+   },
+   {
+    "x": 57,
+    "y": 76,
+    "w": 19,
+    "h": 132
+   },
+   {
+    "x": 172,
+    "y": 132,
+    "w": 57,
+    "h": 76
+   },
+   {
+    "x": 38,
+    "y": 151,
+    "w": 19,
+    "h": 57
+   },
+   {
+    "x": 153,
+    "y": 151,
+    "w": 19,
+    "h": 57
+   },
+   {
+    "x": 230,
+    "y": 151,
+    "w": 19,
+    "h": 57
+   },
+   {
+    "x": 96,
+    "y": 170,
+    "w": 38,
+    "h": 38
+   },
+   {
+    "x": 249,
+    "y": 170,
+    "w": 19,
+    "h": 38
+   },
+   {
+    "x": 0,
+    "y": 189,
+    "w": 38,
+    "h": 19
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__16",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__16.png",
+  "w": 332,
+  "h": 220,
+  "colliders": [
+   {
+    "x": 240,
+    "y": 0,
+    "w": 37,
+    "h": 220
+   },
+   {
+    "x": 221,
+    "y": 18,
+    "w": 18,
+    "h": 202
+   },
+   {
+    "x": 203,
+    "y": 55,
+    "w": 18,
+    "h": 165
+   },
+   {
+    "x": 166,
+    "y": 92,
+    "w": 37,
+    "h": 55
+   },
+   {
+    "x": 74,
+    "y": 110,
+    "w": 92,
+    "h": 18
+   },
+   {
+    "x": 55,
+    "y": 128,
+    "w": 92,
+    "h": 18
+   },
+   {
+    "x": 277,
+    "y": 128,
+    "w": 18,
+    "h": 92
+   },
+   {
+    "x": 55,
+    "y": 147,
+    "w": 55,
+    "h": 73
+   },
+   {
+    "x": 184,
+    "y": 147,
+    "w": 18,
+    "h": 37
+   },
+   {
+    "x": 37,
+    "y": 165,
+    "w": 18,
+    "h": 55
+   },
+   {
+    "x": 295,
+    "y": 165,
+    "w": 18,
+    "h": 55
+   },
+   {
+    "x": 18,
+    "y": 183,
+    "w": 18,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__17",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__17.png",
+  "w": 276,
+  "h": 116,
+  "colliders": [
+   {
+    "x": 168,
+    "y": 0,
+    "w": 24,
+    "h": 64
+   },
+   {
+    "x": 156,
+    "y": 13,
+    "w": 12,
+    "h": 52
+   },
+   {
+    "x": 192,
+    "y": 13,
+    "w": 12,
+    "h": 103
+   },
+   {
+    "x": 132,
+    "y": 26,
+    "w": 24,
+    "h": 39
+   },
+   {
+    "x": 120,
+    "y": 39,
+    "w": 12,
+    "h": 39
+   },
+   {
+    "x": 204,
+    "y": 39,
+    "w": 12,
+    "h": 77
+   },
+   {
+    "x": 72,
+    "y": 52,
+    "w": 12,
+    "h": 64
+   },
+   {
+    "x": 108,
+    "y": 52,
+    "w": 12,
+    "h": 64
+   },
+   {
+    "x": 60,
+    "y": 64,
+    "w": 12,
+    "h": 52
+   },
+   {
+    "x": 84,
+    "y": 64,
+    "w": 24,
+    "h": 52
+   },
+   {
+    "x": 216,
+    "y": 64,
+    "w": 12,
+    "h": 52
+   },
+   {
+    "x": 228,
+    "y": 77,
+    "w": 24,
+    "h": 39
+   },
+   {
+    "x": 12,
+    "y": 90,
+    "w": 48,
+    "h": 26
+   },
+   {
+    "x": 252,
+    "y": 90,
+    "w": 12,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__18",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__18.png",
+  "w": 176,
+  "h": 108,
+  "colliders": [
+   {
+    "x": 88,
+    "y": 0,
+    "w": 38,
+    "h": 48
+   },
+   {
+    "x": 63,
+    "y": 12,
+    "w": 25,
+    "h": 48
+   },
+   {
+    "x": 38,
+    "y": 24,
+    "w": 25,
+    "h": 84
+   },
+   {
+    "x": 126,
+    "y": 24,
+    "w": 13,
+    "h": 84
+   },
+   {
+    "x": 25,
+    "y": 36,
+    "w": 13,
+    "h": 72
+   },
+   {
+    "x": 138,
+    "y": 36,
+    "w": 13,
+    "h": 72
+   },
+   {
+    "x": 101,
+    "y": 48,
+    "w": 25,
+    "h": 12
+   },
+   {
+    "x": 151,
+    "y": 48,
+    "w": 13,
+    "h": 60
+   },
+   {
+    "x": 63,
+    "y": 60,
+    "w": 13,
+    "h": 36
+   },
+   {
+    "x": 113,
+    "y": 60,
+    "w": 13,
+    "h": 36
+   },
+   {
+    "x": 0,
+    "y": 96,
+    "w": 25,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__19",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__19.png",
+  "w": 176,
+  "h": 212,
+  "colliders": [
+   {
+    "x": 63,
+    "y": 0,
+    "w": 13,
+    "h": 75
+   },
+   {
+    "x": 75,
+    "y": 12,
+    "w": 13,
+    "h": 62
+   },
+   {
+    "x": 38,
+    "y": 25,
+    "w": 25,
+    "h": 62
+   },
+   {
+    "x": 88,
+    "y": 25,
+    "w": 13,
+    "h": 50
+   },
+   {
+    "x": 25,
+    "y": 37,
+    "w": 13,
+    "h": 175
+   },
+   {
+    "x": 101,
+    "y": 37,
+    "w": 13,
+    "h": 37
+   },
+   {
+    "x": 38,
+    "y": 87,
+    "w": 13,
+    "h": 125
+   },
+   {
+    "x": 101,
+    "y": 100,
+    "w": 38,
+    "h": 100
+   },
+   {
+    "x": 50,
+    "y": 112,
+    "w": 13,
+    "h": 100
+   },
+   {
+    "x": 88,
+    "y": 112,
+    "w": 13,
+    "h": 100
+   },
+   {
+    "x": 63,
+    "y": 125,
+    "w": 25,
+    "h": 87
+   },
+   {
+    "x": 138,
+    "y": 162,
+    "w": 25,
+    "h": 37
+   },
+   {
+    "x": 13,
+    "y": 187,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__20",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__20.png",
+  "w": 208,
+  "h": 164,
+  "colliders": [
+   {
+    "x": 113,
+    "y": 0,
+    "w": 57,
+    "h": 55
+   },
+   {
+    "x": 19,
+    "y": 18,
+    "w": 95,
+    "h": 36
+   },
+   {
+    "x": 19,
+    "y": 55,
+    "w": 57,
+    "h": 109
+   },
+   {
+    "x": 132,
+    "y": 55,
+    "w": 38,
+    "h": 109
+   },
+   {
+    "x": 76,
+    "y": 128,
+    "w": 57,
+    "h": 36
+   },
+   {
+    "x": 170,
+    "y": 128,
+    "w": 19,
+    "h": 36
+   }
+  ],
+  "openings": [
+   {
+    "x": 72,
+    "y": 48,
+    "w": 64,
+    "h": 88
+   }
+  ]
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__21",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__21.png",
+  "w": 200,
+  "h": 212,
+  "colliders": [
+   {
+    "x": 73,
+    "y": 0,
+    "w": 36,
+    "h": 77
+   },
+   {
+    "x": 55,
+    "y": 19,
+    "w": 18,
+    "h": 193
+   },
+   {
+    "x": 109,
+    "y": 19,
+    "w": 55,
+    "h": 58
+   },
+   {
+    "x": 73,
+    "y": 77,
+    "w": 18,
+    "h": 39
+   },
+   {
+    "x": 145,
+    "y": 77,
+    "w": 18,
+    "h": 135
+   },
+   {
+    "x": 36,
+    "y": 116,
+    "w": 18,
+    "h": 77
+   },
+   {
+    "x": 127,
+    "y": 135,
+    "w": 18,
+    "h": 77
+   },
+   {
+    "x": 18,
+    "y": 154,
+    "w": 18,
+    "h": 39
+   },
+   {
+    "x": 164,
+    "y": 173,
+    "w": 18,
+    "h": 39
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruins_obstacle_sprite_sheet__22",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruins_obstacle_sprite_sheet__22.png",
+  "w": 312,
+  "h": 175,
+  "colliders": [
+   {
+    "x": 202,
+    "y": 0,
+    "w": 73,
+    "h": 39
+   },
+   {
+    "x": 165,
+    "y": 19,
+    "w": 37,
+    "h": 58
+   },
+   {
+    "x": 55,
+    "y": 39,
+    "w": 73,
+    "h": 39
+   },
+   {
+    "x": 147,
+    "y": 39,
+    "w": 18,
+    "h": 136
+   },
+   {
+    "x": 202,
+    "y": 39,
+    "w": 55,
+    "h": 39
+   },
+   {
+    "x": 37,
+    "y": 58,
+    "w": 18,
+    "h": 117
+   },
+   {
+    "x": 128,
+    "y": 58,
+    "w": 18,
+    "h": 117
+   },
+   {
+    "x": 55,
+    "y": 78,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "x": 220,
+    "y": 78,
+    "w": 37,
+    "h": 97
+   },
+   {
+    "x": 55,
+    "y": 97,
+    "w": 18,
+    "h": 78
+   },
+   {
+    "x": 257,
+    "y": 117,
+    "w": 18,
+    "h": 58
+   },
+   {
+    "x": 73,
+    "y": 136,
+    "w": 18,
+    "h": 39
+   },
+   {
+    "x": 275,
+    "y": 136,
+    "w": 18,
+    "h": 39
+   },
+   {
+    "x": 0,
+    "y": 156,
+    "w": 37,
+    "h": 19
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__00",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__00.png",
+  "w": 96,
+  "h": 208,
+  "colliders": [
+   {
+    "x": 48,
+    "y": 0,
+    "w": 12,
+    "h": 208
+   },
+   {
+    "x": 36,
+    "y": 12,
+    "w": 12,
+    "h": 196
+   },
+   {
+    "x": 60,
+    "y": 12,
+    "w": 12,
+    "h": 196
+   },
+   {
+    "x": 24,
+    "y": 24,
+    "w": 12,
+    "h": 184
+   },
+   {
+    "x": 72,
+    "y": 122,
+    "w": 12,
+    "h": 86
+   },
+   {
+    "x": 12,
+    "y": 135,
+    "w": 12,
+    "h": 73
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__01",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__01.png",
+  "w": 44,
+  "h": 276,
+  "colliders": [
+   {
+    "x": 15,
+    "y": 0,
+    "w": 15,
+    "h": 276
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 15,
+    "h": 264
+   },
+   {
+    "x": 29,
+    "y": 12,
+    "w": 15,
+    "h": 264
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__02",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__02.png",
+  "w": 76,
+  "h": 128,
+  "colliders": [
+   {
+    "x": 51,
+    "y": 0,
+    "w": 13,
+    "h": 128
+   },
+   {
+    "x": 38,
+    "y": 13,
+    "w": 13,
+    "h": 115
+   },
+   {
+    "x": 25,
+    "y": 38,
+    "w": 13,
+    "h": 90
+   },
+   {
+    "x": 13,
+    "y": 51,
+    "w": 13,
+    "h": 77
+   },
+   {
+    "x": 0,
+    "y": 64,
+    "w": 13,
+    "h": 64
+   },
+   {
+    "x": 63,
+    "y": 102,
+    "w": 13,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__03",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__03.png",
+  "w": 64,
+  "h": 80,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 67
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__04",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__04.png",
+  "w": 60,
+  "h": 52,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 24,
+    "h": 52
+   },
+   {
+    "x": 12,
+    "y": 13,
+    "w": 12,
+    "h": 39
+   },
+   {
+    "x": 48,
+    "y": 13,
+    "w": 12,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__05",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__05.png",
+  "w": 76,
+  "h": 196,
+  "colliders": [
+   {
+    "x": 25,
+    "y": 0,
+    "w": 25,
+    "h": 196
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 25,
+    "h": 49
+   },
+   {
+    "x": 51,
+    "y": 12,
+    "w": 13,
+    "h": 159
+   },
+   {
+    "x": 63,
+    "y": 24,
+    "w": 13,
+    "h": 37
+   },
+   {
+    "x": 13,
+    "y": 61,
+    "w": 13,
+    "h": 122
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__06",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__06.png",
+  "w": 80,
+  "h": 272,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 12
+   },
+   {
+    "x": 13,
+    "y": 12,
+    "w": 53,
+    "h": 25
+   },
+   {
+    "x": 13,
+    "y": 37,
+    "w": 40,
+    "h": 12
+   },
+   {
+    "x": 27,
+    "y": 49,
+    "w": 27,
+    "h": 223
+   },
+   {
+    "x": 53,
+    "y": 210,
+    "w": 13,
+    "h": 62
+   },
+   {
+    "x": 13,
+    "y": 247,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__07",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__07.png",
+  "w": 84,
+  "h": 280,
+  "colliders": [
+   {
+    "x": 36,
+    "y": 0,
+    "w": 12,
+    "h": 280
+   },
+   {
+    "x": 24,
+    "y": 12,
+    "w": 12,
+    "h": 268
+   },
+   {
+    "x": 48,
+    "y": 12,
+    "w": 12,
+    "h": 268
+   },
+   {
+    "x": 60,
+    "y": 24,
+    "w": 12,
+    "h": 256
+   },
+   {
+    "x": 12,
+    "y": 37,
+    "w": 12,
+    "h": 243
+   },
+   {
+    "x": 72,
+    "y": 256,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__08",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__08.png",
+  "w": 80,
+  "h": 316,
+  "colliders": [
+   {
+    "x": 27,
+    "y": 0,
+    "w": 13,
+    "h": 316
+   },
+   {
+    "x": 40,
+    "y": 12,
+    "w": 13,
+    "h": 304
+   },
+   {
+    "x": 13,
+    "y": 24,
+    "w": 13,
+    "h": 292
+   },
+   {
+    "x": 53,
+    "y": 24,
+    "w": 13,
+    "h": 292
+   },
+   {
+    "x": 0,
+    "y": 207,
+    "w": 13,
+    "h": 109
+   },
+   {
+    "x": 67,
+    "y": 243,
+    "w": 13,
+    "h": 73
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__09",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__09.png",
+  "w": 88,
+  "h": 224,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 88,
+    "h": 12
+   },
+   {
+    "x": 13,
+    "y": 12,
+    "w": 63,
+    "h": 25
+   },
+   {
+    "x": 25,
+    "y": 37,
+    "w": 50,
+    "h": 25
+   },
+   {
+    "x": 25,
+    "y": 62,
+    "w": 38,
+    "h": 124
+   },
+   {
+    "x": 63,
+    "y": 75,
+    "w": 13,
+    "h": 37
+   },
+   {
+    "x": 63,
+    "y": 124,
+    "w": 13,
+    "h": 37
+   },
+   {
+    "x": 25,
+    "y": 187,
+    "w": 25,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__10",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__10.png",
+  "w": 48,
+  "h": 164,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 36,
+    "h": 151
+   },
+   {
+    "x": 0,
+    "y": 50,
+    "w": 12,
+    "h": 76
+   },
+   {
+    "x": 24,
+    "y": 151,
+    "w": 24,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__11",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__11.png",
+  "w": 48,
+  "h": 300,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 12,
+    "h": 300
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 12,
+    "h": 288
+   },
+   {
+    "x": 36,
+    "y": 24,
+    "w": 12,
+    "h": 276
+   },
+   {
+    "x": 0,
+    "y": 36,
+    "w": 12,
+    "h": 264
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__12",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__12.png",
+  "w": 96,
+  "h": 280,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 24
+   },
+   {
+    "x": 12,
+    "y": 24,
+    "w": 72,
+    "h": 12
+   },
+   {
+    "x": 24,
+    "y": 37,
+    "w": 48,
+    "h": 12
+   },
+   {
+    "x": 24,
+    "y": 49,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 36,
+    "y": 61,
+    "w": 24,
+    "h": 219
+   },
+   {
+    "x": 60,
+    "y": 110,
+    "w": 12,
+    "h": 170
+   },
+   {
+    "x": 24,
+    "y": 122,
+    "w": 12,
+    "h": 158
+   },
+   {
+    "x": 12,
+    "y": 256,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 72,
+    "y": 256,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__13",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__13.png",
+  "w": 44,
+  "h": 196,
+  "colliders": [
+   {
+    "x": 15,
+    "y": 0,
+    "w": 15,
+    "h": 196
+   },
+   {
+    "x": 29,
+    "y": 12,
+    "w": 15,
+    "h": 184
+   },
+   {
+    "x": 0,
+    "y": 24,
+    "w": 15,
+    "h": 172
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__14",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__14.png",
+  "w": 92,
+  "h": 268,
+  "colliders": [
+   {
+    "x": 66,
+    "y": 0,
+    "w": 13,
+    "h": 195
+   },
+   {
+    "x": 53,
+    "y": 12,
+    "w": 13,
+    "h": 256
+   },
+   {
+    "x": 39,
+    "y": 24,
+    "w": 13,
+    "h": 244
+   },
+   {
+    "x": 26,
+    "y": 110,
+    "w": 13,
+    "h": 122
+   },
+   {
+    "x": 66,
+    "y": 219,
+    "w": 13,
+    "h": 49
+   },
+   {
+    "x": 13,
+    "y": 244,
+    "w": 26,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__15",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__15.png",
+  "w": 40,
+  "h": 220,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 13,
+    "h": 220
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 13,
+    "h": 208
+   },
+   {
+    "x": 27,
+    "y": 12,
+    "w": 13,
+    "h": 208
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__16",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__16.png",
+  "w": 88,
+  "h": 276,
+  "colliders": [
+   {
+    "x": 38,
+    "y": 0,
+    "w": 13,
+    "h": 276
+   },
+   {
+    "x": 25,
+    "y": 12,
+    "w": 13,
+    "h": 264
+   },
+   {
+    "x": 50,
+    "y": 12,
+    "w": 13,
+    "h": 264
+   },
+   {
+    "x": 13,
+    "y": 24,
+    "w": 13,
+    "h": 96
+   },
+   {
+    "x": 63,
+    "y": 24,
+    "w": 13,
+    "h": 108
+   },
+   {
+    "x": 13,
+    "y": 144,
+    "w": 13,
+    "h": 132
+   },
+   {
+    "x": 63,
+    "y": 144,
+    "w": 13,
+    "h": 132
+   },
+   {
+    "x": 75,
+    "y": 252,
+    "w": 13,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__17",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__17.png",
+  "w": 108,
+  "h": 112,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 60,
+    "h": 62
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 24,
+    "h": 25
+   },
+   {
+    "x": 84,
+    "y": 12,
+    "w": 24,
+    "h": 25
+   },
+   {
+    "x": 36,
+    "y": 62,
+    "w": 36,
+    "h": 50
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__18",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__18.png",
+  "w": 88,
+  "h": 292,
+  "colliders": [
+   {
+    "x": 38,
+    "y": 0,
+    "w": 13,
+    "h": 292
+   },
+   {
+    "x": 50,
+    "y": 12,
+    "w": 13,
+    "h": 280
+   },
+   {
+    "x": 25,
+    "y": 24,
+    "w": 13,
+    "h": 268
+   },
+   {
+    "x": 13,
+    "y": 73,
+    "w": 13,
+    "h": 219
+   },
+   {
+    "x": 63,
+    "y": 73,
+    "w": 13,
+    "h": 219
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__19",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__19.png",
+  "w": 60,
+  "h": 216,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 24,
+    "h": 216
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 12,
+    "h": 204
+   },
+   {
+    "x": 48,
+    "y": 12,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 0,
+    "y": 192,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 48,
+    "y": 192,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__20",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__20.png",
+  "w": 52,
+  "h": 48,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 52,
+    "h": 12
+   },
+   {
+    "x": 13,
+    "y": 12,
+    "w": 26,
+    "h": 36
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__21",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__21.png",
+  "w": 76,
+  "h": 76,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 38,
+    "h": 76
+   },
+   {
+    "x": 51,
+    "y": 13,
+    "w": 13,
+    "h": 63
+   },
+   {
+    "x": 0,
+    "y": 51,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__22",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__22.png",
+  "w": 80,
+  "h": 88,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 53,
+    "h": 63
+   },
+   {
+    "x": 0,
+    "y": 13,
+    "w": 13,
+    "h": 38
+   },
+   {
+    "x": 67,
+    "y": 13,
+    "w": 13,
+    "h": 25
+   },
+   {
+    "x": 13,
+    "y": 63,
+    "w": 40,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__23",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__23.png",
+  "w": 92,
+  "h": 264,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 0,
+    "w": 26,
+    "h": 264
+   },
+   {
+    "x": 26,
+    "y": 12,
+    "w": 13,
+    "h": 24
+   },
+   {
+    "x": 26,
+    "y": 84,
+    "w": 13,
+    "h": 180
+   },
+   {
+    "x": 13,
+    "y": 228,
+    "w": 13,
+    "h": 36
+   },
+   {
+    "x": 66,
+    "y": 228,
+    "w": 13,
+    "h": 36
+   },
+   {
+    "x": 79,
+    "y": 240,
+    "w": 13,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__24",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__24.png",
+  "w": 88,
+  "h": 232,
+  "colliders": [
+   {
+    "x": 25,
+    "y": 0,
+    "w": 50,
+    "h": 37
+   },
+   {
+    "x": 13,
+    "y": 12,
+    "w": 13,
+    "h": 24
+   },
+   {
+    "x": 25,
+    "y": 37,
+    "w": 38,
+    "h": 195
+   },
+   {
+    "x": 63,
+    "y": 183,
+    "w": 13,
+    "h": 49
+   },
+   {
+    "x": 13,
+    "y": 195,
+    "w": 13,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__25",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__25.png",
+  "w": 88,
+  "h": 40,
+  "colliders": [
+   {
+    "x": 25,
+    "y": 0,
+    "w": 50,
+    "h": 40
+   },
+   {
+    "x": 13,
+    "y": 13,
+    "w": 13,
+    "h": 27
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__26",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__26.png",
+  "w": 72,
+  "h": 60,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 12,
+    "y": 48,
+    "w": 36,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__27",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__27.png",
+  "w": 52,
+  "h": 96,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 26,
+    "h": 96
+   },
+   {
+    "x": 26,
+    "y": 12,
+    "w": 26,
+    "h": 60
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__28",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__28.png",
+  "w": 64,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 0,
+    "w": 26,
+    "h": 120
+   },
+   {
+    "x": 13,
+    "y": 12,
+    "w": 13,
+    "h": 108
+   },
+   {
+    "x": 0,
+    "y": 24,
+    "w": 13,
+    "h": 96
+   },
+   {
+    "x": 51,
+    "y": 96,
+    "w": 13,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__29",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__29.png",
+  "w": 80,
+  "h": 184,
+  "colliders": [
+   {
+    "x": 27,
+    "y": 0,
+    "w": 27,
+    "h": 184
+   },
+   {
+    "x": 13,
+    "y": 147,
+    "w": 13,
+    "h": 37
+   },
+   {
+    "x": 53,
+    "y": 147,
+    "w": 13,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__30",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__30.png",
+  "w": 56,
+  "h": 32,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 56,
+    "h": 32
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__31",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__31.png",
+  "w": 116,
+  "h": 244,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 0,
+    "w": 77,
+    "h": 24
+   },
+   {
+    "x": 26,
+    "y": 24,
+    "w": 26,
+    "h": 220
+   },
+   {
+    "x": 64,
+    "y": 24,
+    "w": 26,
+    "h": 220
+   },
+   {
+    "x": 52,
+    "y": 37,
+    "w": 13,
+    "h": 207
+   },
+   {
+    "x": 90,
+    "y": 49,
+    "w": 13,
+    "h": 195
+   },
+   {
+    "x": 13,
+    "y": 220,
+    "w": 13,
+    "h": 24
+   }
+  ],
+  "openings": [
+   {
+    "x": 52,
+    "y": 16,
+    "w": 20,
+    "h": 188
+   }
+  ]
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__32",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__32.png",
+  "w": 64,
+  "h": 40,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 27
+   },
+   {
+    "x": 0,
+    "y": 27,
+    "w": 51,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__33",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__33.png",
+  "w": 88,
+  "h": 200,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 63,
+    "h": 25
+   },
+   {
+    "x": 25,
+    "y": 25,
+    "w": 38,
+    "h": 175
+   },
+   {
+    "x": 13,
+    "y": 162,
+    "w": 13,
+    "h": 38
+   },
+   {
+    "x": 63,
+    "y": 162,
+    "w": 13,
+    "h": 38
+   },
+   {
+    "x": 75,
+    "y": 175,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__34",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__34.png",
+  "w": 40,
+  "h": 80,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 13,
+    "h": 80
+   },
+   {
+    "x": 0,
+    "y": 13,
+    "w": 13,
+    "h": 67
+   },
+   {
+    "x": 27,
+    "y": 13,
+    "w": 13,
+    "h": 67
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__35",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__35.png",
+  "w": 36,
+  "h": 44,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 24,
+    "h": 15
+   },
+   {
+    "x": 24,
+    "y": 15,
+    "w": 12,
+    "h": 29
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__36",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__36.png",
+  "w": 44,
+  "h": 196,
+  "colliders": [
+   {
+    "x": 15,
+    "y": 0,
+    "w": 15,
+    "h": 196
+   },
+   {
+    "x": 0,
+    "y": 37,
+    "w": 15,
+    "h": 159
+   },
+   {
+    "x": 29,
+    "y": 37,
+    "w": 15,
+    "h": 159
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__37",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__37.png",
+  "w": 76,
+  "h": 164,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 13,
+    "h": 164
+   },
+   {
+    "x": 38,
+    "y": 0,
+    "w": 25,
+    "h": 13
+   },
+   {
+    "x": 25,
+    "y": 13,
+    "w": 13,
+    "h": 151
+   },
+   {
+    "x": 38,
+    "y": 25,
+    "w": 13,
+    "h": 139
+   },
+   {
+    "x": 51,
+    "y": 38,
+    "w": 13,
+    "h": 126
+   },
+   {
+    "x": 0,
+    "y": 139,
+    "w": 13,
+    "h": 25
+   },
+   {
+    "x": 63,
+    "y": 139,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__38",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__38.png",
+  "w": 40,
+  "h": 60,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 40,
+    "h": 36
+   },
+   {
+    "x": 13,
+    "y": 36,
+    "w": 27,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__39",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__39.png",
+  "w": 60,
+  "h": 192,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 12,
+    "h": 192
+   },
+   {
+    "x": 36,
+    "y": 12,
+    "w": 12,
+    "h": 180
+   },
+   {
+    "x": 12,
+    "y": 24,
+    "w": 12,
+    "h": 168
+   },
+   {
+    "x": 48,
+    "y": 168,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__40",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__40.png",
+  "w": 72,
+  "h": 184,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 48,
+    "h": 86
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 12,
+    "h": 61
+   },
+   {
+    "x": 24,
+    "y": 86,
+    "w": 36,
+    "h": 98
+   },
+   {
+    "x": 12,
+    "y": 110,
+    "w": 12,
+    "h": 74
+   },
+   {
+    "x": 0,
+    "y": 123,
+    "w": 12,
+    "h": 61
+   },
+   {
+    "x": 60,
+    "y": 159,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__41",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__41.png",
+  "w": 84,
+  "h": 92,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 36,
+    "h": 92
+   },
+   {
+    "x": 12,
+    "y": 13,
+    "w": 12,
+    "h": 79
+   },
+   {
+    "x": 60,
+    "y": 13,
+    "w": 12,
+    "h": 79
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__42",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__42.png",
+  "w": 84,
+  "h": 60,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 48,
+    "h": 48
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 12,
+    "y": 24,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 24,
+    "y": 48,
+    "w": 36,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__43",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__43.png",
+  "w": 80,
+  "h": 140,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 53,
+    "h": 140
+   },
+   {
+    "x": 0,
+    "y": 115,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__44",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__44.png",
+  "w": 76,
+  "h": 108,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 51,
+    "h": 24
+   },
+   {
+    "x": 25,
+    "y": 24,
+    "w": 38,
+    "h": 84
+   },
+   {
+    "x": 13,
+    "y": 36,
+    "w": 13,
+    "h": 72
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__45",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__45.png",
+  "w": 160,
+  "h": 168,
+  "colliders": [
+   {
+    "x": 86,
+    "y": 0,
+    "w": 25,
+    "h": 168
+   },
+   {
+    "x": 74,
+    "y": 12,
+    "w": 12,
+    "h": 156
+   },
+   {
+    "x": 111,
+    "y": 12,
+    "w": 12,
+    "h": 156
+   },
+   {
+    "x": 123,
+    "y": 24,
+    "w": 12,
+    "h": 144
+   },
+   {
+    "x": 37,
+    "y": 36,
+    "w": 37,
+    "h": 36
+   },
+   {
+    "x": 25,
+    "y": 48,
+    "w": 12,
+    "h": 120
+   },
+   {
+    "x": 135,
+    "y": 48,
+    "w": 25,
+    "h": 12
+   },
+   {
+    "x": 12,
+    "y": 72,
+    "w": 12,
+    "h": 96
+   },
+   {
+    "x": 37,
+    "y": 72,
+    "w": 25,
+    "h": 96
+   },
+   {
+    "x": 62,
+    "y": 132,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 135,
+    "y": 144,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__46",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__46.png",
+  "w": 72,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 36,
+    "y": 0,
+    "w": 12,
+    "h": 120
+   },
+   {
+    "x": 24,
+    "y": 12,
+    "w": 12,
+    "h": 108
+   },
+   {
+    "x": 12,
+    "y": 24,
+    "w": 12,
+    "h": 96
+   },
+   {
+    "x": 48,
+    "y": 96,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__47",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__47.png",
+  "w": 76,
+  "h": 60,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 76,
+    "h": 12
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 63,
+    "h": 12
+   },
+   {
+    "x": 13,
+    "y": 24,
+    "w": 38,
+    "h": 24
+   },
+   {
+    "x": 13,
+    "y": 48,
+    "w": 25,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__48",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__48.png",
+  "w": 84,
+  "h": 184,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 72,
+    "h": 12
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 60,
+    "h": 12
+   },
+   {
+    "x": 24,
+    "y": 25,
+    "w": 48,
+    "h": 12
+   },
+   {
+    "x": 36,
+    "y": 37,
+    "w": 36,
+    "h": 147
+   },
+   {
+    "x": 24,
+    "y": 159,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__49",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__49.png",
+  "w": 84,
+  "h": 192,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 36,
+    "h": 192
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 12,
+    "h": 180
+   },
+   {
+    "x": 60,
+    "y": 12,
+    "w": 12,
+    "h": 180
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__50",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__50.png",
+  "w": 60,
+  "h": 260,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 12,
+    "h": 260
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 12,
+    "h": 173
+   },
+   {
+    "x": 36,
+    "y": 12,
+    "w": 12,
+    "h": 248
+   },
+   {
+    "x": 0,
+    "y": 186,
+    "w": 12,
+    "h": 74
+   },
+   {
+    "x": 12,
+    "y": 198,
+    "w": 12,
+    "h": 62
+   },
+   {
+    "x": 48,
+    "y": 223,
+    "w": 12,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__51",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__51.png",
+  "w": 176,
+  "h": 176,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 63,
+    "h": 25
+   },
+   {
+    "x": 113,
+    "y": 0,
+    "w": 63,
+    "h": 13
+   },
+   {
+    "x": 75,
+    "y": 13,
+    "w": 88,
+    "h": 25
+   },
+   {
+    "x": 25,
+    "y": 25,
+    "w": 50,
+    "h": 25
+   },
+   {
+    "x": 113,
+    "y": 38,
+    "w": 50,
+    "h": 13
+   },
+   {
+    "x": 25,
+    "y": 50,
+    "w": 38,
+    "h": 126
+   },
+   {
+    "x": 126,
+    "y": 50,
+    "w": 38,
+    "h": 126
+   },
+   {
+    "x": 13,
+    "y": 151,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__52",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__52.png",
+  "w": 128,
+  "h": 212,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 77,
+    "h": 25
+   },
+   {
+    "x": 13,
+    "y": 25,
+    "w": 51,
+    "h": 187
+   },
+   {
+    "x": 90,
+    "y": 87,
+    "w": 26,
+    "h": 125
+   },
+   {
+    "x": 77,
+    "y": 187,
+    "w": 13,
+    "h": 25
+   },
+   {
+    "x": 115,
+    "y": 187,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__53",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__53.png",
+  "w": 116,
+  "h": 88,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 90,
+    "h": 38
+   },
+   {
+    "x": 26,
+    "y": 38,
+    "w": 64,
+    "h": 13
+   },
+   {
+    "x": 39,
+    "y": 50,
+    "w": 52,
+    "h": 13
+   },
+   {
+    "x": 39,
+    "y": 63,
+    "w": 39,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__54",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__54.png",
+  "w": 80,
+  "h": 140,
+  "colliders": [
+   {
+    "x": 27,
+    "y": 0,
+    "w": 40,
+    "h": 13
+   },
+   {
+    "x": 40,
+    "y": 13,
+    "w": 27,
+    "h": 127
+   },
+   {
+    "x": 13,
+    "y": 25,
+    "w": 27,
+    "h": 115
+   },
+   {
+    "x": 0,
+    "y": 115,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__55",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__55.png",
+  "w": 88,
+  "h": 156,
+  "colliders": [
+   {
+    "x": 50,
+    "y": 0,
+    "w": 25,
+    "h": 156
+   },
+   {
+    "x": 38,
+    "y": 12,
+    "w": 13,
+    "h": 144
+   },
+   {
+    "x": 25,
+    "y": 72,
+    "w": 13,
+    "h": 84
+   },
+   {
+    "x": 13,
+    "y": 96,
+    "w": 13,
+    "h": 60
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__56",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__56.png",
+  "w": 276,
+  "h": 456,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 25,
+    "h": 192
+   },
+   {
+    "x": 100,
+    "y": 0,
+    "w": 75,
+    "h": 48
+   },
+   {
+    "x": 201,
+    "y": 0,
+    "w": 50,
+    "h": 72
+   },
+   {
+    "x": 100,
+    "y": 48,
+    "w": 50,
+    "h": 24
+   },
+   {
+    "x": 100,
+    "y": 72,
+    "w": 25,
+    "h": 144
+   },
+   {
+    "x": 226,
+    "y": 72,
+    "w": 25,
+    "h": 384
+   },
+   {
+    "x": 125,
+    "y": 96,
+    "w": 25,
+    "h": 120
+   },
+   {
+    "x": 25,
+    "y": 216,
+    "w": 50,
+    "h": 240
+   },
+   {
+    "x": 75,
+    "y": 264,
+    "w": 50,
+    "h": 48
+   },
+   {
+    "x": 201,
+    "y": 264,
+    "w": 25,
+    "h": 192
+   },
+   {
+    "x": 100,
+    "y": 312,
+    "w": 50,
+    "h": 144
+   },
+   {
+    "x": 151,
+    "y": 384,
+    "w": 50,
+    "h": 72
+   },
+   {
+    "x": 75,
+    "y": 408,
+    "w": 25,
+    "h": 48
+   }
+  ],
+  "openings": [
+   {
+    "x": 72,
+    "y": 304,
+    "w": 20,
+    "h": 128
+   }
+  ]
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__57",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__57.png",
+  "w": 76,
+  "h": 224,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 76,
+    "h": 12
+   },
+   {
+    "x": 13,
+    "y": 12,
+    "w": 63,
+    "h": 37
+   },
+   {
+    "x": 13,
+    "y": 50,
+    "w": 51,
+    "h": 12
+   },
+   {
+    "x": 13,
+    "y": 62,
+    "w": 38,
+    "h": 12
+   },
+   {
+    "x": 13,
+    "y": 75,
+    "w": 25,
+    "h": 149
+   },
+   {
+    "x": 38,
+    "y": 100,
+    "w": 13,
+    "h": 62
+   },
+   {
+    "x": 38,
+    "y": 174,
+    "w": 13,
+    "h": 50
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__58",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__58.png",
+  "w": 200,
+  "h": 212,
+  "colliders": [
+   {
+    "x": 50,
+    "y": 0,
+    "w": 38,
+    "h": 212
+   },
+   {
+    "x": 88,
+    "y": 12,
+    "w": 25,
+    "h": 25
+   },
+   {
+    "x": 112,
+    "y": 25,
+    "w": 25,
+    "h": 187
+   },
+   {
+    "x": 100,
+    "y": 37,
+    "w": 12,
+    "h": 175
+   },
+   {
+    "x": 38,
+    "y": 62,
+    "w": 12,
+    "h": 150
+   },
+   {
+    "x": 25,
+    "y": 75,
+    "w": 12,
+    "h": 137
+   },
+   {
+    "x": 138,
+    "y": 87,
+    "w": 38,
+    "h": 125
+   },
+   {
+    "x": 12,
+    "y": 112,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 88,
+    "y": 125,
+    "w": 12,
+    "h": 87
+   },
+   {
+    "x": 175,
+    "y": 175,
+    "w": 12,
+    "h": 37
+   },
+   {
+    "x": 12,
+    "y": 187,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": [
+   {
+    "x": 88,
+    "y": 36,
+    "w": 20,
+    "h": 92
+   }
+  ]
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__59",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__59.png",
+  "w": 144,
+  "h": 200,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 60,
+    "h": 25
+   },
+   {
+    "x": 24,
+    "y": 25,
+    "w": 48,
+    "h": 38
+   },
+   {
+    "x": 72,
+    "y": 38,
+    "w": 72,
+    "h": 12
+   },
+   {
+    "x": 72,
+    "y": 50,
+    "w": 60,
+    "h": 12
+   },
+   {
+    "x": 24,
+    "y": 62,
+    "w": 36,
+    "h": 138
+   },
+   {
+    "x": 96,
+    "y": 62,
+    "w": 36,
+    "h": 138
+   },
+   {
+    "x": 12,
+    "y": 175,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 60,
+    "y": 175,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__60",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__60.png",
+  "w": 168,
+  "h": 156,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 48,
+    "h": 12
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 36,
+    "h": 144
+   },
+   {
+    "x": 48,
+    "y": 48,
+    "w": 72,
+    "h": 24
+   },
+   {
+    "x": 84,
+    "y": 72,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 96,
+    "y": 84,
+    "w": 48,
+    "h": 72
+   },
+   {
+    "x": 144,
+    "y": 96,
+    "w": 12,
+    "h": 60
+   },
+   {
+    "x": 84,
+    "y": 120,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 48,
+    "y": 132,
+    "w": 24,
+    "h": 24
+   }
+  ],
+  "openings": [
+   {
+    "x": 44,
+    "y": 72,
+    "w": 52,
+    "h": 68
+   }
+  ]
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__61",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__61.png",
+  "w": 228,
+  "h": 208,
+  "colliders": [
+   {
+    "x": 76,
+    "y": 0,
+    "w": 57,
+    "h": 19
+   },
+   {
+    "x": 57,
+    "y": 19,
+    "w": 19,
+    "h": 189
+   },
+   {
+    "x": 95,
+    "y": 19,
+    "w": 38,
+    "h": 189
+   },
+   {
+    "x": 38,
+    "y": 38,
+    "w": 19,
+    "h": 170
+   },
+   {
+    "x": 133,
+    "y": 38,
+    "w": 38,
+    "h": 170
+   },
+   {
+    "x": 171,
+    "y": 113,
+    "w": 38,
+    "h": 95
+   },
+   {
+    "x": 209,
+    "y": 132,
+    "w": 19,
+    "h": 76
+   },
+   {
+    "x": 19,
+    "y": 151,
+    "w": 19,
+    "h": 57
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__62",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__62.png",
+  "w": 232,
+  "h": 220,
+  "colliders": [
+   {
+    "x": 183,
+    "y": 0,
+    "w": 24,
+    "h": 220
+   },
+   {
+    "x": 24,
+    "y": 12,
+    "w": 37,
+    "h": 208
+   },
+   {
+    "x": 85,
+    "y": 12,
+    "w": 61,
+    "h": 37
+   },
+   {
+    "x": 159,
+    "y": 24,
+    "w": 24,
+    "h": 196
+   },
+   {
+    "x": 147,
+    "y": 37,
+    "w": 12,
+    "h": 61
+   },
+   {
+    "x": 98,
+    "y": 49,
+    "w": 49,
+    "h": 24
+   },
+   {
+    "x": 61,
+    "y": 73,
+    "w": 24,
+    "h": 147
+   },
+   {
+    "x": 98,
+    "y": 73,
+    "w": 37,
+    "h": 147
+   },
+   {
+    "x": 134,
+    "y": 147,
+    "w": 24,
+    "h": 73
+   },
+   {
+    "x": 85,
+    "y": 183,
+    "w": 12,
+    "h": 37
+   },
+   {
+    "x": 12,
+    "y": 196,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 208,
+    "y": 196,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": [
+   {
+    "x": 132,
+    "y": 68,
+    "w": 20,
+    "h": 88
+   }
+  ]
+ },
+ {
+  "id": "pastel_ruined_architecture_sprite_sheet__63",
+  "category": "ruins",
+  "file": "assets/processed/ruins/pastel_ruined_architecture_sprite_sheet__63.png",
+  "w": 92,
+  "h": 240,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 0,
+    "w": 13,
+    "h": 240
+   },
+   {
+    "x": 26,
+    "y": 24,
+    "w": 13,
+    "h": 48
+   },
+   {
+    "x": 53,
+    "y": 24,
+    "w": 13,
+    "h": 216
+   },
+   {
+    "x": 26,
+    "y": 84,
+    "w": 13,
+    "h": 156
+   },
+   {
+    "x": 13,
+    "y": 96,
+    "w": 13,
+    "h": 144
+   },
+   {
+    "x": 66,
+    "y": 192,
+    "w": 13,
+    "h": 48
+   },
+   {
+    "x": 0,
+    "y": 204,
+    "w": 13,
+    "h": 36
+   },
+   {
+    "x": 79,
+    "y": 216,
+    "w": 13,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__00",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__00.png",
+  "w": 432,
+  "h": 208,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 48,
+    "h": 52
+   },
+   {
+    "x": 48,
+    "y": 26,
+    "w": 96,
+    "h": 52
+   },
+   {
+    "x": 24,
+    "y": 52,
+    "w": 24,
+    "h": 156
+   },
+   {
+    "x": 144,
+    "y": 52,
+    "w": 168,
+    "h": 26
+   },
+   {
+    "x": 96,
+    "y": 78,
+    "w": 48,
+    "h": 130
+   },
+   {
+    "x": 168,
+    "y": 78,
+    "w": 48,
+    "h": 26
+   },
+   {
+    "x": 240,
+    "y": 78,
+    "w": 48,
+    "h": 26
+   },
+   {
+    "x": 312,
+    "y": 78,
+    "w": 24,
+    "h": 130
+   },
+   {
+    "x": 192,
+    "y": 104,
+    "w": 24,
+    "h": 104
+   },
+   {
+    "x": 264,
+    "y": 104,
+    "w": 24,
+    "h": 104
+   },
+   {
+    "x": 336,
+    "y": 104,
+    "w": 48,
+    "h": 52
+   },
+   {
+    "x": 360,
+    "y": 156,
+    "w": 48,
+    "h": 52
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__01",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__01.png",
+  "w": 148,
+  "h": 194,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 25,
+    "h": 194
+   },
+   {
+    "x": 25,
+    "y": 12,
+    "w": 12,
+    "h": 182
+   },
+   {
+    "x": 37,
+    "y": 36,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 49,
+    "y": 48,
+    "w": 25,
+    "h": 146
+   },
+   {
+    "x": 74,
+    "y": 61,
+    "w": 12,
+    "h": 133
+   },
+   {
+    "x": 86,
+    "y": 85,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 99,
+    "y": 97,
+    "w": 25,
+    "h": 97
+   },
+   {
+    "x": 123,
+    "y": 109,
+    "w": 12,
+    "h": 85
+   },
+   {
+    "x": 37,
+    "y": 133,
+    "w": 12,
+    "h": 61
+   },
+   {
+    "x": 86,
+    "y": 158,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 136,
+    "y": 158,
+    "w": 12,
+    "h": 36
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__02",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__02.png",
+  "w": 240,
+  "h": 196,
+  "colliders": [
+   {
+    "x": 96,
+    "y": 0,
+    "w": 48,
+    "h": 196
+   },
+   {
+    "x": 72,
+    "y": 24,
+    "w": 24,
+    "h": 172
+   },
+   {
+    "x": 144,
+    "y": 24,
+    "w": 24,
+    "h": 172
+   },
+   {
+    "x": 48,
+    "y": 49,
+    "w": 24,
+    "h": 147
+   },
+   {
+    "x": 168,
+    "y": 49,
+    "w": 24,
+    "h": 147
+   },
+   {
+    "x": 24,
+    "y": 98,
+    "w": 24,
+    "h": 98
+   },
+   {
+    "x": 192,
+    "y": 98,
+    "w": 24,
+    "h": 98
+   },
+   {
+    "x": 0,
+    "y": 147,
+    "w": 24,
+    "h": 49
+   },
+   {
+    "x": 216,
+    "y": 147,
+    "w": 24,
+    "h": 49
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__03",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__03.png",
+  "w": 236,
+  "h": 188,
+  "colliders": [
+   {
+    "x": 145,
+    "y": 0,
+    "w": 18,
+    "h": 188
+   },
+   {
+    "x": 109,
+    "y": 19,
+    "w": 36,
+    "h": 75
+   },
+   {
+    "x": 91,
+    "y": 56,
+    "w": 18,
+    "h": 132
+   },
+   {
+    "x": 73,
+    "y": 75,
+    "w": 18,
+    "h": 113
+   },
+   {
+    "x": 163,
+    "y": 75,
+    "w": 18,
+    "h": 113
+   },
+   {
+    "x": 54,
+    "y": 113,
+    "w": 18,
+    "h": 38
+   },
+   {
+    "x": 182,
+    "y": 113,
+    "w": 18,
+    "h": 75
+   },
+   {
+    "x": 36,
+    "y": 132,
+    "w": 18,
+    "h": 56
+   },
+   {
+    "x": 18,
+    "y": 150,
+    "w": 18,
+    "h": 38
+   },
+   {
+    "x": 200,
+    "y": 150,
+    "w": 18,
+    "h": 38
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__04",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__04.png",
+  "w": 216,
+  "h": 184,
+  "colliders": [
+   {
+    "x": 120,
+    "y": 0,
+    "w": 36,
+    "h": 184
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 108,
+    "h": 25
+   },
+   {
+    "x": 156,
+    "y": 12,
+    "w": 12,
+    "h": 172
+   },
+   {
+    "x": 12,
+    "y": 37,
+    "w": 36,
+    "h": 25
+   },
+   {
+    "x": 84,
+    "y": 37,
+    "w": 36,
+    "h": 37
+   },
+   {
+    "x": 12,
+    "y": 61,
+    "w": 24,
+    "h": 123
+   },
+   {
+    "x": 168,
+    "y": 61,
+    "w": 24,
+    "h": 123
+   },
+   {
+    "x": 96,
+    "y": 74,
+    "w": 24,
+    "h": 110
+   },
+   {
+    "x": 192,
+    "y": 147,
+    "w": 12,
+    "h": 37
+   },
+   {
+    "x": 84,
+    "y": 159,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__05",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__05.png",
+  "w": 307,
+  "h": 168,
+  "colliders": [
+   {
+    "x": 54,
+    "y": 0,
+    "w": 36,
+    "h": 75
+   },
+   {
+    "x": 36,
+    "y": 19,
+    "w": 18,
+    "h": 149
+   },
+   {
+    "x": 90,
+    "y": 19,
+    "w": 18,
+    "h": 56
+   },
+   {
+    "x": 108,
+    "y": 37,
+    "w": 181,
+    "h": 19
+   },
+   {
+    "x": 108,
+    "y": 56,
+    "w": 163,
+    "h": 19
+   },
+   {
+    "x": 18,
+    "y": 75,
+    "w": 18,
+    "h": 93
+   },
+   {
+    "x": 54,
+    "y": 75,
+    "w": 18,
+    "h": 93
+   },
+   {
+    "x": 108,
+    "y": 75,
+    "w": 36,
+    "h": 93
+   },
+   {
+    "x": 163,
+    "y": 75,
+    "w": 36,
+    "h": 93
+   },
+   {
+    "x": 235,
+    "y": 75,
+    "w": 36,
+    "h": 93
+   },
+   {
+    "x": 271,
+    "y": 131,
+    "w": 18,
+    "h": 37
+   },
+   {
+    "x": 72,
+    "y": 149,
+    "w": 36,
+    "h": 19
+   },
+   {
+    "x": 199,
+    "y": 149,
+    "w": 36,
+    "h": 19
+   }
+  ],
+  "openings": [
+   {
+    "x": 76,
+    "y": 68,
+    "w": 28,
+    "h": 80
+   },
+   {
+    "x": 140,
+    "y": 72,
+    "w": 24,
+    "h": 76
+   },
+   {
+    "x": 200,
+    "y": 72,
+    "w": 28,
+    "h": 76
+   }
+  ]
+ },
+ {
+  "id": "ruined_violet_arch_tileset__06",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__06.png",
+  "w": 92,
+  "h": 180,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 26,
+    "h": 180
+   },
+   {
+    "x": 39,
+    "y": 12,
+    "w": 39,
+    "h": 24
+   },
+   {
+    "x": 53,
+    "y": 36,
+    "w": 26,
+    "h": 144
+   },
+   {
+    "x": 39,
+    "y": 60,
+    "w": 13,
+    "h": 36
+   },
+   {
+    "x": 39,
+    "y": 144,
+    "w": 13,
+    "h": 36
+   },
+   {
+    "x": 0,
+    "y": 156,
+    "w": 13,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__07",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__07.png",
+  "w": 320,
+  "h": 178,
+  "colliders": [
+   {
+    "x": 56,
+    "y": 0,
+    "w": 19,
+    "h": 178
+   },
+   {
+    "x": 38,
+    "y": 20,
+    "w": 19,
+    "h": 79
+   },
+   {
+    "x": 245,
+    "y": 40,
+    "w": 38,
+    "h": 138
+   },
+   {
+    "x": 75,
+    "y": 59,
+    "w": 19,
+    "h": 119
+   },
+   {
+    "x": 226,
+    "y": 59,
+    "w": 19,
+    "h": 119
+   },
+   {
+    "x": 282,
+    "y": 59,
+    "w": 19,
+    "h": 119
+   },
+   {
+    "x": 19,
+    "y": 99,
+    "w": 19,
+    "h": 79
+   },
+   {
+    "x": 94,
+    "y": 99,
+    "w": 38,
+    "h": 79
+   },
+   {
+    "x": 38,
+    "y": 119,
+    "w": 19,
+    "h": 59
+   },
+   {
+    "x": 207,
+    "y": 138,
+    "w": 19,
+    "h": 40
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__08",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__08.png",
+  "w": 316,
+  "h": 160,
+  "colliders": [
+   {
+    "x": 194,
+    "y": 0,
+    "w": 49,
+    "h": 160
+   },
+   {
+    "x": 170,
+    "y": 27,
+    "w": 24,
+    "h": 53
+   },
+   {
+    "x": 243,
+    "y": 27,
+    "w": 24,
+    "h": 133
+   },
+   {
+    "x": 0,
+    "y": 53,
+    "w": 170,
+    "h": 27
+   },
+   {
+    "x": 24,
+    "y": 80,
+    "w": 24,
+    "h": 80
+   },
+   {
+    "x": 97,
+    "y": 80,
+    "w": 24,
+    "h": 80
+   },
+   {
+    "x": 146,
+    "y": 80,
+    "w": 24,
+    "h": 80
+   },
+   {
+    "x": 267,
+    "y": 80,
+    "w": 24,
+    "h": 80
+   },
+   {
+    "x": 0,
+    "y": 107,
+    "w": 24,
+    "h": 53
+   },
+   {
+    "x": 49,
+    "y": 107,
+    "w": 24,
+    "h": 53
+   },
+   {
+    "x": 292,
+    "y": 107,
+    "w": 24,
+    "h": 53
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__09",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__09.png",
+  "w": 200,
+  "h": 164,
+  "colliders": [
+   {
+    "x": 164,
+    "y": 0,
+    "w": 36,
+    "h": 18
+   },
+   {
+    "x": 145,
+    "y": 18,
+    "w": 36,
+    "h": 146
+   },
+   {
+    "x": 109,
+    "y": 36,
+    "w": 36,
+    "h": 36
+   },
+   {
+    "x": 91,
+    "y": 55,
+    "w": 18,
+    "h": 109
+   },
+   {
+    "x": 55,
+    "y": 73,
+    "w": 36,
+    "h": 55
+   },
+   {
+    "x": 109,
+    "y": 73,
+    "w": 18,
+    "h": 91
+   },
+   {
+    "x": 36,
+    "y": 91,
+    "w": 18,
+    "h": 55
+   },
+   {
+    "x": 18,
+    "y": 109,
+    "w": 18,
+    "h": 55
+   },
+   {
+    "x": 0,
+    "y": 128,
+    "w": 18,
+    "h": 36
+   },
+   {
+    "x": 55,
+    "y": 128,
+    "w": 18,
+    "h": 36
+   }
+  ],
+  "openings": [
+   {
+    "x": 120,
+    "y": 68,
+    "w": 24,
+    "h": 80
+   }
+  ]
+ },
+ {
+  "id": "ruined_violet_arch_tileset__10",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__10.png",
+  "w": 194,
+  "h": 116,
+  "colliders": [
+   {
+    "x": 61,
+    "y": 0,
+    "w": 24,
+    "h": 77
+   },
+   {
+    "x": 97,
+    "y": 0,
+    "w": 24,
+    "h": 116
+   },
+   {
+    "x": 48,
+    "y": 13,
+    "w": 12,
+    "h": 103
+   },
+   {
+    "x": 121,
+    "y": 13,
+    "w": 12,
+    "h": 103
+   },
+   {
+    "x": 36,
+    "y": 26,
+    "w": 12,
+    "h": 90
+   },
+   {
+    "x": 85,
+    "y": 52,
+    "w": 12,
+    "h": 26
+   },
+   {
+    "x": 24,
+    "y": 64,
+    "w": 12,
+    "h": 52
+   },
+   {
+    "x": 133,
+    "y": 64,
+    "w": 24,
+    "h": 52
+   },
+   {
+    "x": 61,
+    "y": 77,
+    "w": 12,
+    "h": 39
+   },
+   {
+    "x": 158,
+    "y": 77,
+    "w": 12,
+    "h": 39
+   },
+   {
+    "x": 12,
+    "y": 90,
+    "w": 12,
+    "h": 26
+   },
+   {
+    "x": 170,
+    "y": 90,
+    "w": 12,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__11",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__11.png",
+  "w": 172,
+  "h": 164,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 0,
+    "w": 61,
+    "h": 114
+   },
+   {
+    "x": 98,
+    "y": 76,
+    "w": 12,
+    "h": 88
+   },
+   {
+    "x": 25,
+    "y": 88,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 111,
+    "y": 88,
+    "w": 37,
+    "h": 13
+   },
+   {
+    "x": 111,
+    "y": 101,
+    "w": 25,
+    "h": 63
+   },
+   {
+    "x": 37,
+    "y": 114,
+    "w": 25,
+    "h": 50
+   },
+   {
+    "x": 74,
+    "y": 114,
+    "w": 25,
+    "h": 50
+   },
+   {
+    "x": 135,
+    "y": 114,
+    "w": 12,
+    "h": 50
+   },
+   {
+    "x": 25,
+    "y": 126,
+    "w": 12,
+    "h": 38
+   },
+   {
+    "x": 147,
+    "y": 126,
+    "w": 12,
+    "h": 38
+   },
+   {
+    "x": 12,
+    "y": 139,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 160,
+    "y": 139,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__12",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__12.png",
+  "w": 276,
+  "h": 152,
+  "colliders": [
+   {
+    "x": 92,
+    "y": 0,
+    "w": 55,
+    "h": 38
+   },
+   {
+    "x": 55,
+    "y": 19,
+    "w": 37,
+    "h": 133
+   },
+   {
+    "x": 147,
+    "y": 19,
+    "w": 37,
+    "h": 133
+   },
+   {
+    "x": 37,
+    "y": 38,
+    "w": 18,
+    "h": 114
+   },
+   {
+    "x": 184,
+    "y": 57,
+    "w": 18,
+    "h": 95
+   },
+   {
+    "x": 18,
+    "y": 76,
+    "w": 18,
+    "h": 76
+   },
+   {
+    "x": 202,
+    "y": 76,
+    "w": 18,
+    "h": 76
+   },
+   {
+    "x": 221,
+    "y": 95,
+    "w": 18,
+    "h": 57
+   },
+   {
+    "x": 0,
+    "y": 114,
+    "w": 18,
+    "h": 38
+   },
+   {
+    "x": 239,
+    "y": 114,
+    "w": 18,
+    "h": 38
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__13",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__13.png",
+  "w": 264,
+  "h": 108,
+  "colliders": [
+   {
+    "x": 57,
+    "y": 0,
+    "w": 75,
+    "h": 36
+   },
+   {
+    "x": 132,
+    "y": 18,
+    "w": 38,
+    "h": 90
+   },
+   {
+    "x": 19,
+    "y": 36,
+    "w": 57,
+    "h": 72
+   },
+   {
+    "x": 113,
+    "y": 36,
+    "w": 19,
+    "h": 72
+   },
+   {
+    "x": 170,
+    "y": 36,
+    "w": 19,
+    "h": 72
+   },
+   {
+    "x": 0,
+    "y": 72,
+    "w": 19,
+    "h": 36
+   },
+   {
+    "x": 75,
+    "y": 72,
+    "w": 38,
+    "h": 36
+   },
+   {
+    "x": 189,
+    "y": 72,
+    "w": 57,
+    "h": 36
+   }
+  ],
+  "openings": [
+   {
+    "x": 80,
+    "y": 28,
+    "w": 36,
+    "h": 52
+   }
+  ]
+ },
+ {
+  "id": "ruined_violet_arch_tileset__14",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__14.png",
+  "w": 237,
+  "h": 124,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 0,
+    "w": 25,
+    "h": 124
+   },
+   {
+    "x": 25,
+    "y": 12,
+    "w": 12,
+    "h": 112
+   },
+   {
+    "x": 62,
+    "y": 25,
+    "w": 50,
+    "h": 25
+   },
+   {
+    "x": 112,
+    "y": 37,
+    "w": 12,
+    "h": 87
+   },
+   {
+    "x": 87,
+    "y": 50,
+    "w": 25,
+    "h": 74
+   },
+   {
+    "x": 125,
+    "y": 50,
+    "w": 12,
+    "h": 37
+   },
+   {
+    "x": 137,
+    "y": 62,
+    "w": 50,
+    "h": 25
+   },
+   {
+    "x": 187,
+    "y": 74,
+    "w": 12,
+    "h": 50
+   },
+   {
+    "x": 12,
+    "y": 87,
+    "w": 12,
+    "h": 37
+   },
+   {
+    "x": 150,
+    "y": 87,
+    "w": 37,
+    "h": 37
+   },
+   {
+    "x": 200,
+    "y": 87,
+    "w": 12,
+    "h": 37
+   },
+   {
+    "x": 212,
+    "y": 99,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": [
+   {
+    "x": 64,
+    "y": 48,
+    "w": 28,
+    "h": 64
+   }
+  ]
+ },
+ {
+  "id": "ruined_violet_arch_tileset__15",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__15.png",
+  "w": 284,
+  "h": 140,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 57,
+    "h": 40
+   },
+   {
+    "x": 114,
+    "y": 0,
+    "w": 19,
+    "h": 140
+   },
+   {
+    "x": 57,
+    "y": 20,
+    "w": 57,
+    "h": 20
+   },
+   {
+    "x": 133,
+    "y": 20,
+    "w": 19,
+    "h": 40
+   },
+   {
+    "x": 19,
+    "y": 40,
+    "w": 38,
+    "h": 20
+   },
+   {
+    "x": 95,
+    "y": 40,
+    "w": 19,
+    "h": 100
+   },
+   {
+    "x": 151,
+    "y": 40,
+    "w": 38,
+    "h": 100
+   },
+   {
+    "x": 19,
+    "y": 60,
+    "w": 19,
+    "h": 80
+   },
+   {
+    "x": 189,
+    "y": 60,
+    "w": 19,
+    "h": 80
+   },
+   {
+    "x": 208,
+    "y": 80,
+    "w": 19,
+    "h": 60
+   },
+   {
+    "x": 38,
+    "y": 100,
+    "w": 19,
+    "h": 40
+   },
+   {
+    "x": 227,
+    "y": 100,
+    "w": 38,
+    "h": 40
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__16",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__16.png",
+  "w": 196,
+  "h": 124,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 0,
+    "w": 20,
+    "h": 62
+   },
+   {
+    "x": 20,
+    "y": 21,
+    "w": 20,
+    "h": 103
+   },
+   {
+    "x": 59,
+    "y": 21,
+    "w": 20,
+    "h": 103
+   },
+   {
+    "x": 78,
+    "y": 41,
+    "w": 39,
+    "h": 62
+   },
+   {
+    "x": 118,
+    "y": 62,
+    "w": 20,
+    "h": 62
+   },
+   {
+    "x": 0,
+    "y": 83,
+    "w": 20,
+    "h": 41
+   },
+   {
+    "x": 39,
+    "y": 83,
+    "w": 20,
+    "h": 41
+   },
+   {
+    "x": 137,
+    "y": 83,
+    "w": 20,
+    "h": 41
+   },
+   {
+    "x": 157,
+    "y": 103,
+    "w": 39,
+    "h": 21
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__17",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__17.png",
+  "w": 204,
+  "h": 144,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 0,
+    "w": 37,
+    "h": 90
+   },
+   {
+    "x": 19,
+    "y": 18,
+    "w": 19,
+    "h": 126
+   },
+   {
+    "x": 74,
+    "y": 18,
+    "w": 19,
+    "h": 126
+   },
+   {
+    "x": 93,
+    "y": 54,
+    "w": 56,
+    "h": 36
+   },
+   {
+    "x": 37,
+    "y": 90,
+    "w": 19,
+    "h": 54
+   },
+   {
+    "x": 111,
+    "y": 90,
+    "w": 74,
+    "h": 54
+   },
+   {
+    "x": 0,
+    "y": 108,
+    "w": 19,
+    "h": 36
+   },
+   {
+    "x": 56,
+    "y": 108,
+    "w": 19,
+    "h": 36
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__18",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__18.png",
+  "w": 192,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 58,
+    "y": 0,
+    "w": 38,
+    "h": 120
+   },
+   {
+    "x": 38,
+    "y": 20,
+    "w": 19,
+    "h": 100
+   },
+   {
+    "x": 96,
+    "y": 20,
+    "w": 38,
+    "h": 100
+   },
+   {
+    "x": 19,
+    "y": 60,
+    "w": 19,
+    "h": 60
+   },
+   {
+    "x": 134,
+    "y": 60,
+    "w": 19,
+    "h": 60
+   },
+   {
+    "x": 154,
+    "y": 80,
+    "w": 19,
+    "h": 40
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__19",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__19.png",
+  "w": 276,
+  "h": 152,
+  "colliders": [
+   {
+    "x": 221,
+    "y": 0,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "x": 184,
+    "y": 19,
+    "w": 55,
+    "h": 57
+   },
+   {
+    "x": 166,
+    "y": 38,
+    "w": 18,
+    "h": 38
+   },
+   {
+    "x": 129,
+    "y": 57,
+    "w": 37,
+    "h": 95
+   },
+   {
+    "x": 55,
+    "y": 76,
+    "w": 18,
+    "h": 76
+   },
+   {
+    "x": 92,
+    "y": 76,
+    "w": 37,
+    "h": 38
+   },
+   {
+    "x": 202,
+    "y": 76,
+    "w": 37,
+    "h": 76
+   },
+   {
+    "x": 37,
+    "y": 95,
+    "w": 18,
+    "h": 57
+   },
+   {
+    "x": 74,
+    "y": 95,
+    "w": 18,
+    "h": 57
+   },
+   {
+    "x": 18,
+    "y": 114,
+    "w": 18,
+    "h": 38
+   },
+   {
+    "x": 92,
+    "y": 114,
+    "w": 18,
+    "h": 38
+   },
+   {
+    "x": 239,
+    "y": 114,
+    "w": 18,
+    "h": 38
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__20",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__20.png",
+  "w": 144,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 36,
+    "y": 0,
+    "w": 36,
+    "h": 24
+   },
+   {
+    "x": 24,
+    "y": 12,
+    "w": 12,
+    "h": 108
+   },
+   {
+    "x": 72,
+    "y": 12,
+    "w": 12,
+    "h": 108
+   },
+   {
+    "x": 12,
+    "y": 24,
+    "w": 12,
+    "h": 96
+   },
+   {
+    "x": 36,
+    "y": 24,
+    "w": 12,
+    "h": 48
+   },
+   {
+    "x": 60,
+    "y": 24,
+    "w": 12,
+    "h": 96
+   },
+   {
+    "x": 84,
+    "y": 24,
+    "w": 12,
+    "h": 96
+   },
+   {
+    "x": 96,
+    "y": 36,
+    "w": 12,
+    "h": 84
+   },
+   {
+    "x": 48,
+    "y": 48,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 108,
+    "y": 48,
+    "w": 12,
+    "h": 72
+   },
+   {
+    "x": 120,
+    "y": 96,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__21",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__21.png",
+  "w": 324,
+  "h": 112,
+  "colliders": [
+   {
+    "x": 54,
+    "y": 0,
+    "w": 72,
+    "h": 37
+   },
+   {
+    "x": 36,
+    "y": 19,
+    "w": 18,
+    "h": 93
+   },
+   {
+    "x": 126,
+    "y": 19,
+    "w": 18,
+    "h": 93
+   },
+   {
+    "x": 18,
+    "y": 37,
+    "w": 18,
+    "h": 75
+   },
+   {
+    "x": 54,
+    "y": 37,
+    "w": 36,
+    "h": 19
+   },
+   {
+    "x": 108,
+    "y": 37,
+    "w": 18,
+    "h": 75
+   },
+   {
+    "x": 144,
+    "y": 37,
+    "w": 90,
+    "h": 19
+   },
+   {
+    "x": 54,
+    "y": 56,
+    "w": 18,
+    "h": 56
+   },
+   {
+    "x": 180,
+    "y": 56,
+    "w": 108,
+    "h": 19
+   },
+   {
+    "x": 180,
+    "y": 75,
+    "w": 18,
+    "h": 37
+   },
+   {
+    "x": 216,
+    "y": 75,
+    "w": 90,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__22",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__22.png",
+  "w": 280,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 75,
+    "y": 0,
+    "w": 37,
+    "h": 60
+   },
+   {
+    "x": 112,
+    "y": 20,
+    "w": 19,
+    "h": 100
+   },
+   {
+    "x": 168,
+    "y": 20,
+    "w": 19,
+    "h": 100
+   },
+   {
+    "x": 131,
+    "y": 40,
+    "w": 19,
+    "h": 80
+   },
+   {
+    "x": 187,
+    "y": 40,
+    "w": 19,
+    "h": 40
+   },
+   {
+    "x": 56,
+    "y": 60,
+    "w": 19,
+    "h": 40
+   },
+   {
+    "x": 93,
+    "y": 60,
+    "w": 19,
+    "h": 60
+   },
+   {
+    "x": 205,
+    "y": 60,
+    "w": 37,
+    "h": 60
+   },
+   {
+    "x": 37,
+    "y": 80,
+    "w": 19,
+    "h": 40
+   },
+   {
+    "x": 243,
+    "y": 80,
+    "w": 19,
+    "h": 40
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__23",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__23.png",
+  "w": 280,
+  "h": 116,
+  "colliders": [
+   {
+    "x": 231,
+    "y": 0,
+    "w": 37,
+    "h": 116
+   },
+   {
+    "x": 207,
+    "y": 13,
+    "w": 24,
+    "h": 103
+   },
+   {
+    "x": 170,
+    "y": 26,
+    "w": 37,
+    "h": 26
+   },
+   {
+    "x": 122,
+    "y": 39,
+    "w": 49,
+    "h": 26
+   },
+   {
+    "x": 85,
+    "y": 52,
+    "w": 37,
+    "h": 26
+   },
+   {
+    "x": 195,
+    "y": 52,
+    "w": 12,
+    "h": 64
+   },
+   {
+    "x": 49,
+    "y": 64,
+    "w": 37,
+    "h": 52
+   },
+   {
+    "x": 134,
+    "y": 64,
+    "w": 37,
+    "h": 13
+   },
+   {
+    "x": 37,
+    "y": 77,
+    "w": 12,
+    "h": 39
+   },
+   {
+    "x": 97,
+    "y": 77,
+    "w": 24,
+    "h": 39
+   },
+   {
+    "x": 146,
+    "y": 77,
+    "w": 24,
+    "h": 39
+   },
+   {
+    "x": 24,
+    "y": 90,
+    "w": 12,
+    "h": 26
+   },
+   {
+    "x": 183,
+    "y": 90,
+    "w": 12,
+    "h": 26
+   },
+   {
+    "x": 268,
+    "y": 90,
+    "w": 12,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__24",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__24.png",
+  "w": 224,
+  "h": 116,
+  "colliders": [
+   {
+    "x": 187,
+    "y": 0,
+    "w": 25,
+    "h": 64
+   },
+   {
+    "x": 137,
+    "y": 13,
+    "w": 50,
+    "h": 39
+   },
+   {
+    "x": 112,
+    "y": 26,
+    "w": 25,
+    "h": 26
+   },
+   {
+    "x": 100,
+    "y": 39,
+    "w": 12,
+    "h": 77
+   },
+   {
+    "x": 75,
+    "y": 52,
+    "w": 25,
+    "h": 26
+   },
+   {
+    "x": 112,
+    "y": 52,
+    "w": 12,
+    "h": 64
+   },
+   {
+    "x": 137,
+    "y": 52,
+    "w": 12,
+    "h": 64
+   },
+   {
+    "x": 162,
+    "y": 52,
+    "w": 25,
+    "h": 64
+   },
+   {
+    "x": 62,
+    "y": 64,
+    "w": 12,
+    "h": 52
+   },
+   {
+    "x": 187,
+    "y": 64,
+    "w": 12,
+    "h": 52
+   },
+   {
+    "x": 25,
+    "y": 77,
+    "w": 37,
+    "h": 39
+   },
+   {
+    "x": 149,
+    "y": 77,
+    "w": 12,
+    "h": 39
+   },
+   {
+    "x": 12,
+    "y": 90,
+    "w": 12,
+    "h": 26
+   },
+   {
+    "x": 87,
+    "y": 90,
+    "w": 12,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__25",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__25.png",
+  "w": 160,
+  "h": 104,
+  "colliders": [
+   {
+    "x": 49,
+    "y": 0,
+    "w": 25,
+    "h": 104
+   },
+   {
+    "x": 74,
+    "y": 13,
+    "w": 37,
+    "h": 39
+   },
+   {
+    "x": 111,
+    "y": 26,
+    "w": 12,
+    "h": 78
+   },
+   {
+    "x": 86,
+    "y": 52,
+    "w": 25,
+    "h": 52
+   },
+   {
+    "x": 123,
+    "y": 52,
+    "w": 25,
+    "h": 52
+   },
+   {
+    "x": 12,
+    "y": 78,
+    "w": 37,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__26",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__26.png",
+  "w": 68,
+  "h": 128,
+  "colliders": [
+   {
+    "x": 14,
+    "y": 0,
+    "w": 14,
+    "h": 128
+   },
+   {
+    "x": 27,
+    "y": 13,
+    "w": 27,
+    "h": 26
+   },
+   {
+    "x": 54,
+    "y": 26,
+    "w": 14,
+    "h": 102
+   },
+   {
+    "x": 41,
+    "y": 38,
+    "w": 14,
+    "h": 90
+   },
+   {
+    "x": 27,
+    "y": 51,
+    "w": 14,
+    "h": 26
+   },
+   {
+    "x": 0,
+    "y": 102,
+    "w": 14,
+    "h": 26
+   },
+   {
+    "x": 27,
+    "y": 102,
+    "w": 14,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__27",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__27.png",
+  "w": 164,
+  "h": 68,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 139,
+    "h": 41
+   },
+   {
+    "x": 25,
+    "y": 41,
+    "w": 63,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__28",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__28.png",
+  "w": 81,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 27,
+    "y": 0,
+    "w": 14,
+    "h": 120
+   },
+   {
+    "x": 14,
+    "y": 12,
+    "w": 14,
+    "h": 108
+   },
+   {
+    "x": 40,
+    "y": 12,
+    "w": 14,
+    "h": 108
+   },
+   {
+    "x": 54,
+    "y": 24,
+    "w": 14,
+    "h": 96
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__29",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__29.png",
+  "w": 80,
+  "h": 124,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 27,
+    "h": 124
+   },
+   {
+    "x": 40,
+    "y": 74,
+    "w": 27,
+    "h": 50
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__30",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__30.png",
+  "w": 108,
+  "h": 80,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 36,
+    "h": 80
+   },
+   {
+    "x": 48,
+    "y": 13,
+    "w": 60,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__31",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__31.png",
+  "w": 140,
+  "h": 108,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 25,
+    "h": 108
+   },
+   {
+    "x": 102,
+    "y": 0,
+    "w": 25,
+    "h": 108
+   },
+   {
+    "x": 38,
+    "y": 12,
+    "w": 64,
+    "h": 12
+   },
+   {
+    "x": 64,
+    "y": 24,
+    "w": 13,
+    "h": 84
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__32",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__32.png",
+  "w": 80,
+  "h": 100,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 27,
+    "h": 100
+   },
+   {
+    "x": 40,
+    "y": 25,
+    "w": 13,
+    "h": 75
+   },
+   {
+    "x": 53,
+    "y": 62,
+    "w": 13,
+    "h": 38
+   },
+   {
+    "x": 0,
+    "y": 75,
+    "w": 13,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__33",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__33.png",
+  "w": 103,
+  "h": 92,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 64,
+    "h": 26
+   },
+   {
+    "x": 77,
+    "y": 13,
+    "w": 13,
+    "h": 79
+   },
+   {
+    "x": 13,
+    "y": 26,
+    "w": 26,
+    "h": 13
+   },
+   {
+    "x": 64,
+    "y": 26,
+    "w": 13,
+    "h": 66
+   },
+   {
+    "x": 26,
+    "y": 39,
+    "w": 39,
+    "h": 53
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__34",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__34.png",
+  "w": 144,
+  "h": 112,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 120,
+    "h": 12
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 60,
+    "y": 12,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 108,
+    "y": 12,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 12,
+    "y": 25,
+    "w": 24,
+    "h": 87
+   },
+   {
+    "x": 60,
+    "y": 25,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 120,
+    "y": 25,
+    "w": 24,
+    "h": 87
+   },
+   {
+    "x": 72,
+    "y": 37,
+    "w": 12,
+    "h": 75
+   },
+   {
+    "x": 60,
+    "y": 87,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 84,
+    "y": 87,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__35",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__35.png",
+  "w": 132,
+  "h": 61,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 132,
+    "h": 12
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 108,
+    "h": 12
+   },
+   {
+    "x": 24,
+    "y": 24,
+    "w": 84,
+    "h": 12
+   },
+   {
+    "x": 48,
+    "y": 37,
+    "w": 48,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__36",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__36.png",
+  "w": 88,
+  "h": 105,
+  "colliders": [
+   {
+    "x": 25,
+    "y": 0,
+    "w": 38,
+    "h": 26
+   },
+   {
+    "x": 13,
+    "y": 13,
+    "w": 13,
+    "h": 92
+   },
+   {
+    "x": 63,
+    "y": 13,
+    "w": 13,
+    "h": 92
+   },
+   {
+    "x": 25,
+    "y": 26,
+    "w": 13,
+    "h": 79
+   },
+   {
+    "x": 0,
+    "y": 39,
+    "w": 13,
+    "h": 66
+   },
+   {
+    "x": 38,
+    "y": 92,
+    "w": 25,
+    "h": 13
+   }
+  ],
+  "openings": [
+   {
+    "x": 32,
+    "y": 20,
+    "w": 28,
+    "h": 76
+   }
+  ]
+ },
+ {
+  "id": "ruined_violet_arch_tileset__37",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__37.png",
+  "w": 60,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 12,
+    "h": 120
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 12,
+    "h": 108
+   },
+   {
+    "x": 36,
+    "y": 12,
+    "w": 12,
+    "h": 108
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__38",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__38.png",
+  "w": 136,
+  "h": 56,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 124,
+    "h": 28
+   },
+   {
+    "x": 0,
+    "y": 28,
+    "w": 25,
+    "h": 28
+   },
+   {
+    "x": 49,
+    "y": 28,
+    "w": 49,
+    "h": 14
+   },
+   {
+    "x": 49,
+    "y": 42,
+    "w": 37,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__39",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__39.png",
+  "w": 92,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 0,
+    "w": 26,
+    "h": 120
+   },
+   {
+    "x": 13,
+    "y": 12,
+    "w": 13,
+    "h": 108
+   },
+   {
+    "x": 53,
+    "y": 12,
+    "w": 13,
+    "h": 108
+   },
+   {
+    "x": 66,
+    "y": 72,
+    "w": 13,
+    "h": 48
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__40",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__40.png",
+  "w": 92,
+  "h": 119,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 26,
+    "h": 119
+   },
+   {
+    "x": 0,
+    "y": 13,
+    "w": 13,
+    "h": 106
+   },
+   {
+    "x": 39,
+    "y": 13,
+    "w": 13,
+    "h": 106
+   },
+   {
+    "x": 53,
+    "y": 40,
+    "w": 13,
+    "h": 79
+   },
+   {
+    "x": 66,
+    "y": 66,
+    "w": 13,
+    "h": 53
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__41",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__41.png",
+  "w": 184,
+  "h": 69,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 172,
+    "h": 14
+   },
+   {
+    "x": 0,
+    "y": 14,
+    "w": 172,
+    "h": 14
+   },
+   {
+    "x": 12,
+    "y": 28,
+    "w": 37,
+    "h": 14
+   },
+   {
+    "x": 98,
+    "y": 28,
+    "w": 49,
+    "h": 14
+   },
+   {
+    "x": 25,
+    "y": 41,
+    "w": 25,
+    "h": 28
+   },
+   {
+    "x": 98,
+    "y": 41,
+    "w": 37,
+    "h": 14
+   },
+   {
+    "x": 98,
+    "y": 55,
+    "w": 25,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__42",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__42.png",
+  "w": 80,
+  "h": 124,
+  "colliders": [
+   {
+    "x": 40,
+    "y": 12,
+    "w": 27,
+    "h": 112
+   },
+   {
+    "x": 27,
+    "y": 50,
+    "w": 13,
+    "h": 74
+   },
+   {
+    "x": 13,
+    "y": 87,
+    "w": 13,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__43",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__43.png",
+  "w": 71,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 28,
+    "y": 12,
+    "w": 28,
+    "h": 108
+   },
+   {
+    "x": 14,
+    "y": 36,
+    "w": 14,
+    "h": 84
+   },
+   {
+    "x": 0,
+    "y": 60,
+    "w": 14,
+    "h": 60
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__44",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__44.png",
+  "w": 64,
+  "h": 116,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 0,
+    "w": 13,
+    "h": 116
+   },
+   {
+    "x": 13,
+    "y": 13,
+    "w": 13,
+    "h": 103
+   },
+   {
+    "x": 38,
+    "y": 13,
+    "w": 13,
+    "h": 103
+   },
+   {
+    "x": 0,
+    "y": 90,
+    "w": 13,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__45",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__45.png",
+  "w": 136,
+  "h": 69,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 136,
+    "h": 14
+   },
+   {
+    "x": 12,
+    "y": 14,
+    "w": 111,
+    "h": 14
+   },
+   {
+    "x": 12,
+    "y": 28,
+    "w": 99,
+    "h": 14
+   },
+   {
+    "x": 49,
+    "y": 41,
+    "w": 49,
+    "h": 14
+   },
+   {
+    "x": 49,
+    "y": 55,
+    "w": 37,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "ruined_violet_arch_tileset__46",
+  "category": "ruins",
+  "file": "assets/processed/ruins/ruined_violet_arch_tileset__46.png",
+  "w": 67,
+  "h": 116,
+  "colliders": [
+   {
+    "x": 13,
+    "y": 0,
+    "w": 13,
+    "h": 116
+   },
+   {
+    "x": 27,
+    "y": 13,
+    "w": 13,
+    "h": 103
+   },
+   {
+    "x": 40,
+    "y": 26,
+    "w": 13,
+    "h": 90
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__00",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__00.png",
+  "w": 312,
+  "h": 508,
+  "colliders": [
+   {
+    "x": 156,
+    "y": 0,
+    "w": 117,
+    "h": 218
+   },
+   {
+    "x": 39,
+    "y": 36,
+    "w": 117,
+    "h": 73
+   },
+   {
+    "x": 78,
+    "y": 109,
+    "w": 78,
+    "h": 36
+   },
+   {
+    "x": 39,
+    "y": 145,
+    "w": 78,
+    "h": 36
+   },
+   {
+    "x": 39,
+    "y": 181,
+    "w": 39,
+    "h": 73
+   },
+   {
+    "x": 78,
+    "y": 363,
+    "w": 78,
+    "h": 36
+   },
+   {
+    "x": 39,
+    "y": 399,
+    "w": 78,
+    "h": 36
+   },
+   {
+    "x": 156,
+    "y": 399,
+    "w": 117,
+    "h": 36
+   },
+   {
+    "x": 0,
+    "y": 435,
+    "w": 78,
+    "h": 36
+   },
+   {
+    "x": 195,
+    "y": 435,
+    "w": 78,
+    "h": 36
+   }
+  ],
+  "openings": [
+   {
+    "x": 132,
+    "y": 108,
+    "w": 44,
+    "h": 76
+   },
+   {
+    "x": 220,
+    "y": 132,
+    "w": 32,
+    "h": 80
+   }
+  ]
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__01",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__01.png",
+  "w": 272,
+  "h": 256,
+  "colliders": [
+   {
+    "x": 91,
+    "y": 0,
+    "w": 54,
+    "h": 146
+   },
+   {
+    "x": 36,
+    "y": 18,
+    "w": 54,
+    "h": 18
+   },
+   {
+    "x": 145,
+    "y": 18,
+    "w": 91,
+    "h": 91
+   },
+   {
+    "x": 54,
+    "y": 37,
+    "w": 36,
+    "h": 110
+   },
+   {
+    "x": 36,
+    "y": 55,
+    "w": 18,
+    "h": 73
+   },
+   {
+    "x": 145,
+    "y": 110,
+    "w": 18,
+    "h": 91
+   },
+   {
+    "x": 199,
+    "y": 110,
+    "w": 36,
+    "h": 37
+   },
+   {
+    "x": 163,
+    "y": 128,
+    "w": 18,
+    "h": 37
+   },
+   {
+    "x": 54,
+    "y": 146,
+    "w": 18,
+    "h": 91
+   },
+   {
+    "x": 218,
+    "y": 146,
+    "w": 18,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__02",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__02.png",
+  "w": 172,
+  "h": 264,
+  "colliders": [
+   {
+    "x": 134,
+    "y": 0,
+    "w": 19,
+    "h": 170
+   },
+   {
+    "x": 38,
+    "y": 19,
+    "w": 96,
+    "h": 94
+   },
+   {
+    "x": 0,
+    "y": 38,
+    "w": 38,
+    "h": 113
+   },
+   {
+    "x": 57,
+    "y": 113,
+    "w": 76,
+    "h": 19
+   },
+   {
+    "x": 57,
+    "y": 132,
+    "w": 57,
+    "h": 38
+   },
+   {
+    "x": 19,
+    "y": 151,
+    "w": 19,
+    "h": 94
+   },
+   {
+    "x": 57,
+    "y": 170,
+    "w": 38,
+    "h": 19
+   },
+   {
+    "x": 57,
+    "y": 189,
+    "w": 19,
+    "h": 38
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__03",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__03.png",
+  "w": 224,
+  "h": 280,
+  "colliders": [
+   {
+    "x": 56,
+    "y": 19,
+    "w": 149,
+    "h": 19
+   },
+   {
+    "x": 56,
+    "y": 37,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "x": 112,
+    "y": 37,
+    "w": 37,
+    "h": 19
+   },
+   {
+    "x": 168,
+    "y": 37,
+    "w": 19,
+    "h": 56
+   },
+   {
+    "x": 37,
+    "y": 56,
+    "w": 37,
+    "h": 37
+   },
+   {
+    "x": 112,
+    "y": 56,
+    "w": 19,
+    "h": 131
+   },
+   {
+    "x": 187,
+    "y": 93,
+    "w": 19,
+    "h": 56
+   },
+   {
+    "x": 93,
+    "y": 131,
+    "w": 19,
+    "h": 37
+   },
+   {
+    "x": 75,
+    "y": 187,
+    "w": 19,
+    "h": 37
+   }
+  ],
+  "openings": [
+   {
+    "x": 48,
+    "y": 40,
+    "w": 68,
+    "h": 180
+   }
+  ]
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__04",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__04.png",
+  "w": 120,
+  "h": 228,
+  "colliders": [
+   {
+    "x": 20,
+    "y": 0,
+    "w": 20,
+    "h": 38
+   },
+   {
+    "x": 80,
+    "y": 0,
+    "w": 20,
+    "h": 133
+   },
+   {
+    "x": 40,
+    "y": 19,
+    "w": 40,
+    "h": 38
+   },
+   {
+    "x": 60,
+    "y": 76,
+    "w": 20,
+    "h": 57
+   },
+   {
+    "x": 0,
+    "y": 133,
+    "w": 60,
+    "h": 19
+   },
+   {
+    "x": 0,
+    "y": 152,
+    "w": 40,
+    "h": 19
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__05",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__05.png",
+  "w": 248,
+  "h": 248,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 248,
+    "h": 19
+   },
+   {
+    "x": 19,
+    "y": 19,
+    "w": 210,
+    "h": 19
+   },
+   {
+    "x": 57,
+    "y": 38,
+    "w": 153,
+    "h": 19
+   },
+   {
+    "x": 76,
+    "y": 57,
+    "w": 114,
+    "h": 38
+   },
+   {
+    "x": 114,
+    "y": 95,
+    "w": 57,
+    "h": 57
+   },
+   {
+    "x": 114,
+    "y": 153,
+    "w": 38,
+    "h": 19
+   },
+   {
+    "x": 38,
+    "y": 210,
+    "w": 38,
+    "h": 19
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__06",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__06.png",
+  "w": 120,
+  "h": 204,
+  "colliders": [
+   {
+    "x": 48,
+    "y": 12,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 24,
+    "y": 24,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 60,
+    "y": 24,
+    "w": 12,
+    "h": 48
+   },
+   {
+    "x": 72,
+    "y": 36,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 84,
+    "y": 48,
+    "w": 12,
+    "h": 132
+   },
+   {
+    "x": 96,
+    "y": 60,
+    "w": 12,
+    "h": 108
+   },
+   {
+    "x": 108,
+    "y": 84,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 72,
+    "y": 144,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 48,
+    "y": 168,
+    "w": 24,
+    "h": 24
+   },
+   {
+    "x": 36,
+    "y": 192,
+    "w": 24,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__07",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__07.png",
+  "w": 228,
+  "h": 208,
+  "colliders": [
+   {
+    "x": 76,
+    "y": 19,
+    "w": 76,
+    "h": 19
+   },
+   {
+    "x": 152,
+    "y": 38,
+    "w": 38,
+    "h": 19
+   },
+   {
+    "x": 171,
+    "y": 57,
+    "w": 38,
+    "h": 19
+   },
+   {
+    "x": 19,
+    "y": 76,
+    "w": 19,
+    "h": 95
+   },
+   {
+    "x": 190,
+    "y": 76,
+    "w": 38,
+    "h": 38
+   },
+   {
+    "x": 190,
+    "y": 113,
+    "w": 19,
+    "h": 57
+   },
+   {
+    "x": 171,
+    "y": 151,
+    "w": 19,
+    "h": 38
+   },
+   {
+    "x": 57,
+    "y": 170,
+    "w": 57,
+    "h": 19
+   },
+   {
+    "x": 152,
+    "y": 170,
+    "w": 19,
+    "h": 38
+   },
+   {
+    "x": 76,
+    "y": 189,
+    "w": 76,
+    "h": 19
+   }
+  ],
+  "openings": [
+   {
+    "x": 32,
+    "y": 36,
+    "w": 160,
+    "h": 148
+   }
+  ]
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__08",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__08.png",
+  "w": 484,
+  "h": 180,
+  "colliders": [
+   {
+    "x": 97,
+    "y": 26,
+    "w": 73,
+    "h": 51
+   },
+   {
+    "x": 290,
+    "y": 26,
+    "w": 24,
+    "h": 51
+   },
+   {
+    "x": 339,
+    "y": 26,
+    "w": 97,
+    "h": 103
+   },
+   {
+    "x": 48,
+    "y": 51,
+    "w": 48,
+    "h": 26
+   },
+   {
+    "x": 169,
+    "y": 51,
+    "w": 24,
+    "h": 51
+   },
+   {
+    "x": 315,
+    "y": 51,
+    "w": 24,
+    "h": 103
+   },
+   {
+    "x": 436,
+    "y": 51,
+    "w": 24,
+    "h": 129
+   },
+   {
+    "x": 48,
+    "y": 77,
+    "w": 24,
+    "h": 51
+   },
+   {
+    "x": 194,
+    "y": 77,
+    "w": 24,
+    "h": 77
+   },
+   {
+    "x": 218,
+    "y": 129,
+    "w": 24,
+    "h": 51
+   },
+   {
+    "x": 339,
+    "y": 129,
+    "w": 48,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__09",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__09.png",
+  "w": 216,
+  "h": 240,
+  "colliders": [
+   {
+    "x": 144,
+    "y": 18,
+    "w": 18,
+    "h": 222
+   },
+   {
+    "x": 18,
+    "y": 55,
+    "w": 36,
+    "h": 185
+   },
+   {
+    "x": 54,
+    "y": 74,
+    "w": 90,
+    "h": 37
+   },
+   {
+    "x": 90,
+    "y": 111,
+    "w": 54,
+    "h": 18
+   },
+   {
+    "x": 162,
+    "y": 111,
+    "w": 18,
+    "h": 129
+   },
+   {
+    "x": 90,
+    "y": 129,
+    "w": 18,
+    "h": 92
+   },
+   {
+    "x": 126,
+    "y": 129,
+    "w": 18,
+    "h": 111
+   },
+   {
+    "x": 54,
+    "y": 148,
+    "w": 36,
+    "h": 74
+   },
+   {
+    "x": 108,
+    "y": 148,
+    "w": 18,
+    "h": 92
+   },
+   {
+    "x": 180,
+    "y": 203,
+    "w": 18,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__10",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__10.png",
+  "w": 196,
+  "h": 200,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 24,
+    "h": 100
+   },
+   {
+    "x": 0,
+    "y": 12,
+    "w": 24,
+    "h": 100
+   },
+   {
+    "x": 49,
+    "y": 12,
+    "w": 122,
+    "h": 50
+   },
+   {
+    "x": 172,
+    "y": 25,
+    "w": 12,
+    "h": 100
+   },
+   {
+    "x": 184,
+    "y": 50,
+    "w": 12,
+    "h": 38
+   },
+   {
+    "x": 49,
+    "y": 62,
+    "w": 49,
+    "h": 12
+   },
+   {
+    "x": 122,
+    "y": 62,
+    "w": 49,
+    "h": 25
+   },
+   {
+    "x": 122,
+    "y": 88,
+    "w": 24,
+    "h": 112
+   },
+   {
+    "x": 24,
+    "y": 125,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 147,
+    "y": 125,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 37,
+    "y": 138,
+    "w": 12,
+    "h": 62
+   },
+   {
+    "x": 147,
+    "y": 162,
+    "w": 12,
+    "h": 38
+   },
+   {
+    "x": 24,
+    "y": 175,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__11",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__11.png",
+  "w": 128,
+  "h": 196,
+  "colliders": [
+   {
+    "x": 38,
+    "y": 12,
+    "w": 26,
+    "h": 184
+   },
+   {
+    "x": 26,
+    "y": 37,
+    "w": 13,
+    "h": 37
+   },
+   {
+    "x": 64,
+    "y": 49,
+    "w": 13,
+    "h": 24
+   },
+   {
+    "x": 64,
+    "y": 122,
+    "w": 13,
+    "h": 24
+   },
+   {
+    "x": 26,
+    "y": 135,
+    "w": 13,
+    "h": 61
+   },
+   {
+    "x": 13,
+    "y": 147,
+    "w": 13,
+    "h": 49
+   },
+   {
+    "x": 64,
+    "y": 172,
+    "w": 13,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__12",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__12.png",
+  "w": 120,
+  "h": 192,
+  "colliders": [
+   {
+    "x": 84,
+    "y": 0,
+    "w": 12,
+    "h": 192
+   },
+   {
+    "x": 72,
+    "y": 12,
+    "w": 12,
+    "h": 180
+   },
+   {
+    "x": 60,
+    "y": 24,
+    "w": 12,
+    "h": 168
+   },
+   {
+    "x": 96,
+    "y": 168,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": [
+   {
+    "x": 8,
+    "y": 48,
+    "w": 56,
+    "h": 52
+   }
+  ]
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__13",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__13.png",
+  "w": 328,
+  "h": 180,
+  "colliders": [
+   {
+    "x": 182,
+    "y": 0,
+    "w": 18,
+    "h": 54
+   },
+   {
+    "x": 255,
+    "y": 0,
+    "w": 36,
+    "h": 18
+   },
+   {
+    "x": 200,
+    "y": 18,
+    "w": 36,
+    "h": 72
+   },
+   {
+    "x": 0,
+    "y": 36,
+    "w": 18,
+    "h": 90
+   },
+   {
+    "x": 146,
+    "y": 36,
+    "w": 36,
+    "h": 18
+   },
+   {
+    "x": 237,
+    "y": 72,
+    "w": 18,
+    "h": 54
+   },
+   {
+    "x": 255,
+    "y": 90,
+    "w": 18,
+    "h": 36
+   },
+   {
+    "x": 18,
+    "y": 108,
+    "w": 18,
+    "h": 36
+   },
+   {
+    "x": 55,
+    "y": 162,
+    "w": 55,
+    "h": 18
+   }
+  ],
+  "openings": [
+   {
+    "x": 36,
+    "y": 72,
+    "w": 84,
+    "h": 32
+   },
+   {
+    "x": 136,
+    "y": 80,
+    "w": 52,
+    "h": 44
+   },
+   {
+    "x": 184,
+    "y": 92,
+    "w": 60,
+    "h": 56
+   },
+   {
+    "x": 44,
+    "y": 100,
+    "w": 100,
+    "h": 40
+   },
+   {
+    "x": 116,
+    "y": 112,
+    "w": 84,
+    "h": 40
+   }
+  ]
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__14",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__14.png",
+  "w": 272,
+  "h": 168,
+  "colliders": [
+   {
+    "x": 163,
+    "y": 19,
+    "w": 18,
+    "h": 112
+   },
+   {
+    "x": 54,
+    "y": 37,
+    "w": 36,
+    "h": 19
+   },
+   {
+    "x": 145,
+    "y": 37,
+    "w": 18,
+    "h": 37
+   },
+   {
+    "x": 181,
+    "y": 37,
+    "w": 18,
+    "h": 112
+   },
+   {
+    "x": 199,
+    "y": 56,
+    "w": 36,
+    "h": 93
+   },
+   {
+    "x": 36,
+    "y": 75,
+    "w": 91,
+    "h": 37
+   },
+   {
+    "x": 236,
+    "y": 75,
+    "w": 18,
+    "h": 56
+   },
+   {
+    "x": 18,
+    "y": 93,
+    "w": 18,
+    "h": 37
+   },
+   {
+    "x": 127,
+    "y": 93,
+    "w": 36,
+    "h": 37
+   },
+   {
+    "x": 91,
+    "y": 112,
+    "w": 36,
+    "h": 19
+   }
+  ],
+  "openings": [
+   {
+    "x": 100,
+    "y": 12,
+    "w": 60,
+    "h": 36
+   }
+  ]
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__15",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__15.png",
+  "w": 220,
+  "h": 196,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 0,
+    "w": 55,
+    "h": 39
+   },
+   {
+    "x": 0,
+    "y": 20,
+    "w": 37,
+    "h": 39
+   },
+   {
+    "x": 92,
+    "y": 20,
+    "w": 73,
+    "h": 20
+   },
+   {
+    "x": 37,
+    "y": 39,
+    "w": 37,
+    "h": 20
+   },
+   {
+    "x": 110,
+    "y": 39,
+    "w": 73,
+    "h": 20
+   },
+   {
+    "x": 18,
+    "y": 59,
+    "w": 37,
+    "h": 137
+   },
+   {
+    "x": 128,
+    "y": 59,
+    "w": 55,
+    "h": 39
+   },
+   {
+    "x": 128,
+    "y": 98,
+    "w": 37,
+    "h": 98
+   },
+   {
+    "x": 165,
+    "y": 118,
+    "w": 18,
+    "h": 78
+   },
+   {
+    "x": 183,
+    "y": 157,
+    "w": 18,
+    "h": 39
+   }
+  ],
+  "openings": [
+   {
+    "x": 164,
+    "y": 84,
+    "w": 40,
+    "h": 80
+   }
+  ]
+ },
+ {
+  "id": "murmuration_ruins_organic_obstacle_asset_sheet__16",
+  "category": "organic",
+  "file": "assets/processed/organic/murmuration_ruins_organic_obstacle_asset_sheet__16.png",
+  "w": 1404,
+  "h": 344,
+  "colliders": [
+   {
+    "x": 48,
+    "y": 49,
+    "w": 242,
+    "h": 49
+   },
+   {
+    "x": 48,
+    "y": 197,
+    "w": 97,
+    "h": 147
+   },
+   {
+    "x": 145,
+    "y": 246,
+    "w": 145,
+    "h": 98
+   },
+   {
+    "x": 387,
+    "y": 246,
+    "w": 194,
+    "h": 98
+   },
+   {
+    "x": 678,
+    "y": 246,
+    "w": 97,
+    "h": 98
+   },
+   {
+    "x": 968,
+    "y": 246,
+    "w": 145,
+    "h": 49
+   },
+   {
+    "x": 1259,
+    "y": 246,
+    "w": 97,
+    "h": 49
+   },
+   {
+    "x": 775,
+    "y": 295,
+    "w": 97,
+    "h": 49
+   },
+   {
+    "x": 1017,
+    "y": 295,
+    "w": 97,
+    "h": 49
+   }
+  ],
+  "openings": [
+   {
+    "x": 1192,
+    "y": 40,
+    "w": 28,
+    "h": 76
+   }
+  ]
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__00",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__00.png",
+  "w": 1204,
+  "h": 340,
+  "colliders": [
+   {
+    "x": 819,
+    "y": 0,
+    "w": 337,
+    "h": 97
+   },
+   {
+    "x": 337,
+    "y": 49,
+    "w": 289,
+    "h": 97
+   },
+   {
+    "x": 771,
+    "y": 49,
+    "w": 48,
+    "h": 146
+   },
+   {
+    "x": 1156,
+    "y": 49,
+    "w": 48,
+    "h": 97
+   },
+   {
+    "x": 626,
+    "y": 97,
+    "w": 48,
+    "h": 97
+   },
+   {
+    "x": 819,
+    "y": 97,
+    "w": 144,
+    "h": 97
+   },
+   {
+    "x": 1060,
+    "y": 97,
+    "w": 96,
+    "h": 49
+   },
+   {
+    "x": 96,
+    "y": 146,
+    "w": 48,
+    "h": 194
+   },
+   {
+    "x": 385,
+    "y": 146,
+    "w": 241,
+    "h": 49
+   },
+   {
+    "x": 963,
+    "y": 146,
+    "w": 144,
+    "h": 49
+   },
+   {
+    "x": 144,
+    "y": 194,
+    "w": 96,
+    "h": 49
+   },
+   {
+    "x": 482,
+    "y": 194,
+    "w": 144,
+    "h": 49
+   },
+   {
+    "x": 867,
+    "y": 194,
+    "w": 193,
+    "h": 146
+   },
+   {
+    "x": 482,
+    "y": 243,
+    "w": 48,
+    "h": 97
+   }
+  ],
+  "openings": [
+   {
+    "x": 952,
+    "y": 104,
+    "w": 92,
+    "h": 72
+   },
+   {
+    "x": 1048,
+    "y": 104,
+    "w": 40,
+    "h": 52
+   },
+   {
+    "x": 1072,
+    "y": 132,
+    "w": 56,
+    "h": 40
+   },
+   {
+    "x": 864,
+    "y": 144,
+    "w": 52,
+    "h": 40
+   },
+   {
+    "x": 396,
+    "y": 148,
+    "w": 80,
+    "h": 44
+   },
+   {
+    "x": 980,
+    "y": 200,
+    "w": 52,
+    "h": 40
+   }
+  ]
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__01",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__01.png",
+  "w": 480,
+  "h": 216,
+  "colliders": [
+   {
+    "x": 185,
+    "y": 0,
+    "w": 37,
+    "h": 108
+   },
+   {
+    "x": 148,
+    "y": 36,
+    "w": 37,
+    "h": 180
+   },
+   {
+    "x": 222,
+    "y": 36,
+    "w": 37,
+    "h": 180
+   },
+   {
+    "x": 37,
+    "y": 72,
+    "w": 111,
+    "h": 36
+   },
+   {
+    "x": 258,
+    "y": 72,
+    "w": 74,
+    "h": 144
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "w": 37,
+    "h": 108
+   },
+   {
+    "x": 332,
+    "y": 108,
+    "w": 74,
+    "h": 108
+   },
+   {
+    "x": 74,
+    "y": 144,
+    "w": 37,
+    "h": 72
+   },
+   {
+    "x": 406,
+    "y": 144,
+    "w": 37,
+    "h": 72
+   }
+  ],
+  "openings": [
+   {
+    "x": 192,
+    "y": 104,
+    "w": 36,
+    "h": 76
+   },
+   {
+    "x": 80,
+    "y": 108,
+    "w": 88,
+    "h": 72
+   },
+   {
+    "x": 248,
+    "y": 128,
+    "w": 36,
+    "h": 60
+   }
+  ]
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__02",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__02.png",
+  "w": 155,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 24,
+    "w": 78,
+    "h": 36
+   },
+   {
+    "x": 13,
+    "y": 36,
+    "w": 26,
+    "h": 24
+   },
+   {
+    "x": 116,
+    "y": 36,
+    "w": 13,
+    "h": 24
+   },
+   {
+    "x": 78,
+    "y": 60,
+    "w": 13,
+    "h": 60
+   },
+   {
+    "x": 65,
+    "y": 72,
+    "w": 13,
+    "h": 48
+   },
+   {
+    "x": 39,
+    "y": 96,
+    "w": 26,
+    "h": 24
+   },
+   {
+    "x": 90,
+    "y": 96,
+    "w": 26,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__03",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__03.png",
+  "w": 252,
+  "h": 179,
+  "colliders": [
+   {
+    "x": 126,
+    "y": 0,
+    "w": 18,
+    "h": 40
+   },
+   {
+    "x": 144,
+    "y": 60,
+    "w": 54,
+    "h": 80
+   },
+   {
+    "x": 126,
+    "y": 80,
+    "w": 18,
+    "h": 99
+   },
+   {
+    "x": 198,
+    "y": 80,
+    "w": 36,
+    "h": 40
+   },
+   {
+    "x": 18,
+    "y": 99,
+    "w": 108,
+    "h": 40
+   },
+   {
+    "x": 72,
+    "y": 139,
+    "w": 54,
+    "h": 40
+   },
+   {
+    "x": 144,
+    "y": 139,
+    "w": 36,
+    "h": 20
+   },
+   {
+    "x": 162,
+    "y": 159,
+    "w": 36,
+    "h": 20
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__04",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__04.png",
+  "w": 300,
+  "h": 180,
+  "colliders": [
+   {
+    "x": 94,
+    "y": 36,
+    "w": 38,
+    "h": 144
+   },
+   {
+    "x": 131,
+    "y": 54,
+    "w": 19,
+    "h": 126
+   },
+   {
+    "x": 75,
+    "y": 72,
+    "w": 19,
+    "h": 108
+   },
+   {
+    "x": 56,
+    "y": 90,
+    "w": 19,
+    "h": 90
+   },
+   {
+    "x": 150,
+    "y": 90,
+    "w": 19,
+    "h": 90
+   },
+   {
+    "x": 38,
+    "y": 108,
+    "w": 19,
+    "h": 72
+   },
+   {
+    "x": 169,
+    "y": 108,
+    "w": 56,
+    "h": 72
+   },
+   {
+    "x": 225,
+    "y": 126,
+    "w": 19,
+    "h": 54
+   },
+   {
+    "x": 19,
+    "y": 144,
+    "w": 19,
+    "h": 36
+   },
+   {
+    "x": 244,
+    "y": 144,
+    "w": 19,
+    "h": 36
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__05",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__05.png",
+  "w": 284,
+  "h": 172,
+  "colliders": [
+   {
+    "x": 123,
+    "y": 37,
+    "w": 12,
+    "h": 111
+   },
+   {
+    "x": 111,
+    "y": 61,
+    "w": 12,
+    "h": 86
+   },
+   {
+    "x": 136,
+    "y": 74,
+    "w": 86,
+    "h": 74
+   },
+   {
+    "x": 74,
+    "y": 86,
+    "w": 37,
+    "h": 49
+   },
+   {
+    "x": 62,
+    "y": 98,
+    "w": 12,
+    "h": 37
+   },
+   {
+    "x": 222,
+    "y": 98,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 49,
+    "y": 111,
+    "w": 12,
+    "h": 25
+   },
+   {
+    "x": 86,
+    "y": 135,
+    "w": 25,
+    "h": 12
+   },
+   {
+    "x": 222,
+    "y": 135,
+    "w": 12,
+    "h": 37
+   },
+   {
+    "x": 173,
+    "y": 147,
+    "w": 49,
+    "h": 25
+   },
+   {
+    "x": 235,
+    "y": 147,
+    "w": 12,
+    "h": 25
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__06",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__06.png",
+  "w": 384,
+  "h": 248,
+  "colliders": [
+   {
+    "x": 154,
+    "y": 0,
+    "w": 115,
+    "h": 248
+   },
+   {
+    "x": 77,
+    "y": 41,
+    "w": 77,
+    "h": 124
+   },
+   {
+    "x": 269,
+    "y": 41,
+    "w": 77,
+    "h": 124
+   },
+   {
+    "x": 0,
+    "y": 83,
+    "w": 77,
+    "h": 41
+   },
+   {
+    "x": 115,
+    "y": 165,
+    "w": 38,
+    "h": 83
+   },
+   {
+    "x": 38,
+    "y": 207,
+    "w": 77,
+    "h": 41
+   },
+   {
+    "x": 269,
+    "y": 207,
+    "w": 77,
+    "h": 41
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__07",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__07.png",
+  "w": 244,
+  "h": 192,
+  "colliders": [
+   {
+    "x": 113,
+    "y": 0,
+    "w": 38,
+    "h": 77
+   },
+   {
+    "x": 56,
+    "y": 19,
+    "w": 56,
+    "h": 77
+   },
+   {
+    "x": 150,
+    "y": 19,
+    "w": 19,
+    "h": 58
+   },
+   {
+    "x": 169,
+    "y": 38,
+    "w": 38,
+    "h": 58
+   },
+   {
+    "x": 19,
+    "y": 58,
+    "w": 38,
+    "h": 38
+   },
+   {
+    "x": 206,
+    "y": 58,
+    "w": 19,
+    "h": 38
+   },
+   {
+    "x": 94,
+    "y": 96,
+    "w": 19,
+    "h": 96
+   },
+   {
+    "x": 113,
+    "y": 115,
+    "w": 19,
+    "h": 77
+   },
+   {
+    "x": 75,
+    "y": 134,
+    "w": 19,
+    "h": 58
+   },
+   {
+    "x": 56,
+    "y": 154,
+    "w": 19,
+    "h": 38
+   },
+   {
+    "x": 131,
+    "y": 154,
+    "w": 56,
+    "h": 38
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__08",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__08.png",
+  "w": 244,
+  "h": 168,
+  "colliders": [
+   {
+    "x": 150,
+    "y": 0,
+    "w": 19,
+    "h": 75
+   },
+   {
+    "x": 94,
+    "y": 19,
+    "w": 56,
+    "h": 56
+   },
+   {
+    "x": 169,
+    "y": 19,
+    "w": 19,
+    "h": 56
+   },
+   {
+    "x": 56,
+    "y": 37,
+    "w": 38,
+    "h": 56
+   },
+   {
+    "x": 188,
+    "y": 37,
+    "w": 38,
+    "h": 37
+   },
+   {
+    "x": 19,
+    "y": 56,
+    "w": 38,
+    "h": 37
+   },
+   {
+    "x": 94,
+    "y": 75,
+    "w": 19,
+    "h": 37
+   },
+   {
+    "x": 113,
+    "y": 93,
+    "w": 19,
+    "h": 75
+   },
+   {
+    "x": 75,
+    "y": 131,
+    "w": 38,
+    "h": 37
+   },
+   {
+    "x": 131,
+    "y": 131,
+    "w": 19,
+    "h": 37
+   },
+   {
+    "x": 150,
+    "y": 149,
+    "w": 38,
+    "h": 19
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__09",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__09.png",
+  "w": 216,
+  "h": 204,
+  "colliders": [
+   {
+    "x": 72,
+    "y": 56,
+    "w": 18,
+    "h": 56
+   },
+   {
+    "x": 90,
+    "y": 93,
+    "w": 18,
+    "h": 37
+   },
+   {
+    "x": 108,
+    "y": 111,
+    "w": 36,
+    "h": 93
+   },
+   {
+    "x": 36,
+    "y": 130,
+    "w": 18,
+    "h": 74
+   },
+   {
+    "x": 54,
+    "y": 148,
+    "w": 18,
+    "h": 56
+   },
+   {
+    "x": 144,
+    "y": 148,
+    "w": 18,
+    "h": 56
+   },
+   {
+    "x": 90,
+    "y": 167,
+    "w": 18,
+    "h": 37
+   },
+   {
+    "x": 162,
+    "y": 167,
+    "w": 18,
+    "h": 37
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__10",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__10.png",
+  "w": 220,
+  "h": 192,
+  "colliders": [
+   {
+    "x": 73,
+    "y": 60,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 73,
+    "y": 72,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 86,
+    "y": 96,
+    "w": 49,
+    "h": 24
+   },
+   {
+    "x": 159,
+    "y": 108,
+    "w": 24,
+    "h": 84
+   },
+   {
+    "x": 110,
+    "y": 120,
+    "w": 24,
+    "h": 72
+   },
+   {
+    "x": 134,
+    "y": 144,
+    "w": 12,
+    "h": 48
+   },
+   {
+    "x": 183,
+    "y": 144,
+    "w": 12,
+    "h": 48
+   },
+   {
+    "x": 98,
+    "y": 156,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 147,
+    "y": 156,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 86,
+    "y": 168,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__11",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__11.png",
+  "w": 260,
+  "h": 108,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__12",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__12.png",
+  "w": 76,
+  "h": 80,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__13",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__13.png",
+  "w": 104,
+  "h": 72,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__14",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__14.png",
+  "w": 212,
+  "h": 86,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__15",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__15.png",
+  "w": 152,
+  "h": 112,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__16",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__16.png",
+  "w": 180,
+  "h": 184,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__17",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__17.png",
+  "w": 128,
+  "h": 128,
+  "colliders": [
+   {
+    "x": 38,
+    "y": 13,
+    "w": 51,
+    "h": 102
+   },
+   {
+    "x": 26,
+    "y": 26,
+    "w": 13,
+    "h": 90
+   },
+   {
+    "x": 90,
+    "y": 26,
+    "w": 13,
+    "h": 90
+   },
+   {
+    "x": 13,
+    "y": 38,
+    "w": 13,
+    "h": 51
+   },
+   {
+    "x": 102,
+    "y": 38,
+    "w": 13,
+    "h": 64
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__18",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__18.png",
+  "w": 104,
+  "h": 104,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 13,
+    "w": 52,
+    "h": 78
+   },
+   {
+    "x": 13,
+    "y": 26,
+    "w": 13,
+    "h": 52
+   },
+   {
+    "x": 78,
+    "y": 26,
+    "w": 13,
+    "h": 52
+   },
+   {
+    "x": 39,
+    "y": 91,
+    "w": 26,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__19",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__19.png",
+  "w": 36,
+  "h": 124,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 50,
+    "w": 24,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__20",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__20.png",
+  "w": 40,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 48,
+    "w": 27,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__21",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__21.png",
+  "w": 56,
+  "h": 120,
+  "colliders": [
+   {
+    "x": 14,
+    "y": 12,
+    "w": 28,
+    "h": 48
+   },
+   {
+    "x": 14,
+    "y": 72,
+    "w": 14,
+    "h": 36
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__22",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__22.png",
+  "w": 40,
+  "h": 116,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 39,
+    "w": 27,
+    "h": 26
+   },
+   {
+    "x": 13,
+    "y": 64,
+    "w": 13,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_ruins_flock_asset_sheet__23",
+  "category": "ending",
+  "file": "assets/processed/ending/dreamy_ruins_flock_asset_sheet__23.png",
+  "w": 196,
+  "h": 216,
+  "colliders": [
+   {
+    "x": 110,
+    "y": 24,
+    "w": 24,
+    "h": 60
+   },
+   {
+    "x": 61,
+    "y": 36,
+    "w": 24,
+    "h": 24
+   },
+   {
+    "x": 98,
+    "y": 48,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 172,
+    "y": 96,
+    "w": 12,
+    "h": 96
+   },
+   {
+    "x": 37,
+    "y": 120,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 159,
+    "y": 120,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 12,
+    "y": 132,
+    "w": 24,
+    "h": 36
+   },
+   {
+    "x": 12,
+    "y": 168,
+    "w": 12,
+    "h": 24
+   },
+   {
+    "x": 159,
+    "y": 168,
+    "w": 12,
+    "h": 24
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__00",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__00.png",
+  "w": 300,
+  "h": 60,
+  "colliders": [
+   {
+    "x": 144,
+    "y": 0,
+    "w": 60,
+    "h": 36
+   },
+   {
+    "x": 72,
+    "y": 12,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 120,
+    "y": 12,
+    "w": 24,
+    "h": 36
+   },
+   {
+    "x": 204,
+    "y": 12,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 108,
+    "y": 24,
+    "w": 12,
+    "h": 36
+   },
+   {
+    "x": 204,
+    "y": 24,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 84,
+    "y": 36,
+    "w": 24,
+    "h": 24
+   },
+   {
+    "x": 36,
+    "y": 48,
+    "w": 48,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__01",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__01.png",
+  "w": 708,
+  "h": 84,
+  "colliders": [
+   {
+    "x": 468,
+    "y": 0,
+    "w": 96,
+    "h": 12
+   },
+   {
+    "x": 396,
+    "y": 12,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 348,
+    "y": 24,
+    "w": 48,
+    "h": 12
+   },
+   {
+    "x": 300,
+    "y": 36,
+    "w": 60,
+    "h": 12
+   },
+   {
+    "x": 36,
+    "y": 48,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 252,
+    "y": 48,
+    "w": 84,
+    "h": 12
+   },
+   {
+    "x": 168,
+    "y": 60,
+    "w": 144,
+    "h": 12
+   },
+   {
+    "x": 156,
+    "y": 72,
+    "w": 96,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__02",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__02.png",
+  "w": 128,
+  "h": 20,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__03",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__03.png",
+  "w": 68,
+  "h": 24,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 12,
+    "w": 54,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__04",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__04.png",
+  "w": 232,
+  "h": 92,
+  "colliders": [
+   {
+    "x": 37,
+    "y": 13,
+    "w": 24,
+    "h": 13
+   },
+   {
+    "x": 61,
+    "y": 26,
+    "w": 61,
+    "h": 26
+   },
+   {
+    "x": 122,
+    "y": 39,
+    "w": 24,
+    "h": 39
+   },
+   {
+    "x": 98,
+    "y": 53,
+    "w": 24,
+    "h": 13
+   },
+   {
+    "x": 147,
+    "y": 53,
+    "w": 12,
+    "h": 26
+   },
+   {
+    "x": 159,
+    "y": 66,
+    "w": 37,
+    "h": 13
+   },
+   {
+    "x": 195,
+    "y": 79,
+    "w": 37,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__05",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__05.png",
+  "w": 156,
+  "h": 80,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 24,
+    "h": 40
+   },
+   {
+    "x": 132,
+    "y": 53,
+    "w": 24,
+    "h": 27
+   }
+  ],
+  "openings": [
+   {
+    "x": 48,
+    "y": 28,
+    "w": 76,
+    "h": 32
+   }
+  ]
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__06",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__06.png",
+  "w": 104,
+  "h": 28,
+  "colliders": [
+   {
+    "x": 39,
+    "y": 0,
+    "w": 39,
+    "h": 28
+   },
+   {
+    "x": 78,
+    "y": 14,
+    "w": 26,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__07",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__07.png",
+  "w": 72,
+  "h": 32,
+  "colliders": [
+   {
+    "x": 36,
+    "y": 0,
+    "w": 36,
+    "h": 16
+   },
+   {
+    "x": 0,
+    "y": 16,
+    "w": 60,
+    "h": 16
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__08",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__08.png",
+  "w": 116,
+  "h": 16,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 103,
+    "h": 16
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__09",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__09.png",
+  "w": 92,
+  "h": 28,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 66,
+    "h": 14
+   },
+   {
+    "x": 26,
+    "y": 14,
+    "w": 53,
+    "h": 14
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__10",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__10.png",
+  "w": 1096,
+  "h": 512,
+  "colliders": [
+   {
+    "x": 149,
+    "y": 154,
+    "w": 100,
+    "h": 102
+   },
+   {
+    "x": 50,
+    "y": 205,
+    "w": 100,
+    "h": 51
+   },
+   {
+    "x": 399,
+    "y": 205,
+    "w": 149,
+    "h": 102
+   },
+   {
+    "x": 747,
+    "y": 205,
+    "w": 149,
+    "h": 51
+   },
+   {
+    "x": 548,
+    "y": 256,
+    "w": 50,
+    "h": 256
+   },
+   {
+    "x": 50,
+    "y": 307,
+    "w": 149,
+    "h": 51
+   },
+   {
+    "x": 897,
+    "y": 307,
+    "w": 149,
+    "h": 51
+   },
+   {
+    "x": 299,
+    "y": 358,
+    "w": 100,
+    "h": 102
+   },
+   {
+    "x": 0,
+    "y": 410,
+    "w": 100,
+    "h": 51
+   },
+   {
+    "x": 149,
+    "y": 410,
+    "w": 100,
+    "h": 51
+   },
+   {
+    "x": 598,
+    "y": 410,
+    "w": 50,
+    "h": 102
+   },
+   {
+    "x": 797,
+    "y": 461,
+    "w": 149,
+    "h": 51
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__11",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__11.png",
+  "w": 604,
+  "h": 112,
+  "colliders": [
+   {
+    "x": 109,
+    "y": 25,
+    "w": 72,
+    "h": 50
+   },
+   {
+    "x": 60,
+    "y": 37,
+    "w": 48,
+    "h": 37
+   },
+   {
+    "x": 181,
+    "y": 37,
+    "w": 60,
+    "h": 37
+   },
+   {
+    "x": 24,
+    "y": 50,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 242,
+    "y": 50,
+    "w": 48,
+    "h": 37
+   },
+   {
+    "x": 36,
+    "y": 62,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 290,
+    "y": 62,
+    "w": 36,
+    "h": 25
+   },
+   {
+    "x": 326,
+    "y": 75,
+    "w": 181,
+    "h": 12
+   },
+   {
+    "x": 302,
+    "y": 87,
+    "w": 193,
+    "h": 12
+   },
+   {
+    "x": 399,
+    "y": 100,
+    "w": 133,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__12",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__12.png",
+  "w": 84,
+  "h": 20,
+  "colliders": [
+   {
+    "x": 0,
+    "y": 0,
+    "w": 72,
+    "h": 20
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__13",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__13.png",
+  "w": 192,
+  "h": 64,
+  "colliders": [
+   {
+    "x": 120,
+    "y": 0,
+    "w": 48,
+    "h": 51
+   },
+   {
+    "x": 84,
+    "y": 13,
+    "w": 36,
+    "h": 38
+   },
+   {
+    "x": 168,
+    "y": 13,
+    "w": 24,
+    "h": 13
+   },
+   {
+    "x": 24,
+    "y": 26,
+    "w": 60,
+    "h": 38
+   },
+   {
+    "x": 0,
+    "y": 38,
+    "w": 24,
+    "h": 26
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__14",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__14.png",
+  "w": 192,
+  "h": 84,
+  "colliders": [
+   {
+    "x": 72,
+    "y": 0,
+    "w": 60,
+    "h": 12
+   },
+   {
+    "x": 120,
+    "y": 12,
+    "w": 48,
+    "h": 12
+   },
+   {
+    "x": 144,
+    "y": 24,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 72,
+    "y": 36,
+    "w": 48,
+    "h": 12
+   },
+   {
+    "x": 156,
+    "y": 36,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 96,
+    "y": 48,
+    "w": 36,
+    "h": 12
+   },
+   {
+    "x": 168,
+    "y": 48,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 96,
+    "y": 60,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 156,
+    "y": 60,
+    "w": 24,
+    "h": 12
+   },
+   {
+    "x": 144,
+    "y": 72,
+    "w": 24,
+    "h": 12
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__15",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__15.png",
+  "w": 192,
+  "h": 80,
+  "colliders": [
+   {
+    "x": 96,
+    "y": 0,
+    "w": 48,
+    "h": 27
+   },
+   {
+    "x": 60,
+    "y": 13,
+    "w": 36,
+    "h": 13
+   },
+   {
+    "x": 144,
+    "y": 13,
+    "w": 24,
+    "h": 67
+   },
+   {
+    "x": 36,
+    "y": 27,
+    "w": 24,
+    "h": 13
+   },
+   {
+    "x": 108,
+    "y": 27,
+    "w": 36,
+    "h": 13
+   },
+   {
+    "x": 168,
+    "y": 27,
+    "w": 12,
+    "h": 53
+   },
+   {
+    "x": 120,
+    "y": 40,
+    "w": 24,
+    "h": 40
+   },
+   {
+    "x": 180,
+    "y": 40,
+    "w": 12,
+    "h": 27
+   },
+   {
+    "x": 108,
+    "y": 53,
+    "w": 12,
+    "h": 27
+   },
+   {
+    "x": 84,
+    "y": 67,
+    "w": 24,
+    "h": 13
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__16",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__16.png",
+  "w": 108,
+  "h": 104,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 60,
+    "h": 104
+   },
+   {
+    "x": 12,
+    "y": 13,
+    "w": 12,
+    "h": 78
+   },
+   {
+    "x": 84,
+    "y": 13,
+    "w": 12,
+    "h": 78
+   },
+   {
+    "x": 0,
+    "y": 26,
+    "w": 12,
+    "h": 52
+   },
+   {
+    "x": 96,
+    "y": 26,
+    "w": 12,
+    "h": 65
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__17",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__17.png",
+  "w": 92,
+  "h": 108,
+  "colliders": [
+   {
+    "x": 26,
+    "y": 12,
+    "w": 39,
+    "h": 96
+   },
+   {
+    "x": 0,
+    "y": 24,
+    "w": 26,
+    "h": 60
+   },
+   {
+    "x": 66,
+    "y": 24,
+    "w": 13,
+    "h": 72
+   },
+   {
+    "x": 79,
+    "y": 36,
+    "w": 13,
+    "h": 36
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__18",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__18.png",
+  "w": 96,
+  "h": 100,
+  "colliders": [
+   {
+    "x": 24,
+    "y": 0,
+    "w": 48,
+    "h": 100
+   },
+   {
+    "x": 12,
+    "y": 12,
+    "w": 12,
+    "h": 88
+   },
+   {
+    "x": 72,
+    "y": 12,
+    "w": 12,
+    "h": 88
+   },
+   {
+    "x": 0,
+    "y": 25,
+    "w": 12,
+    "h": 62
+   },
+   {
+    "x": 84,
+    "y": 25,
+    "w": 12,
+    "h": 62
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__19",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__19.png",
+  "w": 48,
+  "h": 44,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 24,
+    "h": 44
+   },
+   {
+    "x": 0,
+    "y": 15,
+    "w": 12,
+    "h": 29
+   },
+   {
+    "x": 36,
+    "y": 15,
+    "w": 12,
+    "h": 29
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__20",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__20.png",
+  "w": 68,
+  "h": 64,
+  "colliders": [
+   {
+    "x": 14,
+    "y": 0,
+    "w": 41,
+    "h": 64
+   },
+   {
+    "x": 0,
+    "y": 13,
+    "w": 14,
+    "h": 51
+   },
+   {
+    "x": 54,
+    "y": 13,
+    "w": 14,
+    "h": 51
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "dreamy_pastel_wind_fx_sprite_sheet__21",
+  "category": "fx",
+  "file": "assets/processed/fx/dreamy_pastel_wind_fx_sprite_sheet__21.png",
+  "w": 60,
+  "h": 64,
+  "colliders": [
+   {
+    "x": 12,
+    "y": 0,
+    "w": 36,
+    "h": 64
+   },
+   {
+    "x": 0,
+    "y": 13,
+    "w": 12,
+    "h": 38
+   },
+   {
+    "x": 48,
+    "y": 13,
+    "w": 12,
+    "h": 38
+   }
+  ],
+  "openings": []
+ },
+ {
+  "id": "garden_tl_branch",
+  "category": "foreground",
+  "file": "assets/processed/foreground/garden_tl_branch.png",
+  "w": 661,
+  "h": 258,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "garden_tr_column",
+  "category": "foreground",
+  "file": "assets/processed/foreground/garden_tr_column.png",
+  "w": 604,
+  "h": 357,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "garden_bl_arch",
+  "category": "foreground",
+  "file": "assets/processed/foreground/garden_bl_arch.png",
+  "w": 401,
+  "h": 565,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "garden_br_column",
+  "category": "foreground",
+  "file": "assets/processed/foreground/garden_br_column.png",
+  "w": 435,
+  "h": 546,
+  "colliders": [],
+  "openings": []
+ },
+ {
+  "id": "garden_ground_strip",
+  "category": "foreground",
+  "file": "assets/processed/foreground/garden_ground_strip.png",
+  "w": 1672,
+  "h": 264,
+  "colliders": [],
+  "openings": []
+ }
+]

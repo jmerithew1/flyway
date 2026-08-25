@@ -30,7 +30,6 @@ export class ScatterSystem {
   spawn(x: number, y: number, awayX: number, awayY: number): void {
     const sprite = this.scene.add.image(x, y, 'bird-mid')
     sprite.setScale(0.3)
-    sprite.setTint(0x222638)
     const m = Math.hypot(awayX, awayY) || 1
     const recoverable = Math.random() < 0.3
     this.birds.push({
