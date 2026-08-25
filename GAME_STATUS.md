@@ -15,25 +15,23 @@ npm run dev
 - **SPACE (hold)** — gather: narrow dense stream, slightly faster
 - **SHIFT (hold)** — spread: broad cloud, collects strays, slower
 
-## Art pipeline (rebuilt 2026-08-24)
+## Art pipeline (supplied asset kit, integrated 2026-08-24)
 
-**All visible art is authored SVG in `public/art/`** — 16 files, loaded by a real
-`BootScene.preload()` via `this.load.svg()` and rasterized at load. No runtime
-primitives are used as final artwork. `src/ruins.ts` (the old Graphics kit) is
-deleted; only particle textures (`softdot`, `leaf`) remain procedural.
+**All visible art comes from the owner's 10-sheet art kit** (raw sheets committed
+in `assets_raw/`). `tools/extract_assets.py` segments them on their real alpha
+channels into 254 pieces under `public/assets/processed/`, with alpha-derived
+collider rects and enclosed-opening detection. `tools/build_manifest.py`
+generates `src/artManifest.ts` (86 curated pieces, semantic names, families).
 
-Assets live in `public/`, **not** `src/`, deliberately: Vite inlines assets under
-4 KB as *percent-encoded* data URIs, and Phaser's loader fast-paths `data:` URLs
-through `atob()`, which throws on percent-encoding — an uncaught exception that
-kills the whole load queue. It works in dev and hard-crashes `vite build`.
-Serving from `public/` bypasses Vite's transform entirely. **`npm run build` +
-`vite preview` is therefore part of verification, not a dev-only check.**
+Collision stays decoupled from art: `level.ts` features are PLACED PIECES whose
+simple invisible rects come from the manifest via one shared `pieceScale()` /
+`pieceDisplay()` (width clamp 520px, upscale cap 2.2x to prevent blur; ground/
+top mounting resolved from the TRUE post-clamp size — the debug overlay `D`
+draws collider outlines over the art to catch mismatch).
 
-Colliders and art are decoupled: `level.ts` owns collision geometry, `DayScene`
-places sprites over it and never re-derives it. (Previously `f.hw * (f.huge ?
-1.15 : 1.45)` appeared verbatim in both files — the drawn circle and the
-collision circle were literally the same expression, which is why the art read
-as developer geometry.)
+Birds are the supplied navy sprites (trio 09/10/11) normalized onto a shared
+128px canvas. Art is pre-colored, so the old white-art tint tricks are gone;
+strays are marked by a warm radial glow instead.
 
 ## Systems
 - `src/flock.ts` — 120-bird boid sim, fixed timestep, spatial hash. Envelope is

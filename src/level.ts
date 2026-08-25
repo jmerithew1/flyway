@@ -15,9 +15,10 @@ import { ART } from './artManifest'
 
 export interface PieceFeature {
   x: number // center x
-  y: number // center y ('bottom' pieces may use yBottom instead)
+  y: number // center y (only meaningful for mount: 'mid')
+  mount: 'gnd' | 'top' | 'mid'
   art: keyof typeof ART & string
-  h: number // display height in px (scale = h / native h)
+  h: number // REQUESTED display height (may be reduced by pieceScale clamps)
   flipX?: boolean
   sway?: boolean // gentle rotation tween (visual only)
   brittle?: boolean // all colliders become breakable
@@ -58,10 +59,11 @@ export const CHECKPOINTS = [0, 2100, 4600, 7100, 9600, 12000, 14400, 17400, 2040
 
 const GROUND = 880 // visual ground line where bottom-mounted pieces sit
 
-/** bottom-mounted piece: y = GROUND - h/2 */
+/** bottom-mounted piece: sits on the ground line whatever its final scale */
 const gnd = (x: number, art: PieceFeature['art'], h: number, extra: Partial<PieceFeature> = {}): PieceFeature => ({
   x,
-  y: GROUND - h / 2,
+  y: 0,
+  mount: 'gnd',
   art,
   h,
   ...extra,
@@ -69,7 +71,8 @@ const gnd = (x: number, art: PieceFeature['art'], h: number, extra: Partial<Piec
 /** top-mounted piece: hangs from above the sky line */
 const top = (x: number, art: PieceFeature['art'], h: number, extra: Partial<PieceFeature> = {}): PieceFeature => ({
   x,
-  y: h / 2 - 26,
+  y: 0,
+  mount: 'top',
   art,
   h,
   ...extra,
@@ -78,6 +81,7 @@ const top = (x: number, art: PieceFeature['art'], h: number, extra: Partial<Piec
 const mid = (x: number, y: number, art: PieceFeature['art'], h: number, extra: Partial<PieceFeature> = {}): PieceFeature => ({
   x,
   y,
+  mount: 'mid',
   art,
   h,
   ...extra,
@@ -211,13 +215,22 @@ export function pieceScale(f: PieceFeature): number {
   return Math.min(s, 2.2)
 }
 
-/** World-space colliders for a placed piece. */
-export function pieceObstacles(f: PieceFeature): Obstacle[] {
+/** Final display geometry: TRUE size after clamps, and the resolved center y. */
+export function pieceDisplay(f: PieceFeature): { s: number; w: number; h: number; y: number } {
   const art = ART[f.art]
   const s = pieceScale(f)
   const w = art.w * s
+  const h = art.h * s
+  const y = f.mount === 'gnd' ? GROUND - h / 2 : f.mount === 'top' ? h / 2 - 26 : f.y
+  return { s, w, h, y }
+}
+
+/** World-space colliders for a placed piece. */
+export function pieceObstacles(f: PieceFeature): Obstacle[] {
+  const art = ART[f.art]
+  const { s, w, h, y } = pieceDisplay(f)
   const tlx = f.x - w / 2
-  const tly = f.y - f.h / 2
+  const tly = y - h / 2
   const kind = f.brittle || art.family === 'organic-brittle' ? 'brittle' : 'solid'
   return art.colliders.map((r) => {
     const rx = f.flipX ? art.w - r.x - r.w : r.x

@@ -12,7 +12,7 @@ import {
   CHECKPOINTS,
   WIND_ZONES,
   buildObstacles,
-  pieceScale,
+  pieceDisplay,
   PieceFeature,
   WindZone,
   SCROLL_SPEED,
@@ -297,9 +297,9 @@ export class DayScene extends Phaser.Scene {
   /** Place one sprite per feature. Art overhangs its simple colliders freely. */
   private placePieces(): void {
     for (const f of FEATURES) {
-      const s = pieceScale(f)
+      const { s, y } = pieceDisplay(f)
       const img = this.add
-        .image(f.x, f.y, f.art)
+        .image(f.x, y, f.art)
         .setScale(s)
         .setFlipX(!!f.flipX)
         .setDepth(3)
