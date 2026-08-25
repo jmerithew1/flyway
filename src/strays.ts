@@ -34,8 +34,13 @@ export class StrayGroup {
     this.tint = tint
     this.remaining = count
     // warm glow marker: signals "optional birds here" from a distance
-    this.glow = scene.add.image(x, y, 'glow_warm').setDisplaySize(88, 88).setAlpha(0.45).setDepth(1.5)
-    scene.tweens.add({ targets: this.glow, alpha: 0.3, scale: this.glow.scale * 1.15, duration: 1600, yoyo: true, repeat: -1 })
+    this.glow = scene.add
+      .image(x, y, 'glow_warm')
+      .setDisplaySize(88, 88)
+      .setAlpha(0.5)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(1.5)
+    scene.tweens.add({ targets: this.glow, alpha: 0.32, scale: this.glow.scale * 1.15, duration: 1600, yoyo: true, repeat: -1 })
     for (let i = 0; i < count; i++) {
       const sprite = scene.add.image(x, y, 'bird-mid')
       sprite.setScale(0.24)
@@ -116,7 +121,12 @@ export class StrayGroup {
   reset(count: number): void {
     // re-populate after a checkpoint restart
     if (!this.glow) {
-      this.glow = this.scene.add.image(this.x, this.y, 'glow_warm').setDisplaySize(88, 88).setAlpha(0.45).setDepth(1.5)
+      this.glow = this.scene.add
+        .image(this.x, this.y, 'glow_warm')
+        .setDisplaySize(88, 88)
+        .setAlpha(0.5)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(1.5)
     }
     for (const b of this.birds) b.sprite.destroy()
     this.birds = []
