@@ -33,7 +33,7 @@ export class StrayGroup {
     this.tint = tint
     this.remaining = count
     for (let i = 0; i < count; i++) {
-      const sprite = scene.add.image(x, y, 'bird')
+      const sprite = scene.add.image(x, y, 'bird-mid')
       sprite.setScale(0.3)
       sprite.setTint(tint)
       sprite.setAlpha(0.85)
@@ -111,7 +111,7 @@ export class StrayGroup {
     this.birds = []
     this.joinTimer = 0
     for (let i = 0; i < count; i++) {
-      const sprite = this.scene.add.image(this.x, this.y, 'bird')
+      const sprite = this.scene.add.image(this.x, this.y, 'bird-mid')
       sprite.setScale(0.3)
       sprite.setTint(this.tint)
       sprite.setAlpha(0.85)

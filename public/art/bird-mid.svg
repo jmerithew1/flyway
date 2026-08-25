@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <!-- Starling in flight, slight-overhead, facing +X. Wings at full extension.
+       Broad triangular wings rooted along most of the torso, blunt head at the
+       shoulders, short narrow tail with a shallow fork. Single filled outline. -->
+  <path fill="#ffffff" d="
+    M 76,50
+    C 75.2,47.4 73.8,45.9 72.0,45.4
+    C 70.2,44.8 68.0,44.3 66.0,44.0
+    C 56.0,34.0 44.0,22.0 32.0,12.0
+    C 29.8,10.0 28.2,11.2 29.4,15.4
+    C 32.4,25.6 37.4,37.4 43.6,46.4
+    C 39.6,46.6 35.6,46.8 32.0,47.0
+    C 27.0,45.8 21.6,44.6 17.0,43.8
+    C 21.0,46.0 23.6,48.0 25.4,50.0
+    C 23.6,52.0 21.0,54.0 17.0,56.2
+    C 21.6,55.4 27.0,54.2 32.0,53.0
+    C 35.6,53.2 39.6,53.4 43.6,53.6
+    C 37.4,62.6 32.4,74.4 29.4,84.6
+    C 28.2,88.8 29.8,90.0 32.0,88.0
+    C 44.0,78.0 56.0,66.0 66.0,56.0
+    C 68.0,55.7 70.2,55.2 72.0,54.6
+    C 73.8,54.1 75.2,52.6 76,50
+    Z
+  "/>
+</svg>

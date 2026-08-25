@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { createCoreTextures } from './textures'
+import { createCoreTextures, loadArt } from './textures'
 import { SandboxScene } from './scenes/SandboxScene'
 import { DayScene } from './scenes/DayScene'
 import { ResultsScene } from './scenes/ResultsScene'
@@ -7,6 +7,10 @@ import { ResultsScene } from './scenes/ResultsScene'
 class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot')
+  }
+
+  preload(): void {
+    loadArt(this)
   }
 
   create(): void {

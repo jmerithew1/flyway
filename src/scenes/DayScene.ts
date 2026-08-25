@@ -223,7 +223,7 @@ export class DayScene extends Phaser.Scene {
       .setAlpha(0)
 
     // ---- minimal HUD: bird icon + count only
-    this.add.image(30, 32, 'bird').setScale(0.42).setTint(0xf2e8f5).setAlpha(0.9).setScrollFactor(0).setDepth(20)
+    this.add.image(30, 32, 'bird-mid').setScale(0.42).setTint(0xf2e8f5).setAlpha(0.9).setScrollFactor(0).setDepth(20)
     this.countText = this.add
       .text(52, 18, '120', { fontFamily: 'Georgia, serif', fontSize: '28px', color: '#f2e8f5' })
       .setAlpha(0.92)
@@ -310,7 +310,7 @@ export class DayScene extends Phaser.Scene {
     g.fillCircle(ROOST_X - 45, ROOST_Y - 118, 90)
     g.fillCircle(ROOST_X + 60, ROOST_Y - 90, 76)
     for (let i = 0; i < 30; i++) {
-      const sprite = this.add.image(ROOST_X, ROOST_Y, 'bird').setScale(0.2).setTint(0x241a30).setDepth(2)
+      const sprite = this.add.image(ROOST_X, ROOST_Y, 'bird-mid').setScale(0.2).setTint(0x241a30).setDepth(2)
       this.roostSwirl.push({
         sprite,
         a: Math.random() * Math.PI * 2,
@@ -571,7 +571,7 @@ export class DayScene extends Phaser.Scene {
       const sx = this.scrollX + VIEW_W * (0.7 + Math.random() * 0.3)
       const sy = SKY_TOP + Math.random() * 260
       for (let i = 0; i < n; i++) {
-        const s = this.add.image(sx + (Math.random() - 0.5) * 60, sy + (Math.random() - 0.5) * 40, 'bird')
+        const s = this.add.image(sx + (Math.random() - 0.5) * 60, sy + (Math.random() - 0.5) * 40, 'bird-mid')
         s.setScale(0.24).setTint(0x2a2038).setAlpha(0.7).setDepth(1)
         birds.push(s)
       }

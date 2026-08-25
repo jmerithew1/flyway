@@ -28,7 +28,7 @@ export class ScatterSystem {
 
   /** Spawn a scattering bird at (x, y). ~30% linger and can be re-collected. */
   spawn(x: number, y: number, awayX: number, awayY: number): void {
-    const sprite = this.scene.add.image(x, y, 'bird1')
+    const sprite = this.scene.add.image(x, y, 'bird-mid')
     sprite.setScale(0.3)
     sprite.setTint(0x222638)
     const m = Math.hypot(awayX, awayY) || 1

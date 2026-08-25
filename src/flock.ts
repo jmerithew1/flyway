@@ -85,7 +85,17 @@ interface Grid {
 
 const STEP = 1 / 60
 const MAX_STEPS = 6
-const BIRD_SCALE = 0.36
+/** On-screen wingspan of an average bird, in game px. */
+const BIRD_PX = 27
+
+/**
+ * Sprite scale derived from the actual rasterized texture width, so the art
+ * stays the right size regardless of what resolution the SVG was rasterized at.
+ */
+function birdScale(scene: Phaser.Scene): number {
+  const tex = scene.textures.get('bird-mid')?.getSourceImage() as { width?: number } | undefined
+  return BIRD_PX / (tex?.width || 128)
+}
 
 /** ±8%-ish per-channel tint variation so the flock isn't one flat stamp. */
 function varyTint(base: number): number {
@@ -115,19 +125,21 @@ export class Flock {
 
   private grid: Grid = { cell: TUNING.viewRadius, map: new Map() }
   private tint: number
+  private scale: number
 
   constructor(scene: Phaser.Scene, count: number, x: number, y: number, tint = 0x222638) {
     this.scene = scene
     this.tint = tint
+    this.scale = birdScale(scene)
     this.intentX = x
     this.intentY = y
     for (let i = 0; i < count; i++) this.spawnBird(x + rand(-140, 140), y + rand(-90, 90))
   }
 
   spawnBird(x: number, y: number, vx?: number, vy?: number): Bird {
-    const sprite = this.scene.add.image(x, y, 'bird1')
+    const sprite = this.scene.add.image(x, y, 'bird-mid')
     const depth = rand(0.75, 1.15)
-    sprite.setScale(BIRD_SCALE * depth)
+    sprite.setScale(this.scale * depth)
     sprite.setTint(varyTint(this.tint))
     sprite.setAlpha(0.82 + (depth - 0.75) * 0.45)
     const bird: Bird = {
@@ -421,8 +433,8 @@ export class Flock {
       if (s.texture.key !== key) s.setTexture(key)
       // faint breathing keeps silhouettes from feeling stamped
       const flap = Math.sin(this.time * b.flapFreq + b.flapPhase)
-      s.scaleY = BIRD_SCALE * b.depth * (0.94 + 0.08 * flap)
-      s.scaleX = BIRD_SCALE * b.depth
+      s.scaleY = this.scale * b.depth * (0.94 + 0.08 * flap)
+      s.scaleX = this.scale * b.depth
     }
   }
 

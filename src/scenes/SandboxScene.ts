@@ -41,7 +41,9 @@ export class SandboxScene extends Phaser.Scene {
     this.obstacleGfx = this.add.graphics()
     this.drawObstacles()
 
-    this.flock = new Flock(this, 120, W * 0.35, H * 0.45)
+    // ?birds=N — bird-sprite inspection gate (renders a small flock at real scale)
+    const birdCount = Number(new URLSearchParams(window.location.search).get('birds')) || 120
+    this.flock = new Flock(this, birdCount, W * 0.35, H * 0.45)
 
     const kb = this.input.keyboard!
     this.keySpace = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
