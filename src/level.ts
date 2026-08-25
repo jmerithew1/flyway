@@ -4,9 +4,15 @@ import { Obstacle } from './obstacles'
  * DAY 1 — ANCIENT RUINS. Declarative world layout.
  *
  * A "wall" is a vertical stone face at x pierced by openings. Anything NOT
- * listed as an opening is solid stone. An opening is either a true gap
- * (nothing there) or, if `brittle` is set, a breakable curtain obstacle that
- * a fast, gathered flock can punch through — a real shortcut, not free space.
+ * listed as an opening is solid stone. An opening is either a true gap or,
+ * if `brittle`, a breakable curtain a fast gathered flock can punch through.
+ *
+ * ---------------------------------------------------------------------------
+ * PACING RULE (this is what the spacing numbers below are derived from):
+ * the player must read every obstacle 2-4 seconds before reaching it. At
+ * SCROLL_SPEED that is 356-712px of clearance; at PRESSURE_SPEED it is
+ * 448-896px. Nothing is spaced tighter than that floor — difficulty comes
+ * from transition timing and route choice, never from stolen reaction time.
  */
 
 export type GapDeco = 'arch' | 'pointedArch' | 'window' | 'rose' | 'vines' | 'doubleArch' | 'none'
@@ -48,167 +54,189 @@ export interface PromptDef {
   text: string
 }
 
-// ---------------------------------------------------------------------------
-// Layout. Phase boundaries are commented with their approximate elapsed time
-// at the section's scroll speed, for pacing reference during design.
-
 export const SCROLL_SPEED = 178
-export const PRESSURE_SPEED = 224
-export const PRESSURE_START = 8200
-export const ROOST_X = 15200
+export const PRESSURE_SPEED = 214
+export const PRESSURE_START = 12000
+export const ROOST_X = 26600
 export const ROOST_Y = 430
 export const SLICE_END = ROOST_X + 700
 export const SKY_TOP = 40
 export const SKY_BOTTOM = 830
 
-export const CHECKPOINTS = [0, 1900, 3100, 4300, 6450, 8200, 11500]
+/** ~45-60s apart at the speed of the section each one sits in. */
+export const CHECKPOINTS = [0, 2100, 4600, 7100, 9600, 12000, 14400, 17400, 20400, 23200]
+
+const w = (x: number, hw: number, openings: Opening[]): WallFeature => ({ type: 'wall', x, hw, openings })
+const p = (x: number, top: number, bottom: number, hw: number, huge = false): PillarFeature => ({
+  type: 'pillar',
+  x,
+  top,
+  bottom,
+  hw,
+  huge,
+})
 
 export const FEATURES: Feature[] = [
-  // ===== PHASE 1 — OPEN SKY (0 – 1900): teach steer, gather, spread =====
-  { type: 'wall', x: 850, hw: 44, openings: [{ y0: 330, y1: 620, deco: 'arch' }] },
-  {
-    type: 'wall',
-    x: 1500,
-    hw: 42,
-    openings: [
-      { y0: 130, y1: 350, deco: 'none' },
-      { y0: 430, y1: 650, deco: 'none' },
-      { y0: 720, y1: 850, deco: 'none' },
-    ],
-  },
+  // ===== PHASE 1 — OPENING (0 - 2100): teach steer, gather, spread =========
+  // one generous arch to learn compression on
+  w(900, 44, [{ y0: 300, y1: 640, deco: 'arch' }]),
+  // a wide three-opening comb: spread reads clearly here
+  w(1600, 42, [
+    { y0: 120, y1: 340, deco: 'none' },
+    { y0: 430, y1: 640, deco: 'none' },
+    { y0: 730, y1: 860, deco: 'none' },
+  ]),
 
-  // ===== PHASE 2 — RUIN ROUTES (1900 – 3100): three real routes =====
-  {
-    type: 'wall',
-    x: 2500,
-    hw: 46,
-    openings: [
-      { y0: 110, y1: 240, deco: 'vines' }, // reward: tight, strays behind
-      { y0: 380, y1: 500, deco: 'pointedArch' }, // skill: tight, fast
-      { y0: 610, y1: 850, deco: 'arch' }, // safe: large, easy
-    ],
-  },
+  // ===== PHASE 2 — SEQUENCE 1 (2100 - 4600) ================================
+  // large ruin, three real routes: safe low arch / medium centre / tight
+  // upper opening guarding 10 strays
+  w(2600, 46, [
+    { y0: 110, y1: 235, deco: 'vines' }, // reward: tight, strays behind
+    { y0: 390, y1: 520, deco: 'window' }, // skill: medium
+    { y0: 630, y1: 860, deco: 'arch' }, // safe: large
+  ]),
+  p(3150, 280, 660, 44), // immediately: pillar forces a split
+  w(3650, 46, [{ y0: 400, y1: 545, deco: 'pointedArch' }]), // narrow: gather
+  w(4150, 40, [
+    // three openings: spread works well
+    { y0: 130, y1: 320, deco: 'none' },
+    { y0: 410, y1: 570, deco: 'none' },
+    { y0: 660, y1: 850, deco: 'none' },
+  ]),
+  // ...then a short recovery before the next sequence
 
-  // ===== PHASE 3 — SPLIT FLOW (3100 – 4300): pillar, then 2→3 openings =====
-  { type: 'pillar', x: 3450, top: 280, bottom: 650, hw: 44 },
-  {
-    type: 'wall',
-    x: 3800,
-    hw: 42,
-    openings: [
-      { y0: 200, y1: 420, deco: 'none' },
-      { y0: 520, y1: 850, deco: 'none' },
-    ],
-  },
-  {
-    type: 'wall',
-    x: 4200,
-    hw: 40,
-    openings: [
-      { y0: 120, y1: 300, deco: 'none' },
-      { y0: 400, y1: 560, deco: 'none' },
-      { y0: 650, y1: 850, deco: 'none' },
-    ],
-  },
+  // ===== PHASE 3 — SEQUENCE 2 (4600 - 7100) ================================
+  // ruined wall with FIVE irregular holes: gather one, spread several, or
+  // take the small upper gap for the optional birds
+  w(5100, 44, [
+    { y0: 90, y1: 190, deco: 'vines' }, // small upper: strays
+    { y0: 265, y1: 400, deco: 'none' },
+    { y0: 455, y1: 620, deco: 'rose' }, // the one large hole
+    { y0: 680, y1: 780, deco: 'none' },
+    { y0: 830, y1: 900, deco: 'none' },
+  ]),
+  p(5700, 300, 620, 38), // two columns demanding steering adjustment
+  p(6150, 420, 780, 38),
+  w(6650, 46, [{ y0: 380, y1: 530, deco: 'pointedArch' }]),
 
-  // ===== PHASE 4 — RAPID MORPHING (4300 – 6450): tight beats, ~2.5s apart =====
-  { type: 'wall', x: 4700, hw: 46, openings: [{ y0: 380, y1: 540, deco: 'pointedArch' }] },
-  {
-    type: 'wall',
-    x: 5150,
-    hw: 38,
-    openings: [
-      { y0: 100, y1: 260, deco: 'window' },
-      { y0: 380, y1: 560, deco: 'window' },
-      { y0: 660, y1: 850, deco: 'window' },
-    ],
-  },
-  { type: 'wall', x: 5600, hw: 46, openings: [{ y0: 420, y1: 570, deco: 'pointedArch' }] },
-  { type: 'pillar', x: 6000, top: 300, bottom: 640, hw: 40 },
-  { type: 'wall', x: 6450, hw: 46, openings: [{ y0: 440, y1: 580, deco: 'arch' }] },
+  // ===== PHASE 4 — SEQUENCE 3 (7100 - 9600) ================================
+  w(7500, 46, [{ y0: 420, y1: 550, deco: 'pointedArch' }]), // tight passage
+  // open area with a stray flock (no wall) around 8000
+  w(8450, 44, [{ y0: 330, y1: 470, deco: 'arch' }]), // narrow arch
+  p(8950, 300, 650, 42), // split pillar
+  w(9450, 42, [
+    // route choice again: brittle shortcut low, safe high
+    { y0: 150, y1: 350, deco: 'none' },
+    { y0: 620, y1: 740, deco: 'vines', brittle: true },
+  ]),
 
-  // ===== PHASE 5 — CHOICE CLUSTER (6450 – 8200): 4 real tradeoffs =====
-  {
-    type: 'wall',
-    x: 6900,
-    hw: 42,
-    openings: [
-      { y0: 90, y1: 250, deco: 'rose' }, // C: reward — 18 strays
-      { y0: 340, y1: 430, deco: 'pointedArch' }, // B: narrow twin arches (fast)
-      { y0: 460, y1: 560, deco: 'pointedArch' }, // B cont'd
-      { y0: 590, y1: 700, deco: 'vines', brittle: true }, // D: brittle shortcut
-      { y0: 720, y1: 850, deco: 'arch' }, // A: safe
-    ],
-  },
-  {
-    type: 'wall',
-    x: 7500,
-    hw: 42,
-    openings: [
-      { y0: 250, y1: 470, deco: 'none' },
-      { y0: 560, y1: 850, deco: 'none' },
-    ],
-  },
+  // ===== PHASE 5 — CHOICE CLUSTER (9600 - 12000) ===========================
+  // four genuinely different ways through one big ruin
+  w(10200, 44, [
+    { y0: 90, y1: 240, deco: 'rose' }, // C: reward — 14 strays
+    { y0: 340, y1: 440, deco: 'pointedArch' }, // B: narrow twin arches, fast
+    { y0: 480, y1: 580, deco: 'pointedArch' },
+    { y0: 640, y1: 750, deco: 'vines', brittle: true }, // D: brittle shortcut
+    { y0: 800, y1: 900, deco: 'arch' }, // A: safe
+  ]),
+  w(10900, 42, [
+    { y0: 220, y1: 450, deco: 'none' },
+    { y0: 560, y1: 860, deco: 'none' },
+  ]),
+  p(11500, 280, 640, 40),
 
-  // ===== PHASE 6 — PRESSURE (8200 – 11500): speed up, tighten spacing =====
-  { type: 'wall', x: 8500, hw: 46, openings: [{ y0: 400, y1: 540, deco: 'pointedArch' }] },
-  { type: 'pillar', x: 8850, top: 260, bottom: 620, hw: 38 },
-  {
-    type: 'wall',
-    x: 9200,
-    hw: 36,
-    openings: [
-      { y0: 110, y1: 290, deco: 'none' },
-      { y0: 380, y1: 560, deco: 'none' },
-      { y0: 650, y1: 830, deco: 'none' },
-    ],
-  },
-  { type: 'wall', x: 9550, hw: 44, openings: [{ y0: 380, y1: 520, deco: 'arch' }] },
-  {
-    type: 'wall',
-    x: 9880,
-    hw: 40,
-    openings: [
-      { y0: 300, y1: 410, deco: 'doubleArch' },
-      { y0: 460, y1: 580, deco: 'doubleArch' },
-    ],
-  },
-  { type: 'pillar', x: 10230, top: 300, bottom: 650, hw: 40 },
-  { type: 'wall', x: 10560, hw: 46, openings: [{ y0: 420, y1: 560, deco: 'pointedArch' }] },
+  // ===== PHASE 6 — PRESSURE (12000 - 14400) ================================
+  // Runs at PRESSURE_SPEED, so spacing widens to ~480-600px to hold the
+  // 2s reaction floor. (The previous 330px spacing here was the grinder.)
+  w(12100, 44, [{ y0: 380, y1: 520, deco: 'pointedArch' }]),
+  p(12650, 260, 620, 38),
+  w(13200, 40, [
+    { y0: 110, y1: 300, deco: 'none' },
+    { y0: 390, y1: 570, deco: 'none' },
+    { y0: 660, y1: 850, deco: 'none' },
+  ]),
+  w(13800, 44, [{ y0: 360, y1: 510, deco: 'arch' }]),
 
-  // ===== PHASE 7 — FINAL FLOW (11500 – 13200): choreographed set piece =====
-  { type: 'wall', x: 11800, hw: 46, openings: [{ y0: 400, y1: 540, deco: 'pointedArch' }] },
-  {
-    type: 'wall',
-    x: 12150,
-    hw: 34,
-    openings: [
-      { y0: 80, y1: 220, deco: 'window' },
-      { y0: 300, y1: 420, deco: 'window' },
-      { y0: 500, y1: 620, deco: 'window' },
-      { y0: 700, y1: 850, deco: 'window' },
-    ],
-  },
-  { type: 'pillar', x: 12600, top: 200, bottom: 760, hw: 64, huge: true },
+  // ===== PHASE 7 — RAPID MORPH CHAIN (14400 - 17400) =======================
+  // alternating tight/wide so neither formation can be held through it
+  w(14500, 46, [{ y0: 400, y1: 540, deco: 'pointedArch' }]),
+  w(15100, 40, [
+    { y0: 120, y1: 310, deco: 'none' },
+    { y0: 400, y1: 580, deco: 'none' },
+    { y0: 670, y1: 860, deco: 'none' },
+  ]),
+  w(15700, 46, [{ y0: 300, y1: 430, deco: 'window' }]),
+  p(16300, 320, 700, 40),
+  w(16850, 44, [
+    { y0: 200, y1: 330, deco: 'vines' },
+    { y0: 560, y1: 780, deco: 'arch' },
+  ]),
+
+  // ===== PHASE 8 — SECOND CHOICE CLUSTER (17400 - 20400) ===================
+  w(17500, 44, [
+    { y0: 100, y1: 210, deco: 'rose' }, // reward, 12 strays
+    { y0: 420, y1: 530, deco: 'pointedArch' }, // skill
+    { y0: 690, y1: 900, deco: 'arch' }, // safe
+  ]),
+  p(18100, 260, 600, 42),
+  w(18700, 42, [{ y0: 430, y1: 600, deco: 'none' }]),
+  w(19300, 40, [
+    { y0: 150, y1: 330, deco: 'none' },
+    { y0: 430, y1: 560, deco: 'vines', brittle: true },
+    { y0: 680, y1: 860, deco: 'none' },
+  ]),
+  w(19950, 46, [{ y0: 360, y1: 500, deco: 'pointedArch' }]),
+
+  // ===== PHASE 9 — GAUNTLET (20400 - 23200) ================================
+  p(20500, 280, 640, 38),
+  w(21100, 42, [
+    { y0: 130, y1: 300, deco: 'none' },
+    { y0: 400, y1: 540, deco: 'window' },
+    { y0: 650, y1: 850, deco: 'none' },
+  ]),
+  w(21750, 46, [{ y0: 420, y1: 555, deco: 'pointedArch' }]),
+  p(22350, 240, 580, 40),
+  w(22950, 44, [
+    { y0: 180, y1: 320, deco: 'vines' },
+    { y0: 520, y1: 760, deco: 'arch' },
+  ]),
+
+  // ===== PHASE 10 — FINAL FLOW (23200 - 25400) =============================
+  w(23600, 46, [{ y0: 400, y1: 540, deco: 'pointedArch' }]), // gather, thread
+  w(24250, 36, [
+    // spread through several openings
+    { y0: 90, y1: 230, deco: 'window' },
+    { y0: 320, y1: 440, deco: 'window' },
+    { y0: 530, y1: 650, deco: 'window' },
+    { y0: 740, y1: 870, deco: 'window' },
+  ]),
+  p(25000, 200, 780, 64, true), // split around a huge tower
+  // then open sky to the roost
 ]
 
 export const STRAYS: StrayDef[] = [
-  { x: 1650, y: 240, count: 6 }, // phase 1, spread comb
-  { x: 2760, y: 175, count: 12 }, // phase 2, reward route
-  { x: 4050, y: 350, count: 4 }, // phase 3, reform A
-  { x: 4350, y: 610, count: 4 }, // phase 3, reform B
-  { x: 5150, y: 470, count: 5 }, // phase 4, between windows
-  { x: 6450, y: 210, count: 6 }, // phase 4, above tight gate
-  { x: 7050, y: 170, count: 18 }, // phase 5, reward route
-  { x: 9200, y: 470, count: 6 }, // phase 6, pressure comb
-  { x: 10560, y: 200, count: 8 }, // phase 6, above tight gate
-  { x: 12150, y: 160, count: 10 }, // phase 7, final optional flock
+  { x: 1700, y: 230, count: 6 }, // phase 1 comb
+  { x: 2860, y: 170, count: 10 }, // seq 1 reward route
+  { x: 4350, y: 720, count: 5 }, // seq 1 spread openings
+  { x: 5260, y: 140, count: 12 }, // seq 2 small upper gap
+  { x: 5950, y: 200, count: 6 }, // seq 2 between the columns
+  { x: 8000, y: 430, count: 8 }, // seq 3 open area
+  { x: 9600, y: 690, count: 7 }, // beyond the brittle shortcut
+  { x: 10380, y: 165, count: 14 }, // choice cluster reward route
+  { x: 11000, y: 330, count: 6 },
+  { x: 13250, y: 480, count: 7 }, // pressure comb
+  { x: 16900, y: 265, count: 6 }, // rapid-morph chain
+  { x: 17580, y: 155, count: 12 }, // second cluster reward route
+  { x: 19360, y: 495, count: 8 }, // beyond the second brittle shortcut
+  { x: 21160, y: 470, count: 7 }, // gauntlet
+  { x: 23010, y: 250, count: 9 },
+  { x: 24300, y: 160, count: 10 }, // final optional flock
 ]
 
 export const PROMPTS: PromptDef[] = [
   { key: 'steer', x: -1, text: 'move the mouse — steer the flock' },
-  { key: 'gather', x: 500, text: 'hold SPACE — gather' },
-  { key: 'spread', x: 1150, text: 'hold SHIFT — spread' },
+  { key: 'gather', x: 520, text: 'hold SPACE — gather' },
+  { key: 'spread', x: 1250, text: 'hold SHIFT — spread' },
 ]
 
 /** Build collidable Obstacle[] from FEATURES. */
@@ -243,4 +271,19 @@ export function buildObstacles(): Obstacle[] {
     }
   }
   return obstacles
+}
+
+/** Dev assertion: no obstacle may sit closer than the 2s reaction floor. */
+export function pacingReport(): { gaps: number[]; violations: string[] } {
+  const xs = [...new Set(FEATURES.map((f) => f.x))].sort((a, b) => a - b)
+  const gaps: number[] = []
+  const violations: string[] = []
+  for (let i = 1; i < xs.length; i++) {
+    const gap = xs[i] - xs[i - 1]
+    gaps.push(gap)
+    const speed = xs[i] >= PRESSURE_START ? PRESSURE_SPEED : SCROLL_SPEED
+    const seconds = gap / speed
+    if (seconds < 1.9) violations.push(`x=${xs[i]}: ${seconds.toFixed(2)}s after previous (gap ${gap})`)
+  }
+  return { gaps, violations }
 }

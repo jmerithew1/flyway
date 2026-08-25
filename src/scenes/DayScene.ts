@@ -28,9 +28,9 @@ import {
 } from '../backdrop'
 
 /** Crosswind zone: adds a reason to change formation without a new control. */
-const WIND_START = 6450
-const WIND_END = 11500
-const WIND_STRENGTH = 70
+const WIND_START = 12000
+const WIND_END = 17400
+const WIND_STRENGTH = 46
 
 export interface DayStats {
   startCount: number
@@ -479,8 +479,8 @@ export class DayScene extends Phaser.Scene {
         else if (pr.key === 'spread') this.showPrompt('spread', pr.text, () => this.spreadHeld > 0.7)
       }
     }
-    if (this.scrollX > 6500 && this.scrollX < WIND_END) {
-      this.showPrompt('wind', 'crosswind — Gather cuts through it', () => this.scrollX > 7100)
+    if (this.scrollX > WIND_START && this.scrollX < WIND_END) {
+      this.showPrompt('wind', 'crosswind — Gather cuts through it', () => this.scrollX > WIND_START + 700)
     }
     this.updatePrompt()
 
