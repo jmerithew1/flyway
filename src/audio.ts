@@ -3,12 +3,24 @@
  * WebAudio. A continuous filtered-noise "wing" bed that brightens on Gather
  * and widens on Spread, soft collision thuds, and a warm chime at the roost.
  */
+/**
+ * Suno replacement slots: drop a stem at public/audio/<layer>.mp3 and that
+ * procedural layer is replaced at runtime with zero code changes.
+ * Layers: pad, bells, wings (the wing bed itself).
+ */
+const STEM_LAYERS = ['pad', 'bells', 'wings'] as const
+
 export class GameAudio {
   private ctx: AudioContext | null = null
   private master!: GainNode
   private noiseGain!: GainNode
   private noiseFilter!: BiquadFilterNode
   private started = false
+  private layerGains = new Map<string, GainNode>()
+  private stems = new Map<string, AudioBuffer>()
+  private bellTimer = 0
+  private bellStep = 0
+  private progress01 = 0
 
   /** Must be called from a user gesture (first pointer move / keydown). */
   start(): void {
@@ -42,8 +54,109 @@ export class GameAudio {
     this.noiseFilter.Q.value = 0.6
     this.noiseGain = ctx.createGain()
     this.noiseGain.gain.value = 0.5
-    src.connect(this.noiseFilter).connect(this.noiseGain).connect(this.master)
+    const wingsLayer = ctx.createGain()
+    this.layerGains.set('wings', wingsLayer)
+    src.connect(this.noiseFilter).connect(this.noiseGain).connect(wingsLayer).connect(this.master)
     src.start()
+
+    // ---- pad layer: warm slow-detuned bank through a lowpass (or a stem)
+    const padGain = ctx.createGain()
+    padGain.gain.value = 0.055
+    this.layerGains.set('pad', padGain)
+    padGain.connect(this.master)
+    const bellsGain = ctx.createGain()
+    bellsGain.gain.value = 1
+    this.layerGains.set('bells', bellsGain)
+    bellsGain.connect(this.master)
+    this.tryLoadStems()
+    if (!this.stems.has('pad')) {
+      const lp = ctx.createBiquadFilter()
+      lp.type = 'lowpass'
+      lp.frequency.value = 640
+      lp.connect(padGain)
+      for (const [freq, detune] of [
+        [98, -4],
+        [147, 3],
+        [196, -2],
+        [247, 5],
+      ] as Array<[number, number]>) {
+        const o = ctx.createOscillator()
+        o.type = 'triangle'
+        o.frequency.value = freq
+        o.detune.value = detune
+        const g = ctx.createGain()
+        g.gain.value = 0.22
+        // slow independent breathing per voice
+        const lfo = ctx.createOscillator()
+        lfo.frequency.value = 0.05 + Math.random() * 0.06
+        const lfoGain = ctx.createGain()
+        lfoGain.gain.value = 0.09
+        lfo.connect(lfoGain).connect(g.gain)
+        o.connect(g).connect(lp)
+        o.start()
+        lfo.start()
+      }
+    }
+  }
+
+  /** Replace procedural layers with any stems found at public/audio/<layer>.mp3. */
+  private tryLoadStems(): void {
+    if (!this.ctx) return
+    for (const layer of STEM_LAYERS) {
+      fetch(`audio/${layer}.mp3`)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+        .then((buf) => this.ctx!.decodeAudioData(buf))
+        .then((audio) => {
+          this.stems.set(layer, audio)
+          const src = this.ctx!.createBufferSource()
+          src.buffer = audio
+          src.loop = true
+          const gain = this.layerGains.get(layer)
+          if (gain) {
+            if (layer === 'wings') this.noiseGain.gain.value = 0 // silence procedural bed
+            src.connect(gain)
+            src.start()
+          }
+        })
+        .catch(() => undefined) // no stem: procedural layer stays
+    }
+  }
+
+  /**
+   * Sparse pentatonic bell motif; density grows with journey progress so the
+   * melody strengthens as home nears. Call every frame with dt + progress.
+   */
+  musicTick(dt: number, progress01: number): void {
+    if (!this.ctx || this.stems.has('bells')) return
+    this.progress01 = progress01
+    this.bellTimer -= dt
+    if (this.bellTimer > 0) return
+    this.bellTimer = 5.2 - progress01 * 3.1 + Math.random() * 2.4
+    const scale = [392, 440, 523.3, 587.3, 659.3, 784]
+    const step = (this.bellStep + 1 + ((Math.random() * 2) | 0)) % scale.length
+    this.bellStep = step
+    const f = scale[step]
+    const t = this.ctx.currentTime
+    const o = this.ctx.createOscillator()
+    o.type = 'sine'
+    o.frequency.value = f
+    const h = this.ctx.createOscillator()
+    h.type = 'sine'
+    h.frequency.value = f * 2.01
+    const g = this.ctx.createGain()
+    g.gain.setValueAtTime(0, t)
+    g.gain.linearRampToValueAtTime(0.045 + progress01 * 0.02, t + 0.02)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4)
+    const hg = this.ctx.createGain()
+    hg.gain.setValueAtTime(0.012, t)
+    hg.gain.exponentialRampToValueAtTime(0.0001, t + 1.1)
+    const dest = this.layerGains.get('bells') ?? this.master
+    o.connect(g).connect(dest)
+    h.connect(hg).connect(dest)
+    o.start(t)
+    h.start(t)
+    o.stop(t + 2.5)
+    h.stop(t + 1.2)
   }
 
   private gStrain = 0

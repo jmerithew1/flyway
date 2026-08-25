@@ -652,6 +652,7 @@ export class DayScene extends Phaser.Scene {
     this.checkFinish(dt)
 
     const meanSpeed = Math.hypot(this.flock.meanVX, this.flock.meanVY) / 430
+    this.audio.musicTick(dt, Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1))
     this.audio.setStrain(this.flock.gatherStrain, this.flock.spreadStrain)
     this.audio.setFlockState(this.flock.form, Phaser.Math.Clamp(meanSpeed, 0, 1))
     // first-time strain hints, once each, fading on recovery

@@ -1,6 +1,27 @@
-# MURMURATION — Game Status
+# FLYWAY — Game Status
 
-(Previous candidate TENSION archived under `archive/tension/`.)
+Bring the flock home before nightfall. (Formerly MURMURATION; previous
+candidate TENSION archived under `archive/tension/`.)
+
+## Complete game loop (FLYWAY pass, 2026-08-24)
+Title screen → Day intro → playable tutorial (steer/gather/spread taught by
+level, prompts complete on success) → full Day with: hidden formation strain
+(anti-hold: over-gather frays side clusters, over-spread fragments — exposure,
+never direct kills), Perfect Flow gates (6, clean-pass detection), golden mote
+arcs, stray flocks w/ glow markers, recoverable scattered birds (2.2s window,
+Spread widens recovery), moving obstacles (art+colliders together), brittle
+curtains, crosswind/updraft/downdraft zones, 2 authored falcon set pieces
+(telegraph → 1s window → formation-scaled strike, replaceable art slot at
+assets/processed/falcon.png), 5 named landmark checkpoints with identity tones,
+meaningful failure sequence, journey storytelling (roost grows on horizon,
+light warms), homecoming murmuration (sim birds to 320 + ~260 echoes), results
+with per-star reasons, REPLAY loop. Procedural audio with Suno-replaceable
+layer slots (public/audio/{pad,bells,wings}.mp3 auto-substitute).
+
+2.5D collider rule: full-width coverage BANDS block (crowns/beams/masses);
+narrow verticals (arch legs, mullions) are depth-passable — collision always
+matches what the player sees.
+
 
 ## How to run
 ```

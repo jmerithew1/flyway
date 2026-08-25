@@ -16,7 +16,10 @@ export function loadArt(scene: Phaser.Scene): void {
     scene.load.image(piece.key, piece.file)
   }
   // falcon: replaceable art slot — drop a real falcon at assets/processed/falcon.png
-  scene.load.image('falcon-art', 'assets/processed/falcon.png')
+  // (existence is pre-checked in main.ts so a missing file never logs errors)
+  if ((window as unknown as Record<string, unknown>).__hasFalconArt) {
+    scene.load.image('falcon-art', 'assets/processed/falcon.png')
+  }
 }
 
 /**

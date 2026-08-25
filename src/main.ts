@@ -22,7 +22,19 @@ class BootScene extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({
+// pre-check the optional falcon art slot, then boot
+fetch('assets/processed/falcon.png', { method: 'HEAD' })
+  .then((r) => {
+    ;(window as unknown as Record<string, unknown>).__hasFalconArt = r.ok
+  })
+  .catch(() => {
+    ;(window as unknown as Record<string, unknown>).__hasFalconArt = false
+  })
+  .finally(() => {
+    new Phaser.Game(config)
+  })
+
+const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: 1536,
   height: 960,
@@ -32,4 +44,4 @@ new Phaser.Game({
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   scene: [BootScene, TitleScene, SandboxScene, DayScene, ResultsScene],
-})
+}
