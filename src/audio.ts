@@ -88,6 +88,74 @@ export class GameAudio {
     o.stop(t + 0.25)
   }
 
+  /** Falcon telegraph: distant descending screech; the music thins under it. */
+  falconScreech(): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    // FM cry: carrier swept down with vibrato, bandpassed
+    const o = ctx.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.setValueAtTime(2350, t)
+    o.frequency.exponentialRampToValueAtTime(1150, t + 0.55)
+    const vib = ctx.createOscillator()
+    vib.frequency.value = 26
+    const vibGain = ctx.createGain()
+    vibGain.gain.value = 90
+    vib.connect(vibGain).connect(o.frequency)
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 2100
+    bp.Q.value = 4
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.12, t + 0.06)
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.65)
+    o.connect(bp).connect(g).connect(this.master)
+    o.start(t)
+    vib.start(t)
+    o.stop(t + 0.7)
+    vib.stop(t + 0.7)
+    // music thins: pull the bed down for a couple of seconds
+    this.noiseGain.gain.setTargetAtTime(0.16, t, 0.4)
+    this.noiseGain.gain.setTargetAtTime(0.4, t + 2.6, 0.8)
+  }
+
+  /** Strike missed: a huge air rush, then release. */
+  falconMiss(): void {
+    this.airRush(0.34, 0.8)
+  }
+
+  /** Strike connected: sharp wing burst + brief musical drop. */
+  falconHit(): void {
+    this.airRush(0.42, 0.5)
+    if (!this.ctx) return
+    const t = this.ctx.currentTime
+    this.master.gain.setTargetAtTime(0.1, t, 0.15)
+    this.master.gain.setTargetAtTime(0.22, t + 1.2, 0.9)
+  }
+
+  private airRush(amp: number, dur: number): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const len = ctx.sampleRate * dur
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len)
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    const lp = ctx.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.setValueAtTime(900, t)
+    lp.frequency.exponentialRampToValueAtTime(3600, t + dur * 0.4)
+    lp.frequency.exponentialRampToValueAtTime(500, t + dur)
+    const g = ctx.createGain()
+    g.gain.value = amp
+    src.connect(lp).connect(g).connect(this.master)
+    src.start(t)
+  }
+
   /** Failure: everything falls away to wind; only the noise bed survives, quiet. */
   failureFade(): void {
     if (!this.ctx) return

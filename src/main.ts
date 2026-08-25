@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { createCoreTextures, loadArt } from './textures'
+import { createCoreTextures, loadArt, resolveFalconTexture } from './textures'
 import { SandboxScene } from './scenes/SandboxScene'
 import { DayScene } from './scenes/DayScene'
 import { TitleScene } from './scenes/TitleScene'
@@ -16,6 +16,7 @@ class BootScene extends Phaser.Scene {
 
   create(): void {
     createCoreTextures(this)
+    resolveFalconTexture(this)
     const params = new URLSearchParams(window.location.search)
     this.scene.start(params.has('sandbox') ? 'Sandbox' : params.has('day') ? 'Day' : 'Title')
   }

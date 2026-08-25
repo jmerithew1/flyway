@@ -4,6 +4,7 @@ import { Obstacle } from '../obstacles'
 import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
 import { GameAudio } from '../audio'
+import { FalconSystem } from '../falcon'
 import { ART } from '../artManifest'
 import {
   FEATURES,
@@ -78,6 +79,7 @@ export class DayScene extends Phaser.Scene {
   private roostSwirl: { sprite: Phaser.GameObjects.Image; a: number; r: number; s: number; ph: number }[] = []
   private ambientFlocks: AmbientFlock[] = []
   private audio = new GameAudio()
+  private falcon!: FalconSystem
 
   private keySpace!: Phaser.Input.Keyboard.Key
   private keyShift!: Phaser.Input.Keyboard.Key
@@ -106,6 +108,13 @@ export class DayScene extends Phaser.Scene {
   private stuckTime = new Map<Bird, number>()
   private lossTimes: number[] = []
   private flowGates = new Map<PieceFeature, { state: 'idle' | 'active' | 'done' | 'failed'; clean: boolean; entryCount: number }>()
+  private movers: {
+    f: PieceFeature
+    sprite: Phaser.GameObjects.Image
+    baseY: number
+    obs: { o: Obstacle; baseY: number }[]
+    phase: number
+  }[] = []
   private motes: { x: number; y: number; img: Phaser.GameObjects.Image }[] = []
   private mouseTravel = 0
   private lastPointer = { x: 0, y: 0 }
@@ -199,6 +208,14 @@ export class DayScene extends Phaser.Scene {
     this.drawRoost()
     this.flowGates.clear()
     for (const f of FEATURES) if (f.flow) this.flowGates.set(f, { state: 'idle', clean: true, entryCount: 0 })
+    // moving obstacles: art and colliders travel together
+    this.movers = []
+    for (const [f, sprite] of this.featureSprites) {
+      if (!f.motion) continue
+      const obs: { o: Obstacle; baseY: number }[] = []
+      for (const [o, feat] of this.obstacleFeature) if (feat === f) obs.push({ o, baseY: o.y })
+      this.movers.push({ f, sprite, baseY: sprite.y, obs, phase: Math.random() * Math.PI * 2 })
+    }
     this.motes = []
     for (const arc of MOTE_ARCS) {
       for (let i = 0; i < arc.count; i++) {
@@ -217,6 +234,34 @@ export class DayScene extends Phaser.Scene {
     }
 
     this.colliderGfx = this.add.graphics().setDepth(19).setVisible(false)
+
+    // authored predator zones: one mid-day, one in the final run
+    this.falcon = new FalconSystem(this, this.audio, [8150, 22300])
+    this.falcon.onStrikeResolved = (taken, gathered) => {
+      if (taken > 0) {
+        // feather burst where the talons crossed the flock
+        const burst = this.add.particles(this.flock.centerX, this.flock.centerY - 60, 'leaf', {
+          speed: { min: 120, max: 380 },
+          angle: { min: -160, max: -20 },
+          lifespan: { min: 500, max: 1200 },
+          quantity: 26,
+          scale: { start: 0.55, end: 0.1 },
+          alpha: { start: 0.95, end: 0 },
+          rotate: { min: 0, max: 360 },
+          tint: [0x222638, 0x3a3355],
+          emitting: false,
+        })
+        burst.setDepth(9)
+        burst.explode(26, 0, 0)
+        this.time.delayedCall(1400, () => burst.destroy())
+      } else if (gathered) {
+        // defensive success: a satisfying near-miss flourish
+        this.perfectFlowFeedback()
+      }
+      // subtle camera emphasis — a nudge, never disorienting shake
+      this.cameras.main.zoomTo(1.03, 120, 'Sine.easeOut', true)
+      this.time.delayedCall(240, () => this.cameras.main.zoomTo(1, 320, 'Sine.easeInOut', true))
+    }
 
     this.flock = new Flock(this, 120, 420, 430)
     this.flock.intentX = 600
@@ -520,6 +565,11 @@ export class DayScene extends Phaser.Scene {
       this.visibleObstacles(),
     )
 
+    this.falcon.update(dt, this.flock, this.scrollX, VIEW_W)
+    if (this.falcon.inWarning && this.falcon.firstEncounter) {
+      this.showPrompt('falcon', 'Gather!', () => !this.falcon.inWarning)
+      this.falcon.firstEncounter = false
+    }
     this.applyWind(dt)
 
     // soft bounds
@@ -543,6 +593,7 @@ export class DayScene extends Phaser.Scene {
       if (joined > 0) this.stats.found += joined
     }
 
+    this.updateMovers(time)
     this.updateFlowGates()
     this.updateMotes()
     this.updateRoostSwirl(dt, time)
@@ -622,6 +673,30 @@ export class DayScene extends Phaser.Scene {
       this.countText.setColor('#ffd9a0')
       this.time.delayedCall(420, () => this.countText.setColor('#f2e8f5'))
       this.audio.collectBloom(delta)
+    }
+  }
+
+  /** Rhythmic obstacle motion: readable, slow, colliders move with the art. */
+  private updateMovers(time: number): void {
+    for (const m of this.movers) {
+      const mo = m.f.motion!
+      const t = (time / mo.period) * Math.PI * 2 + m.phase
+      if (mo.kind === 'bob') {
+        const dy = Math.sin(t) * mo.amp
+        m.sprite.y = m.baseY + dy
+        for (const e of m.obs) e.o.y = e.baseY + dy
+      } else {
+        // pendulum: sway the sprite and swing colliders along the arc's x
+        const a = Math.sin(t) * 0.14
+        m.sprite.setRotation(a)
+        const dy = Math.abs(Math.sin(t)) * mo.amp * 0.2
+        const dx = Math.sin(t) * mo.amp
+        m.sprite.x = m.f.x + dx * 0.4
+        for (const e of m.obs) {
+          e.o.x = m.f.x + dx * 0.4
+          e.o.y = e.baseY + dy
+        }
+      }
     }
   }
 
@@ -829,7 +904,8 @@ export class DayScene extends Phaser.Scene {
     emitter.setDepth(3)
     emitter.explode(46, 0, 0)
     this.time.delayedCall(1600, () => emitter.destroy())
-    this.cameras.main.shake(110, 0.0015)
+    this.cameras.main.zoomTo(1.02, 100, 'Sine.easeOut', true)
+    this.time.delayedCall(200, () => this.cameras.main.zoomTo(1, 280, 'Sine.easeInOut', true))
     this.audio.collisionThump()
   }
 
@@ -992,6 +1068,7 @@ export class DayScene extends Phaser.Scene {
     for (const s of this.strays) {
       if (s.def.x > cp.x) s.group.reset(s.def.count)
     }
+    this.falcon.reset(cp.x)
     // un-break brittle features ahead of the checkpoint and restore their art
     for (const [f, sprite] of this.featureSprites) {
       if (f.x <= cp.x) continue

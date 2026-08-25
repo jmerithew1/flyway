@@ -15,6 +15,23 @@ export function loadArt(scene: Phaser.Scene): void {
   for (const piece of Object.values(ART)) {
     scene.load.image(piece.key, piece.file)
   }
+  // falcon: replaceable art slot — drop a real falcon at assets/processed/falcon.png
+  scene.load.image('falcon-art', 'assets/processed/falcon.png')
+}
+
+/**
+ * After load: 'falcon' resolves to the owner-supplied art if present,
+ * otherwise a scaled dark stand-in built from the wings-down bird pose.
+ */
+export function resolveFalconTexture(scene: Phaser.Scene): void {
+  if (scene.textures.exists('falcon-art')) {
+    const src = scene.textures.get('falcon-art').getSourceImage() as HTMLCanvasElement
+    scene.textures.addImage('falcon', src as unknown as HTMLImageElement)
+    return
+  }
+  // stand-in: bird-down pose, enlarged and darkened at draw time by tint/scale
+  const src = scene.textures.get('bird-down').getSourceImage() as HTMLCanvasElement
+  scene.textures.addImage('falcon', src as unknown as HTMLImageElement)
 }
 
 export const BIRD_FRAMES = ['bird-up', 'bird-mid', 'bird-down'] as const

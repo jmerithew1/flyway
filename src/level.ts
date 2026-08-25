@@ -26,6 +26,8 @@ export interface PieceFeature {
   alpha?: number
   /** Perfect Flow gate: pass cleanly in this formation for Flow credit. */
   flow?: 'spread' | 'gather'
+  /** Rhythmic, readable motion — art AND colliders move together. */
+  motion?: { kind: 'pendulum' | 'bob'; amp: number; period: number }
 }
 
 export interface WindZone {
@@ -135,13 +137,13 @@ export const FEATURES: PieceFeature[] = [
   top(9450, 'wisteria_curtain', 300, { brittle: true }), // brittle shortcut above
 
   // ===== OVERGROWN RUINS (9600-12000): the organic turn =====================
-  mid(10200, 420, 'thorn_ring', 430), // precise center opening
+  mid(10200, 420, 'thorn_ring', 430, { motion: { kind: 'bob', amp: 70, period: 3.8 } }), // drifting ring
   gnd(10200, 'web_column_a', 360),
-  top(10750, 'wisteria_dense', 420, { brittle: true }), // brittle curtain, safe route under
+  top(10750, 'wisteria_dense', 420, { brittle: true, motion: { kind: 'pendulum', amp: 90, period: 3.4 } }), // swinging brittle curtain
   gnd(10750, 'wall_circle_bite', 360),
   gnd(11300, 'organic_arch', 500), // vine arch
   top(11300, 'ceiling_pods', 300, { sway: true }),
-  gnd(11800, 'lattice_gate', 480, { flow: 'spread' }), // lattice: spread through small holes
+  gnd(11800, 'lattice_gate', 480, { flow: 'spread', motion: { kind: 'bob', amp: 50, period: 4.4 } }), // drifting lattice
 
   // ===== WIND HEIGHTS (12000-14400): pressure + wind ========================
   gnd(12300, 'colonnade_arch', 480),
@@ -196,15 +198,12 @@ export const WIND_ZONES: WindZone[] = [
 export const STRAYS: StrayDef[] = [
   { x: 1700, y: 230, count: 6 },
   { x: 2860, y: 170, count: 10 }, // above the early ruin
-  { x: 4350, y: 720, count: 5 },
   { x: 5260, y: 140, count: 12 }, // over the double-arch wall
   { x: 5950, y: 200, count: 6 },
   { x: 8050, y: 620, count: 8 }, // beneath the rose window
   { x: 9650, y: 150, count: 7 }, // beyond the brittle wisteria
   { x: 10200, y: 420, count: 14 }, // INSIDE the thorn ring's reward line
-  { x: 11000, y: 330, count: 6 },
   { x: 13350, y: 480, count: 7 }, // mid-wind
-  { x: 16900, y: 265, count: 6 },
   { x: 19360, y: 495, count: 8 },
   { x: 23010, y: 250, count: 9 },
   { x: 24300, y: 160, count: 10 }, // final optional flock
