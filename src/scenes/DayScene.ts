@@ -624,7 +624,9 @@ export class DayScene extends Phaser.Scene {
     const prog = Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1)
     if (prog > 0.42) {
       const t01 = Phaser.Math.Clamp((prog - 0.42) / 0.5, 0, 1)
-      this.roostHorizon.setAlpha(Math.min(0.55, t01 * 0.55))
+      // fade the horizon stand-in away as the REAL roost scrolls into view
+      const handoff = Phaser.Math.Clamp((ROOST_X - VIEW_W - this.scrollX) / 900, 0, 1)
+      this.roostHorizon.setAlpha(Math.min(0.55, t01 * 0.55) * handoff)
       const grow = 90 + t01 * 130
       this.roostHorizon.setDisplaySize(grow, grow * 0.72)
     }
