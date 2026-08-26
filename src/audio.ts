@@ -67,7 +67,7 @@ export class GameAudio {
     this.master = ctx.createGain()
     this.master.gain.value = 0.0
     this.master.connect(ctx.destination)
-    this.tween(this.master.gain, 0.22, 2.5)
+    this.tween(this.master.gain, 0.3, 2.5)
 
     // pink-ish noise buffer, looped, through a bandpass "wing rush" filter
     const bufSize = ctx.sampleRate * 2
@@ -88,7 +88,7 @@ export class GameAudio {
     this.noiseFilter.frequency.value = 420
     this.noiseFilter.Q.value = 0.6
     this.noiseGain = ctx.createGain()
-    this.noiseGain.gain.value = 0.5
+    this.noiseGain.gain.value = 0.34
     const wingsLayer = ctx.createGain()
     this.layerGains.set('wings', wingsLayer)
     src.connect(this.noiseFilter).connect(this.noiseGain).connect(wingsLayer).connect(this.master)
@@ -96,7 +96,7 @@ export class GameAudio {
 
     // ---- pad layer: warm slow-detuned bank through a lowpass (or a stem)
     const padGain = ctx.createGain()
-    padGain.gain.value = 0.055
+    padGain.gain.value = 0.16
     this.layerGains.set('pad', padGain)
     padGain.connect(this.master)
     const bellsGain = ctx.createGain()
@@ -449,7 +449,7 @@ export class GameAudio {
   /** Master mute — the whole graph ducks, nothing is torn down. */
   setMuted(on: boolean): void {
     if (!this.ctx) return
-    this.master.gain.setTargetAtTime(on ? 0 : 0.22, this.ctx.currentTime, 0.05)
+    this.master.gain.setTargetAtTime(on ? 0 : 0.3, this.ctx.currentTime, 0.05)
   }
 
   /** ±ratio random pitch so repeated one-shots never sound stamped. */

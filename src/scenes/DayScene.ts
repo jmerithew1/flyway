@@ -5,7 +5,7 @@ import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
 import { GameAudio } from '../audio'
 import { scoreFeathers } from '../result'
-import { ScoreBook, ScoreSource, NIGHTFALL_PAR } from '../score'
+import { ScoreBook, MasteryEvent, NIGHTFALL_PAR } from '../score'
 import { FalconSystem } from '../falcon'
 import { birdFrameKey } from '../textures'
 import { ART } from '../artManifest'
@@ -180,7 +180,7 @@ export class DayScene extends Phaser.Scene {
     flow: 0,
     lost: 0,
     collisionEvents: 0,
-    score: { total: 0, streak: 0, bySource: {}, bestStreak: 0 },
+    score: new ScoreBook().snapshot(),
   }
   private mercyTime = 0
   private lastGrazeTime = -10
@@ -616,7 +616,7 @@ export class DayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(20)
     this.scoreText = this.add
-      .text(safe.x + safe.w - 26, safe.y + 20, '0', display(26, INK.bright, 3))
+      .text(safe.x + safe.w - 26, safe.y + 20, '×1.0', display(26, '#ffd9a0', 3))
       .setOrigin(1, 0)
       .setAlpha(0.9)
       .setScrollFactor(0)
@@ -1130,7 +1130,7 @@ export class DayScene extends Phaser.Scene {
       const joined = s.group.update(dt, time, this.flock, 200 + spreadAmt * 220 + callBoost * 340)
       if (joined > 0) {
         this.stats.found += joined
-        this.awardScore('found', joined, { x: s.def.x, y: s.def.y })
+        this.flockGain(joined, s.def.x, s.def.y)
       }
     }
 
@@ -1261,11 +1261,8 @@ export class DayScene extends Phaser.Scene {
     if (this.finishing) this.audio.warmth(Math.min(1, this.finishTimer / 4))
 
     this.flightSeconds += dt
-    if (this.scoreShown !== this.score.total) {
-      this.scoreShown += Math.max(1, Math.ceil((this.score.total - this.scoreShown) * 0.18))
-      if (this.scoreShown > this.score.total) this.scoreShown = this.score.total
-      this.scoreText.setText(String(this.scoreShown))
-    }
+    this.scoreShown += (this.score.mastery - this.scoreShown) * Math.min(1, dt * 6)
+    this.scoreText.setText(`×${this.scoreShown.toFixed(1)}`)
     this.updateHudCount()
     const displayed = this.flock.count + this.scatter.recoverableCount
     if (displayed <= WARN_BIRDS && !this.finishing) {
@@ -1298,7 +1295,6 @@ export class DayScene extends Phaser.Scene {
     this.stats.lost += this.scatter.expiredThisFrame
     if (this.scatter.recoveredThisFrame > 0) {
       this.stats.recovered += this.scatter.recoveredThisFrame
-      this.awardScore('recovered', this.scatter.recoveredThisFrame)
       this.tweens.killTweensOf(this.recoveredText)
       this.recoveredText.setText(`Recovered ${this.scatter.recoveredThisFrame}`).setAlpha(1)
       this.tweens.add({ targets: this.recoveredText, alpha: 0, duration: 1400, delay: 500 })
@@ -1603,6 +1599,20 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
+  /** Birds joining the flock are announced as birds — never as points. */
+  private flockGain(n: number, x: number, y: number): void {
+    const at = this.floatAt(x - this.scrollX, y - 40)
+    const t = this.add
+      .text(at.x, at.y, `+${n} ${n === 1 ? 'BIRD' : 'BIRDS'}`, display(19, '#ffd9a0', 4, 500))
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(21)
+      .setAlpha(0)
+    t.setShadow(0, 2, '#2a2036', 6)
+    this.tweens.add({ targets: t, alpha: 1, y: at.y - 26, duration: 340, ease: 'Cubic.easeOut' })
+    this.tweens.add({ targets: t, alpha: 0, y: at.y - 62, duration: 640, delay: 620, onComplete: () => t.destroy() })
+  }
+
   /** Keep floating text inside the visible rect AND clear of the touch pads. */
   private floatAt(x: number, y: number): { x: number; y: number } {
     const safe = safeArea(this)
@@ -1634,7 +1644,7 @@ export class DayScene extends Phaser.Scene {
   }
 
   /** Award points and float the reason where the player was looking. */
-  private awardScore(source: ScoreSource, count = 1, at?: { x: number; y: number }): void {
+  private awardScore(source: MasteryEvent, count = 1, at?: { x: number; y: number }): void {
     const ev = this.score.award(source, count)
     if (!ev) return
     const wx = at?.x ?? this.flock.centerX
@@ -1642,12 +1652,15 @@ export class DayScene extends Phaser.Scene {
     const spot = this.floatAt(wx - this.scrollX, wy - 90)
     const sx = spot.x
     const sy = spot.y
-    const big = ev.points >= 500
+    const big = ev.gain >= 0.25
     // stagger against anything still on screen so popups never stack
     this.popupSlot = (this.popupSlot + 1) % 4
     const slotY = (this.popupSlot - 1.5) * 30
+    // every popup speaks the same language as the HUD: what you did, and
+    // what it did to your multiplier
+    const headline = `${ev.label}   ×+${ev.gain.toFixed(2)}`
     const label = this.add
-      .text(sx, sy + slotY, `${ev.label}  +${ev.points}`, display(big ? 21 : 17, big ? '#ffe6bf' : '#f2e4d5', big ? 6 : 4, big ? 500 : 400))
+      .text(sx, sy + slotY, headline, display(big ? 21 : 17, big ? '#ffe6bf' : '#f2e4d5', big ? 6 : 4, big ? 500 : 400))
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(21)
@@ -1655,19 +1668,19 @@ export class DayScene extends Phaser.Scene {
     label.setShadow(0, 2, '#2a2036', 6)
     this.tweens.add({ targets: label, alpha: 1, y: sy + slotY - 26, duration: 380, ease: 'Cubic.easeOut' })
     this.tweens.add({ targets: label, alpha: 0, y: sy + slotY - 64, duration: 700, delay: 620, onComplete: () => label.destroy() })
-    if (this.score.streak > 0) this.showChain(ev.multiplier)
+    this.showChain()
   }
 
   /** The live chain, pinned beside the flock and PERSISTENT — the audit found
    * it invisible until x2, for 2.2s, in a corner the player never looks at. */
   private chainText!: Phaser.GameObjects.Text
-  private showChain(mult: number): void {
-    const n = this.score.streak
-    const next = n < 3 ? 3 : n < 6 ? 6 : 10
-    const label = mult > 1 ? `×${mult}  ${n} CLEAN` : `${n} CLEAN  ·  ×2 at ${next}`
+  private showChain(): void {
+    const n = this.score.chain
+    if (n <= 0) return
+    const label = n >= 2 ? `${n} CLEAN IN A ROW` : '1 CLEAN'
     this.chainText
       .setText(label)
-      .setColor(mult >= 3 ? '#ffe6bf' : mult > 1 ? '#ffd9a0' : '#cdbdd4')
+      .setColor(n >= 5 ? '#ffe6bf' : n >= 2 ? '#ffd9a0' : '#cdbdd4')
       .setAlpha(1)
       .setScale(1.25)
     this.tweens.killTweensOf(this.chainText)
@@ -1677,8 +1690,7 @@ export class DayScene extends Phaser.Scene {
   /** A collision breaks the chain — the loss the player feels most. Even a
    * 2-link chain says so now; silence was reading as "nothing was lost". */
   private breakScoreStreak(): void {
-    const had = this.score.streak
-    this.score.breakStreak()
+    const had = this.score.stumble()
     if (had < 1) return
     this.chainText.setText(had >= 3 ? `CHAIN BROKEN  ${had}` : 'chain broken').setColor('#e0a898').setAlpha(1)
     this.tweens.killTweensOf(this.chainText)
@@ -2121,8 +2133,8 @@ export class DayScene extends Phaser.Scene {
     this.stats.lost = cp.lost
     this.stats.collisionEvents = cp.collisionEvents
     this.score.restore(cp.score)
-    this.scoreShown = this.score.total
-    this.scoreText.setText(String(this.scoreShown))
+    this.scoreShown = this.score.mastery
+    this.scoreText.setText(`×${this.scoreShown.toFixed(1)}`)
     this.callCooldown = 0
     this.callTimer = 0
     this.promptQueue.length = 0
@@ -2318,6 +2330,7 @@ export class DayScene extends Phaser.Scene {
   private setPaused(on: boolean): void {
     if (on === this.paused || this.failing) return
     this.paused = on
+    this.audio.setMuted(on || this.muted) // a paused world is a silent one
     if (on) {
       const veil = this.add.container(0, 0).setScrollFactor(0).setDepth(60)
       veil.add(this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x0f0c22, 0.62).setOrigin(0))
@@ -2646,9 +2659,8 @@ export class DayScene extends Phaser.Scene {
         this.stats.returned = arrived
         // survival + the nightfall bonus land last, so the ceremony can
         // count them up as the closing beats
-        this.awardScore('birds', arrived)
         const saved = Math.max(0, Math.round(NIGHTFALL_PAR - this.flightSeconds))
-        if (saved > 0) this.awardScore('nightfall', saved)
+        this.score.awardNightfall(saved)
         const result = scoreFeathers({
           flightId: 'ancient-ruins',
           startingBirds: this.stats.startCount,
@@ -2663,9 +2675,12 @@ export class DayScene extends Phaser.Scene {
         })
         this.scene.start('Results', {
           ...result,
-          score: this.score.total,
-          scoreBySource: this.score.bySource,
-          bestStreak: this.score.bestStreak,
+          score: this.score.finalScore(arrived),
+          mastery: this.score.mastery,
+          masteryGains: this.score.gains,
+          masteryCounts: this.score.counts,
+          masteryLost: this.score.lostToCollisions,
+          bestStreak: this.score.bestChain,
           secondsSaved: Math.max(0, Math.round(NIGHTFALL_PAR - this.flightSeconds)),
         })
       }

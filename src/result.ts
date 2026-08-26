@@ -19,9 +19,12 @@ export interface FlightResult {
   homeFeather: boolean
   flockFeather: boolean
   flowFeather: boolean
-  /** two-currency score, filled by the Day scene when the flight ends */
+  /** score = birds home x mastery, filled by the Day scene at the roost */
   score?: number
-  scoreBySource?: Record<string, number>
+  mastery?: number
+  masteryGains?: Record<string, number>
+  masteryCounts?: Record<string, number>
+  masteryLost?: number
   bestStreak?: number
   secondsSaved?: number
 }

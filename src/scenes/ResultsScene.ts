@@ -3,7 +3,7 @@ import { W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { ART } from '../artManifest'
 import { DAY_NAME, FLOCK_STAR_RETURNED, FLOW_STAR_FRACTION } from '../config'
 import { FlightResult, FLOW_COLLISION_CAP, recordBest } from '../result'
-import { SOURCE_LABEL, ScoreSource } from '../score'
+import { MASTERY_LABEL, MasteryEvent } from '../score'
 import { display, voice, INK } from '../ui'
 
 /**
@@ -65,18 +65,39 @@ export class ResultsScene extends Phaser.Scene {
       this.at(800 + i * 240, () => this.spins.push({ text: val, value: v, shown: 0, prefix }))
     })
 
-    // ---- the flight, scored
-    const bySource = (result.scoreBySource ?? {}) as Record<string, number>
-    const order: ScoreSource[] = ['flow', 'cleanPass', 'breakthrough', 'mob', 'recovered', 'found', 'light', 'birds', 'nightfall']
-    const lines = order.filter((k) => (bySource[k] ?? 0) > 0)
+    // ---- how you flew: what each kind of skill added to the multiplier
+    const gains = (result.masteryGains ?? {}) as Record<string, number>
+    const counts = (result.masteryCounts ?? {}) as Record<string, number>
+    const order: MasteryEvent[] = ['flow', 'cleanPass', 'breakthrough', 'mob', 'light']
+    const lines = order.filter((k) => (gains[k] ?? 0) > 0)
     lines.forEach((key, i) => {
       const y = 316 + i * 26
-      const label = this.add.text(cx - 24, y, SOURCE_LABEL[key], style(13, '#a89bb4', 3)).setOrigin(1, 0.5).setAlpha(0)
-      const val = this.add.text(cx + 24, y, `+${bySource[key]}`, style(14, '#e6d6c2', 1)).setOrigin(0, 0.5).setAlpha(0)
+      const n = counts[key] ?? 0
+      const label = this.add
+        .text(cx - 24, y, `${MASTERY_LABEL[key]}${n > 1 ? `  x${n}` : ''}`, style(13, '#a89bb4', 3))
+        .setOrigin(1, 0.5)
+        .setAlpha(0)
+      const val = this.add
+        .text(cx + 24, y, `×+${gains[key].toFixed(2)}`, style(14, '#e6d6c2', 1))
+        .setOrigin(0, 0.5)
+        .setAlpha(0)
       this.at(1900 + i * 140, () => this.tweens.add({ targets: [label, val], alpha: 0.95, duration: 240 }))
     })
+    if ((result.masteryLost ?? 0) > 0.001) {
+      const y = 316 + lines.length * 26
+      const l = this.add.text(cx - 24, y, 'COLLISIONS', style(13, '#c9a2a2', 3)).setOrigin(1, 0.5).setAlpha(0)
+      const v = this.add
+        .text(cx + 24, y, `×-${(result.masteryLost ?? 0).toFixed(2)}`, style(14, '#c9a2a2', 1))
+        .setOrigin(0, 0.5)
+        .setAlpha(0)
+      this.at(1900 + lines.length * 140, () => this.tweens.add({ targets: [l, v], alpha: 0.95, duration: 240 }))
+    }
 
-    const totalY = 316 + Math.max(lines.length, 1) * 26 + 32
+    const totalY = 316 + Math.max(lines.length, 1) * 26 + 54
+    const eq = this.add
+      .text(cx, totalY - 30, `${result.birdsArrived} birds home   ×   ${(result.mastery ?? 1).toFixed(2)} mastery`, style(15, '#cdbdd4', 2))
+      .setOrigin(0.5)
+      .setAlpha(0)
     const totalLabel = this.add.text(cx - 24, totalY, 'SCORE', style(19, '#f6d9b8', 6)).setOrigin(1, 0.5).setAlpha(0)
     const totalVal = this.add.text(cx + 24, totalY, '0', display(30, '#ffe6bf', 2, 500)).setOrigin(0, 0.5).setAlpha(0)
     const streakLine =
@@ -84,7 +105,7 @@ export class ResultsScene extends Phaser.Scene {
         ? this.add.text(cx + 24, totalY + 30, `best chain ×${result.bestStreak}`, style(13, '#a89bb4', 2)).setOrigin(0, 0.5).setAlpha(0)
         : null
     this.at(1900 + lines.length * 140 + 220, () => {
-      this.tweens.add({ targets: [totalLabel, totalVal, ...(streakLine ? [streakLine] : [])], alpha: 1, duration: 280 })
+      this.tweens.add({ targets: [eq, totalLabel, totalVal, ...(streakLine ? [streakLine] : [])], alpha: 1, duration: 280 })
       this.spins.push({ text: totalVal, value: result.score ?? 0, shown: 0, prefix: '' })
     })
 

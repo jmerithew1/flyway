@@ -5,10 +5,13 @@ import { GAME_TITLE, TAGLINE, TITLE_HINT } from '../config'
 import { birdFrameKey } from '../textures'
 import { isTouch } from '../touch'
 import { display, voice, INK } from '../ui'
+import { GameAudio } from '../audio'
 
 /** Minimal elegant title screen on the painted plate, with drifting birds. */
 export class TitleScene extends Phaser.Scene {
   private drifting: { img: Phaser.GameObjects.Image; vx: number; vy: number; ph: number }[] = []
+  private audio = new GameAudio()
+  private musicT = 0
   private rotateCard?: Phaser.GameObjects.Container
 
   constructor() {
@@ -21,7 +24,18 @@ export class TitleScene extends Phaser.Scene {
     const plate = ART[bgKey] ?? ART['bg_plate']
     const cover = Math.max(VIEW_W / plate.w, VIEW_H / plate.h)
     this.add.image(VIEW_W / 2, VIEW_H / 2, bgKey).setDisplaySize(plate.w * cover, plate.h * cover)
-    this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x1a1530, 0.18).setOrigin(0)
+    this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x1a1530, 0.2).setOrigin(0)
+    // the sunset is bright exactly where the words are; give them ground
+    this.add
+      .image(VIEW_W / 2, 300, 'softdot')
+      .setTint(0x1a1332)
+      .setDisplaySize(1180, 520)
+      .setAlpha(0.34)
+    this.add
+      .image(VIEW_W / 2, 620, 'softdot')
+      .setTint(0x16112c)
+      .setDisplaySize(940, 520)
+      .setAlpha(0.44)
 
     // perched birds resting on the foreground — the flock at home
     if (this.textures.exists('perched_a')) {
@@ -49,74 +63,82 @@ export class TitleScene extends Phaser.Scene {
     const cx = VIEW_W / 2
     const serif = (size: number, color: string = INK.bright, ls = 0) => display(size, color, ls, 300)
 
-    // the painted FLYWAY wordmark (never tiny); text fallback keeps it working
+    // ---- the painted FLYWAY wordmark: the hero, and the only large art
     let title: Phaser.GameObjects.Image | Phaser.GameObjects.Text
     if (this.textures.exists('wordmark')) {
       const wm = ART['wordmark']
-      const wmW = Math.min(560, VIEW_W * 0.42)
-      title = this.add
-        .image(cx, 288, 'wordmark')
-        .setDisplaySize(wmW, (wm.h / wm.w) * wmW)
-        .setAlpha(0)
+      const wmW = Math.min(620, VIEW_W * 0.44)
+      title = this.add.image(cx, 250, 'wordmark').setDisplaySize(wmW, (wm.h / wm.w) * wmW).setAlpha(0)
     } else {
-      const t = this.add.text(cx, 300, GAME_TITLE, serif(84, '#f7f0ea', 26)).setOrigin(0.5).setAlpha(0)
-      t.setShadow(0, 2, '#3a2f4a', 8)
+      const t = this.add.text(cx, 250, GAME_TITLE, serif(84, '#fff6ec', 26)).setOrigin(0.5).setAlpha(0)
+      t.setShadow(0, 3, '#180f28', 10)
       title = t
     }
-    const tag = this.add.text(cx, 396, TAGLINE, voice(24, '#eddfd8')).setOrigin(0.5).setAlpha(0)
+    const tag = this.add.text(cx, 372, TAGLINE, voice(26, '#fdf1e8')).setOrigin(0.5).setAlpha(0)
+    tag.setShadow(0, 2, '#180f28', 8)
 
-    // the same grammar, named for the hand that's playing it
-    // every verb, and what it DOES — the audit found half the control set
-    // undocumented and the documented half naming effects it never explained
-    const controls = isTouch
-      ? [
-          ['Drag', 'steer the flock'],
-          ['GATHER', 'hold: tighten · tap: surge forward'],
-          ['SPREAD', 'hold: widen, gather strays · tap: brake'],
-          ['DIVE', 'hold: trade height for speed'],
-          ['CALL', 'cry out — the lost turn home'],
-          ['BOTH PADS', 'brace: the world slows'],
-          ['circle', 'whirl the flock into a column'],
-        ]
-      : [
-          ['Mouse', 'steer the flock'],
-          ['SPACE', 'hold: tighten · tap: surge forward'],
-          ['SHIFT', 'hold: widen, gather strays · tap: brake'],
-          ['Mouse hold', 'dive: trade height for speed'],
-          ['C', 'cry out — the lost turn home'],
-          ['SPACE+SHIFT', 'brace: the world slows'],
-          ['circle', 'whirl the flock into a column'],
-        ]
-    const ctrlObjs: Phaser.GameObjects.Text[] = []
-    controls.forEach(([k, v], i) => {
-      const y = 470 + i * 27
-      ctrlObjs.push(this.add.text(cx - 18, y, k, serif(15, '#f5edf3', 2)).setOrigin(1, 0.5).setAlpha(0))
-      ctrlObjs.push(this.add.text(cx + 18, y, v, serif(15, '#bdb0c9', 0)).setOrigin(0, 0.5).setAlpha(0))
-    })
-    const hint = this.add.text(cx, 676, TITLE_HINT, voice(17, '#f0e6ee')).setOrigin(0.5).setAlpha(0)
-    hint.setShadow(0, 1, '#3a2f4a', 4)
-
+    // ---- BEGIN FLIGHT: the one thing that matters, so it is the one thing
+    // that is unmissable — a lit plate, big warm caps, and room around it
+    const btnPlate = this.add
+      .image(cx, 500, 'softdot')
+      .setTint(0x0e0920)
+      .setDisplaySize(760, 250)
+      .setAlpha(0)
+    const btnPlate2 = this.add
+      .image(cx, 500, 'softdot')
+      .setTint(0x0b0718)
+      .setDisplaySize(470, 150)
+      .setAlpha(0)
     const begin = this.add
-      .text(cx, 700, isTouch ? 'TAP TO BEGIN FLIGHT' : 'BEGIN FLIGHT', serif(24, '#f7f0ea', 6))
+      .text(cx, 498, 'BEGIN FLIGHT', serif(38, '#fff3dc', 10))
       .setOrigin(0.5)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true })
+    begin.setShadow(0, 3, '#160d24', 12)
+    begin.input!.hitArea = new Phaser.Geom.Rectangle(-90, -50, begin.width + 180, begin.height + 100)
+    begin.input!.hitAreaCallback = Phaser.Geom.Rectangle.Contains
+    const beginHint = this.add
+      .text(cx, 546, isTouch ? 'tap anywhere' : 'click, or press SPACE', serif(15, '#c9bcd6', 4))
+      .setOrigin(0.5)
+      .setAlpha(0)
+    beginHint.setShadow(0, 2, '#180f28', 6)
     if (!isTouch) {
-      // hover is cosmetic only — and on touch it would stick gold after a tap
       begin.on('pointerover', () => begin.setColor('#ffe6bf'))
-      begin.on('pointerout', () => begin.setColor('#f7f0ea'))
+      begin.on('pointerout', () => begin.setColor('#fff3dc'))
     }
+
+    // ---- the controls, compact and secondary: three lines a judge can scan,
+    // because the rest is taught by the level as it is needed
+    const controls = isTouch
+      ? ['drag the sky — steer', 'GATHER / SPREAD — hold to shape, tap for a move', 'more is taught as you fly']
+      : ['mouse — steer the flock', 'SPACE gather · SHIFT spread — hold to shape, tap for a move', 'more is taught as you fly']
+    const ctrlObjs: Phaser.GameObjects.Text[] = []
+    controls.forEach((line, i) => {
+      const t = this.add
+        .text(cx, 826 + i * 30, line, serif(i === 2 ? 14 : 16, i === 2 ? '#c4b8d4' : '#f2eaf8', 2))
+        .setOrigin(0.5)
+        .setAlpha(0)
+      t.setShadow(0, 2, '#100a1e', 8)
+      ctrlObjs.push(t)
+    })
+    const hint = ctrlObjs[2]
 
     const start = () => this.scene.start('Day')
     begin.on('pointerdown', start)
     this.input.keyboard?.once('keydown-ENTER', start)
     this.input.keyboard?.once('keydown-SPACE', start)
+    // the score starts on the title, on the player's first gesture
+    this.input.once('pointermove', () => this.audio.start())
+    this.input.once('pointerdown', () => this.audio.start())
+    this.input.keyboard?.once('keydown', () => this.audio.start())
 
     this.tweens.add({ targets: title, alpha: 1, duration: 1100 })
     this.tweens.add({ targets: tag, alpha: 0.95, duration: 900, delay: 500 })
-    this.tweens.add({ targets: ctrlObjs, alpha: 1, duration: 800, delay: 950 })
-    this.tweens.add({ targets: hint, alpha: 0.9, duration: 800, delay: 1250 })
-    this.tweens.add({ targets: begin, alpha: 1, duration: 800, delay: 1500 })
+    this.tweens.add({ targets: ctrlObjs, alpha: 0.95, duration: 800, delay: 1700 })
+    this.tweens.add({ targets: hint, alpha: 0.85, duration: 800, delay: 1700 })
+    this.tweens.add({ targets: [btnPlate], alpha: 0.62, duration: 800, delay: 1300 })
+    this.tweens.add({ targets: [btnPlate2], alpha: 0.5, duration: 800, delay: 1300 })
+    this.tweens.add({ targets: [begin, beginHint], alpha: 1, duration: 800, delay: 1400 })
     this.tweens.add({ targets: begin, scale: 1.045, duration: 1300, delay: 2300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
     this.buildRotateCard()
@@ -154,6 +176,9 @@ export class TitleScene extends Phaser.Scene {
 
   update(timeMs: number, deltaMs: number): void {
     const dt = deltaMs / 1000
+    this.musicT += dt
+    this.audio.musicTick(dt, 0.35, 0)
+    this.audio.setJourney(0.2, 1, 0)
     const t = timeMs / 1000
     for (const d of this.drifting) {
       d.img.x += d.vx * dt
