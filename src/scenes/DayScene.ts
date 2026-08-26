@@ -5,6 +5,7 @@ import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
 import { GameAudio } from '../audio'
 import { scoreFeathers } from '../result'
+import { ScoreBook, ScoreSource, NIGHTFALL_PAR } from '../score'
 import { FalconSystem } from '../falcon'
 import { birdFrameKey } from '../textures'
 import { ART } from '../artManifest'
@@ -56,6 +57,9 @@ interface CheckpointState {
   count: number
   found: number
   flow: number
+  lost: number
+  collisionEvents: number
+  score: ReturnType<ScoreBook['snapshot']>
 }
 
 interface AmbientFlock {
@@ -136,7 +140,16 @@ export class DayScene extends Phaser.Scene {
   private spreadHeld = 0
 
   private stats: DayStats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0, flow: 0, flowTotal: 0, recovered: 0 }
-  private checkpoint: CheckpointState = { x: 0, name: '', count: START_BIRDS, found: 0, flow: 0 }
+  private checkpoint: CheckpointState = {
+    x: 0,
+    name: '',
+    count: START_BIRDS,
+    found: 0,
+    flow: 0,
+    lost: 0,
+    collisionEvents: 0,
+    score: { total: 0, streak: 0, bySource: {}, bestStreak: 0 },
+  }
   private mercyTime = 0
   private lastGrazeTime = -10
   private prevGather = false
@@ -182,6 +195,9 @@ export class DayScene extends Phaser.Scene {
     this.obstacleFeature.clear()
     this.prompt = null
     this.mercyTime = 0
+    this.score = new ScoreBook()
+    this.scoreShown = 0
+    this.flightSeconds = 0
     this.flingTimes = []
     this.lastGrazeTime = -10
     this.prevGather = false
@@ -207,7 +223,16 @@ export class DayScene extends Phaser.Scene {
       flowTotal: FEATURES.filter((f) => f.flow).length,
       recovered: 0,
     }
-    this.checkpoint = { x: 0, name: '', count: START_BIRDS, found: 0, flow: 0 }
+    this.checkpoint = {
+      x: 0,
+      name: '',
+      count: START_BIRDS,
+      found: 0,
+      flow: 0,
+      lost: 0,
+      collisionEvents: 0,
+      score: this.score.snapshot(),
+    }
 
     // ---- backdrop: the supplied painted plate, covering the view
     const plate = ART['bg_plate']
@@ -366,7 +391,7 @@ export class DayScene extends Phaser.Scene {
         this.camKick = 2.6
         this.audio.falconScreech()
         this.perfectFlowFeedback()
-        this.showLandmark('THE FLOCK FIGHTS BACK')
+        this.awardScore('mob')
         return
       }
       if (taken > 0) {
@@ -508,6 +533,18 @@ export class DayScene extends Phaser.Scene {
     this.landmarkText = this.add
       .text(VIEW_W / 2, 150, '', display(22, '#f2e4d5', 6, 300))
       .setOrigin(0.5)
+      .setAlpha(0)
+      .setScrollFactor(0)
+      .setDepth(20)
+    this.scoreText = this.add
+      .text(VIEW_W - 26, 20, '0', display(26, INK.bright, 3))
+      .setOrigin(1, 0)
+      .setAlpha(0.9)
+      .setScrollFactor(0)
+      .setDepth(20)
+    this.streakText = this.add
+      .text(VIEW_W - 26, 56, '', display(17, '#ffd9a0', 5, 500))
+      .setOrigin(1, 0)
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
@@ -685,6 +722,11 @@ export class DayScene extends Phaser.Scene {
   private mobLift = 0
   private draftTrailT = 0
   private journeyTick = 0
+  private score = new ScoreBook()
+  private scoreText!: Phaser.GameObjects.Text
+  private scoreShown = 0
+  private streakText!: Phaser.GameObjects.Text
+  private flightSeconds = 0
 
   /** Surge: tap SPACE — whipcrack pulse. Weak and ragged when strained. */
   private doSurge(): void {
@@ -944,7 +986,10 @@ export class DayScene extends Phaser.Scene {
     for (const s of this.strays) {
       if (s.group.depleted) continue
       const joined = s.group.update(dt, time, this.flock, 200 + spreadAmt * 220 + callBoost * 340)
-      if (joined > 0) this.stats.found += joined
+      if (joined > 0) {
+        this.stats.found += joined
+        this.awardScore('found', joined, { x: s.def.x, y: s.def.y })
+      }
     }
 
     // drafting streamlines: clean straight flight visibly cuts the air
@@ -1030,6 +1075,12 @@ export class DayScene extends Phaser.Scene {
       this.showPrompt('strain-s', 'the flock is losing cohesion', () => this.flock.spreadStrain < 0.2)
     if (this.finishing) this.audio.warmth(Math.min(1, this.finishTimer / 4))
 
+    this.flightSeconds += dt
+    if (this.scoreShown !== this.score.total) {
+      this.scoreShown += Math.max(1, Math.ceil((this.score.total - this.scoreShown) * 0.18))
+      if (this.scoreShown > this.score.total) this.scoreShown = this.score.total
+      this.scoreText.setText(String(this.scoreShown))
+    }
     this.updateHudCount()
     const displayed = this.flock.count + this.scatter.recoverableCount
     if (displayed <= WARN_BIRDS && !this.finishing) {
@@ -1062,6 +1113,7 @@ export class DayScene extends Phaser.Scene {
     this.stats.lost += this.scatter.expiredThisFrame
     if (this.scatter.recoveredThisFrame > 0) {
       this.stats.recovered += this.scatter.recoveredThisFrame
+      this.awardScore('recovered', this.scatter.recoveredThisFrame)
       this.tweens.killTweensOf(this.recoveredText)
       this.recoveredText.setText(`Recovered ${this.scatter.recoveredThisFrame}`).setAlpha(1)
       this.tweens.add({ targets: this.recoveredText, alpha: 0, duration: 1400, delay: 500 })
@@ -1202,6 +1254,7 @@ export class DayScene extends Phaser.Scene {
           if (g.clean && cohesive) {
             g.state = 'done'
             this.stats.flow++
+            this.awardScore('flow', 1, { x: f.x, y: this.flock.centerY })
             this.flowStreak++
             this.perfectFlowFeedback()
           } else {
@@ -1246,6 +1299,9 @@ export class DayScene extends Phaser.Scene {
         if (dx * dx + dy * dy < 42 * 42) {
           m.img.setVisible(false)
           this.audio.collectBloom(1)
+          this.awardScore('light', 1, { x: m.x, y: m.y })
+          // the old flyway's light steadies the flock
+          this.flock.relieveStrain(0.5)
           const spark = this.add
             .image(m.x, m.y, 'softdot').setTint(0xffd9a0)
             .setDisplaySize(40, 40)
@@ -1324,6 +1380,7 @@ export class DayScene extends Phaser.Scene {
         this.lossTimes.push(time)
         this.stats.collisionEvents++
         this.audio.collisionThump()
+        this.breakScoreStreak()
         this.featherPuff(bird.x, bird.y, 4, this.flock.meanVX * 0.35, -20)
         if (!this.scatter.spawn(bird.x, bird.y, bird.x - this.flock.centerX, bird.y - this.flock.centerY)) this.stats.lost++
         this.flock.removeBird(bird)
@@ -1338,6 +1395,45 @@ export class DayScene extends Phaser.Scene {
         bird.vy = (dy / d) * sp * 0.8
       }
     }
+  }
+
+  /** Award points and float the reason where the player was looking. */
+  private awardScore(source: ScoreSource, count = 1, at?: { x: number; y: number }): void {
+    const ev = this.score.award(source, count)
+    if (!ev) return
+    const wx = at?.x ?? this.flock.centerX
+    const wy = at?.y ?? this.flock.centerY
+    const sx = Phaser.Math.Clamp(wx - this.scrollX, 190, VIEW_W - 190)
+    const sy = Phaser.Math.Clamp(wy - 90, 90, VIEW_H - 150)
+    const big = ev.points >= 500
+    const label = this.add
+      .text(sx, sy, `${ev.label}  +${ev.points}`, display(big ? 21 : 17, big ? '#ffe6bf' : '#f2e4d5', big ? 6 : 4, big ? 500 : 400))
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(21)
+      .setAlpha(0)
+    label.setShadow(0, 2, '#2a2036', 6)
+    this.tweens.add({ targets: label, alpha: 1, y: sy - 26, duration: 380, ease: 'Cubic.easeOut' })
+    this.tweens.add({ targets: label, alpha: 0, y: sy - 64, duration: 700, delay: 620, onComplete: () => label.destroy() })
+    if (ev.multiplier > 1) {
+      this.streakText.setText(`×${ev.multiplier}  ${this.score.streak} clean`).setAlpha(1)
+      this.tweens.killTweensOf(this.streakText)
+      this.tweens.add({ targets: this.streakText, alpha: 0, duration: 900, delay: 1300 })
+    }
+  }
+
+  /** A collision breaks the chain — the loss the player feels most. */
+  private breakScoreStreak(): void {
+    if (!this.score.breakStreak()) return
+    this.streakText.setText('streak lost').setColor('#e0a898').setAlpha(1)
+    this.tweens.killTweensOf(this.streakText)
+    this.tweens.add({
+      targets: this.streakText,
+      alpha: 0,
+      duration: 700,
+      delay: 500,
+      onComplete: () => this.streakText.setColor('#ffd9a0'),
+    })
   }
 
   /** Feathers: the universal loss language. Small puffs per bird; the
@@ -1427,6 +1523,7 @@ export class DayScene extends Phaser.Scene {
         z.state = 'done'
         if (z.seen.size >= 10 && this.stats.lost === z.entryLost) {
           this.audio.cleanPassBloom()
+          this.awardScore('cleanPass', 1, { x: z.x, y: z.y })
           const bloom = this.add
             .image(z.x, z.y, 'softdot').setTint(0xffd9a0)
             .setBlendMode(Phaser.BlendModes.ADD)
@@ -1568,6 +1665,7 @@ export class DayScene extends Phaser.Scene {
     this.time.delayedCall(1600, () => emitter.destroy())
     this.hitStop = 0.07
     this.camKick = 3
+    this.awardScore('breakthrough', 1, { x: o.x, y: o.y })
     this.cameras.main.zoomTo(1.02, 100, 'Sine.easeOut', true)
     this.time.delayedCall(200, () => this.cameras.main.zoomTo(1, 280, 'Sine.easeInOut', true))
     this.audio.collisionThump()
@@ -1641,7 +1739,16 @@ export class DayScene extends Phaser.Scene {
   private checkCheckpoints(): void {
     for (const lm of LANDMARKS) {
       if (lm.x > this.checkpoint.x && this.flock.centerX >= lm.x) {
-        this.checkpoint = { x: lm.x, name: lm.name, count: this.flock.count, found: this.stats.found, flow: this.stats.flow }
+        this.checkpoint = {
+          x: lm.x,
+          name: lm.name,
+          count: this.flock.count,
+          found: this.stats.found,
+          flow: this.stats.flow,
+          lost: this.stats.lost,
+          collisionEvents: this.stats.collisionEvents,
+          score: this.score.snapshot(),
+        }
         if (lm.name) {
           this.showLandmark(`${lm.name} reached`)
           this.audio.landmarkTone(lm.name)
@@ -1743,6 +1850,15 @@ export class DayScene extends Phaser.Scene {
     this.flock.intentY = 430
     this.stats.found = cp.found
     this.stats.flow = cp.flow
+    // roll the loss counters back too — otherwise a restart permanently
+    // skews the FLOW feather's collision cap and the results breakdown
+    this.stats.lost = cp.lost
+    this.stats.collisionEvents = cp.collisionEvents
+    this.score.restore(cp.score)
+    this.scoreShown = this.score.total
+    this.scoreText.setText(String(this.scoreShown))
+    this.callCooldown = 0
+    this.callTimer = 0
     for (const z of this.openingZones) if (z.x > cp.x) z.state = 'idle'
     // reset flow gates and motes ahead of the checkpoint
     for (const [f, g] of this.flowGates) if (f.x > cp.x) { g.state = 'idle'; g.clean = true }
@@ -1762,6 +1878,48 @@ export class DayScene extends Phaser.Scene {
         }
       }
       if (restored) sprite.setAlpha(f.alpha ?? 1)
+    }
+  }
+
+  private perched: Phaser.GameObjects.Image[] = []
+
+  /** The day's closing bookend: the camera eases in on the roost while the
+   * flock settles into its branches, bird by bird. */
+  private runArrivalCeremony(dt: number): void {
+    void dt
+    const cam = this.cameras.main
+    const t = this.finishTimer
+    // the HUD steps aside for the ceremony (and a zoomed camera would clip it)
+    if (t > 0.4 && this.countText.alpha > 0) {
+      this.tweens.add({
+        targets: [this.countText, this.scoreText, this.streakText, this.scatteredText, this.recoveredText, this.deltaText],
+        alpha: 0,
+        duration: 700,
+      })
+    }
+    // ease the camera in on the roost (never a hard cut)
+    const zoom = 1 + Math.min(1, Math.max(0, (t - 1.2) / 5)) * 0.26
+    cam.setZoom(Phaser.Math.Linear(cam.zoom, zoom, 0.04))
+    // birds land: one settles roughly every 0.12s once the flock is home
+    if (t > 2.2 && this.textures.exists('perched_a')) {
+      const want = Math.min(26, Math.floor((t - 2.2) / 0.12))
+      while (this.perched.length < want) {
+        const i = this.perched.length
+        const key = ['perched_a', 'perched_b', 'perched_c', 'perched_sleep'][i % 4]
+        const art = ART[key]
+        const h = 26 + Math.random() * 8
+        const px = ROOST_X + rand(-230, 230)
+        const py = 470 + Math.random() * 210
+        const img = this.add
+          .image(px, py - 40, key)
+          .setDisplaySize((art.w / art.h) * h, h)
+          .setFlipX(Math.random() < 0.5)
+          .setAlpha(0)
+          .setDepth(4)
+        this.perched.push(img)
+        this.tweens.add({ targets: img, y: py, alpha: 0.95, duration: 520, ease: 'Sine.easeOut' })
+        if (i % 5 === 0) this.audio.chime(392 + i * 11, 0)
+      }
     }
   }
 
@@ -1818,8 +1976,14 @@ export class DayScene extends Phaser.Scene {
 
     if (this.finishing) {
       this.finishTimer += dt
-      if (this.finishTimer > 7.5) {
+      this.runArrivalCeremony(dt)
+      if (this.finishTimer > 8.6) {
         this.stats.returned = this.flock.count
+        // survival + the nightfall bonus land last, so the ceremony can
+        // count them up as the closing beats
+        this.awardScore('birds', this.flock.count)
+        const saved = Math.max(0, Math.round(NIGHTFALL_PAR - this.flightSeconds))
+        if (saved > 0) this.awardScore('nightfall', saved)
         const result = scoreFeathers({
           flightId: 'ancient-ruins',
           startingBirds: this.stats.startCount,
@@ -1832,7 +1996,13 @@ export class DayScene extends Phaser.Scene {
           collisionEvents: this.stats.collisionEvents,
           checkpointsUsed: this.stats.resets,
         })
-        this.scene.start('Results', result)
+        this.scene.start('Results', {
+          ...result,
+          score: this.score.total,
+          scoreBySource: this.score.bySource,
+          bestStreak: this.score.bestStreak,
+          secondsSaved: Math.max(0, Math.round(NIGHTFALL_PAR - this.flightSeconds)),
+        })
       }
       return
     }

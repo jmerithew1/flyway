@@ -41,7 +41,9 @@ Promise.all([
     }),
   fontsReady,
 ]).finally(() => {
-  new Phaser.Game(config)
+  const game = new Phaser.Game(config)
+  // debug handle for the headless verification harness
+  ;(window as unknown as Record<string, unknown>).__game = game
 })
 
 const config: Phaser.Types.Core.GameConfig = {

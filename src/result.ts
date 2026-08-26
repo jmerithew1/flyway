@@ -19,6 +19,11 @@ export interface FlightResult {
   homeFeather: boolean
   flockFeather: boolean
   flowFeather: boolean
+  /** two-currency score, filled by the Day scene when the flight ends */
+  score?: number
+  scoreBySource?: Record<string, number>
+  bestStreak?: number
+  secondsSaved?: number
 }
 
 /** FLOW measures clean navigation, not survival: flows AND few collisions. */
@@ -43,8 +48,8 @@ export function recordBest(result: FlightResult): FlightResult | null {
     const prev = prevRaw ? (JSON.parse(prevRaw) as FlightResult) : null
     const better =
       !prev ||
-      result.birdsArrived > prev.birdsArrived ||
-      (result.birdsArrived === prev.birdsArrived && result.perfectFlows > prev.perfectFlows)
+      (result.score ?? 0) > (prev.score ?? 0) ||
+      ((result.score ?? 0) === (prev.score ?? 0) && result.birdsArrived > prev.birdsArrived)
     if (better) {
       localStorage.setItem(bestKey(result.flightId), JSON.stringify(result))
       return prev
