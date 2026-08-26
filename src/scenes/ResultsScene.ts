@@ -3,6 +3,7 @@ import { W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { ART } from '../artManifest'
 import { DAY_NAME, FLOCK_STAR_RETURNED, FLOW_STAR_FRACTION } from '../config'
 import { FlightResult, FLOW_COLLISION_CAP, recordBest } from '../result'
+import { display, voice, INK } from '../ui'
 
 /**
  * End-of-flight rating, fed ONLY by the FlightResult record. Feathers (bird
@@ -23,8 +24,7 @@ export class ResultsScene extends Phaser.Scene {
     this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x1a1530, 0.38).setOrigin(0)
 
     const cx = VIEW_W / 2
-    const style = (size: number, color = '#f2e8f5', ls = 0) =>
-      ({ fontFamily: 'Georgia, serif', fontSize: `${size}px`, color, letterSpacing: ls }) as Phaser.Types.GameObjects.Text.TextStyle
+    const style = (size: number, color: string = INK.bright, ls = 0) => display(size, color, ls, 300)
 
     const title = this.add.text(cx, 118, `${DAY_NAME} — HOME`, style(38, '#f7f0ea', 6)).setOrigin(0.5).setAlpha(0)
 
@@ -76,7 +76,7 @@ export class ResultsScene extends Phaser.Scene {
       }
       row.add(icon)
       row.add(this.add.text(x, 52, label, style(15, earned ? '#f2e4d5' : '#8d8298', 4)).setOrigin(0.5))
-      row.add(this.add.text(x, 80, why, style(13, earned ? '#c9b8a2' : '#a08f96')).setOrigin(0.5))
+      row.add(this.add.text(x, 80, why, voice(15, earned ? '#c9b8a2' : '#a08f96')).setOrigin(0.5))
     })
 
     const earnedCount = feathers.filter(([, e]) => e).length

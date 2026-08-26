@@ -3,6 +3,7 @@ import { ART } from '../artManifest'
 import { W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { GAME_TITLE, TAGLINE, TITLE_HINT } from '../config'
 import { birdFrameKey } from '../textures'
+import { display, voice, INK } from '../ui'
 
 /** Minimal elegant title screen on the painted plate, with drifting birds. */
 export class TitleScene extends Phaser.Scene {
@@ -44,8 +45,7 @@ export class TitleScene extends Phaser.Scene {
     }
 
     const cx = VIEW_W / 2
-    const serif = (size: number, color = '#f5edf3', ls = 0) =>
-      ({ fontFamily: 'Georgia, serif', fontSize: `${size}px`, color, letterSpacing: ls }) as Phaser.Types.GameObjects.Text.TextStyle
+    const serif = (size: number, color: string = INK.bright, ls = 0) => display(size, color, ls, 300)
 
     // the painted FLYWAY wordmark (never tiny); text fallback keeps it working
     let title: Phaser.GameObjects.Image | Phaser.GameObjects.Text
@@ -61,7 +61,7 @@ export class TitleScene extends Phaser.Scene {
       t.setShadow(0, 2, '#3a2f4a', 8)
       title = t
     }
-    const tag = this.add.text(cx, 396, TAGLINE, serif(21, '#eddfd8', 2)).setOrigin(0.5).setAlpha(0)
+    const tag = this.add.text(cx, 396, TAGLINE, voice(24, '#eddfd8')).setOrigin(0.5).setAlpha(0)
 
     const controls = [
       ['Mouse', 'Steer'],
@@ -75,7 +75,7 @@ export class TitleScene extends Phaser.Scene {
       ctrlObjs.push(this.add.text(cx - 24, y, k, serif(18, '#f5edf3', 2)).setOrigin(1, 0.5).setAlpha(0))
       ctrlObjs.push(this.add.text(cx + 24, y, v, serif(18, '#cdbdd4', 1)).setOrigin(0, 0.5).setAlpha(0))
     })
-    const hint = this.add.text(cx, 612, TITLE_HINT, serif(15, '#f0e6ee', 1)).setOrigin(0.5).setAlpha(0)
+    const hint = this.add.text(cx, 612, TITLE_HINT, voice(17, '#f0e6ee')).setOrigin(0.5).setAlpha(0)
     hint.setShadow(0, 1, '#3a2f4a', 4)
 
     const begin = this.add

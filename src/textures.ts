@@ -9,6 +9,7 @@ export function createCoreTextures(scene: Phaser.Scene): void {
   makeSoftDot(scene)
   makeLeafTexture(scene)
   makeFeatherTexture(scene)
+  makeVerticalFade(scene)
 }
 
 /** Load every curated piece from the manifest as a plain image. */
@@ -60,6 +61,23 @@ function makeSoftDot(scene: Phaser.Scene): void {
   grd.addColorStop(1, 'rgba(255,255,255,0)')
   ctx.fillStyle = grd
   ctx.fillRect(0, 0, size, size)
+  canvas.refresh()
+}
+
+/** Vertical fade (transparent top → solid bottom), white for tinting. Used
+ * anywhere a wash must sink into a scene without leaving a hard edge. */
+function makeVerticalFade(scene: Phaser.Scene): void {
+  if (scene.textures.exists('vfade')) return
+  const h = 256
+  const canvas = scene.textures.createCanvas('vfade', 8, h)
+  if (!canvas) return
+  const ctx = canvas.context
+  const grd = ctx.createLinearGradient(0, 0, 0, h)
+  grd.addColorStop(0, 'rgba(255,255,255,0)')
+  grd.addColorStop(0.45, 'rgba(255,255,255,0.55)')
+  grd.addColorStop(1, 'rgba(255,255,255,1)')
+  ctx.fillStyle = grd
+  ctx.fillRect(0, 0, 8, h)
   canvas.refresh()
 }
 

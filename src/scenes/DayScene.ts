@@ -29,6 +29,8 @@ import {
 } from '../level'
 import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS } from '../config'
+import { display, voice, INK } from '../ui'
+import { Atmosphere, hazeScenery } from '../atmosphere'
 
 export interface DayStats {
   startCount: number
@@ -95,6 +97,7 @@ export class DayScene extends Phaser.Scene {
   private colliderGfx!: Phaser.GameObjects.Graphics
   private roostHorizon!: Phaser.GameObjects.Image
   private warmth!: Phaser.GameObjects.Rectangle
+  private atmo!: Atmosphere
   /** decorative echo birds that swell the final murmuration into the hundreds */
   private echoes: { img: Phaser.GameObjects.Image; leader: Bird; dx: number; dy: number; ph: number }[] = []
   private joinTimer = 0
@@ -279,6 +282,10 @@ export class DayScene extends Phaser.Scene {
       .setAlpha(0.9)
       .setTint(0xc9c2dd)
     this.placeWindFx()
+    // Phase 5 light layer: act mood plates, sunbeams through real openings, wisps
+    this.atmo = new Atmosphere(this, { warmth: this.warmth, fogFar: this.fogFar })
+    this.atmo.createBeams()
+    this.atmo.createWisps()
     this.drawRoost()
     this.flowGates.clear()
     for (const f of FEATURES) if (f.flow) this.flowGates.set(f, { state: 'idle', clean: true, entryCount: 0 })
@@ -470,42 +477,42 @@ export class DayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(20)
     this.countText = this.add
-      .text(52, 18, '120', { fontFamily: 'Georgia, serif', fontSize: '28px', color: '#f2e8f5' })
+      .text(52, 18, '120', display(28, INK.bright, 1))
       .setAlpha(0.92)
       .setScrollFactor(0)
       .setDepth(20)
     this.debugText = this.add
-      .text(14, 60, '', { fontFamily: 'Georgia, serif', fontSize: '15px', color: '#ffffff' })
+      .text(14, 60, '', display(14, '#ffffff'))
       .setAlpha(0.7)
       .setScrollFactor(0)
       .setDepth(20)
       .setVisible(false)
     this.promptText = this.add
-      .text(0, 0, '', { fontFamily: 'Georgia, serif', fontSize: '21px', color: '#f7ecdf' })
+      .text(0, 0, '', voice(23, '#f7ecdf'))
       .setOrigin(0.5)
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
     this.landmarkText = this.add
-      .text(VIEW_W / 2, 150, '', { fontFamily: 'Georgia, serif', fontSize: '24px', color: '#f2e4d5', letterSpacing: 3 } as Phaser.Types.GameObjects.Text.TextStyle)
+      .text(VIEW_W / 2, 150, '', display(22, '#f2e4d5', 6, 300))
       .setOrigin(0.5)
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
     this.deltaText = this.add
-      .text(96, 44, '', { fontFamily: 'Georgia, serif', fontSize: '20px', color: '#f2e8f5' })
+      .text(96, 44, '', display(19, INK.bright, 1))
       .setOrigin(0, 0.5)
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
     this.scatteredText = this.add
-      .text(52, 46, '', { fontFamily: 'Georgia, serif', fontSize: '14px', color: '#d8c0a8' })
+      .text(52, 46, '', display(13, '#d8c0a8', 1, 300))
       .setOrigin(0, 0.5)
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
     this.recoveredText = this.add
-      .text(52, 68, '', { fontFamily: 'Georgia, serif', fontSize: '14px', color: '#ffd9a0' })
+      .text(52, 68, '', display(13, '#ffd9a0', 1, 300))
       .setOrigin(0, 0.5)
       .setAlpha(0)
       .setScrollFactor(0)
@@ -522,10 +529,10 @@ export class DayScene extends Phaser.Scene {
 
     // ---- day intro: over live gameplay, no confirmation
     const introBits = [
-      this.add.text(VIEW_W / 2, 330, DAY_NAME, { fontFamily: 'Georgia, serif', fontSize: '44px', color: '#f7f0ea', letterSpacing: 10 } as Phaser.Types.GameObjects.Text.TextStyle).setOrigin(0.5).setScrollFactor(0).setDepth(30),
-      this.add.text(VIEW_W / 2, 386, DAY_SUBTITLE, { fontFamily: 'Georgia, serif', fontSize: '22px', color: '#dccce0', letterSpacing: 6 } as Phaser.Types.GameObjects.Text.TextStyle).setOrigin(0.5).setScrollFactor(0).setDepth(30),
-      this.add.text(VIEW_W / 2, 442, `${START_BIRDS} birds`, { fontFamily: 'Georgia, serif', fontSize: '19px', color: '#f2e8f5' }).setOrigin(0.5).setScrollFactor(0).setDepth(30),
-      this.add.text(VIEW_W / 2, 472, 'Reach the roost.', { fontFamily: 'Georgia, serif', fontSize: '17px', color: '#cdbdd4' }).setOrigin(0.5).setScrollFactor(0).setDepth(30),
+      this.add.text(VIEW_W / 2, 330, DAY_NAME, display(42, '#f7f0ea', 14, 300)).setOrigin(0.5).setScrollFactor(0).setDepth(30),
+      this.add.text(VIEW_W / 2, 386, DAY_SUBTITLE, display(18, '#dccce0', 9, 300)).setOrigin(0.5).setScrollFactor(0).setDepth(30),
+      this.add.text(VIEW_W / 2, 442, `${START_BIRDS} birds`, display(18, INK.bright, 2, 300)).setOrigin(0.5).setScrollFactor(0).setDepth(30),
+      this.add.text(VIEW_W / 2, 472, 'Reach the roost.', voice(19, INK.soft)).setOrigin(0.5).setScrollFactor(0).setDepth(30),
     ]
     for (const t of introBits) t.setAlpha(0)
     this.tweens.add({ targets: introBits, alpha: 0.95, duration: 550, hold: 1300, yoyo: true, onComplete: () => introBits.forEach((t) => t.destroy()) })
@@ -1048,11 +1055,7 @@ export class DayScene extends Phaser.Scene {
       this.hintedFeatures.add(f)
       this.brittleHints++
       const label = this.add
-        .text(sprite.x, sprite.y - sprite.displayHeight / 2 - 26, 'loose — tap SPACE', {
-          fontFamily: 'Georgia, serif',
-          fontSize: '17px',
-          color: '#ffe2b8',
-        } as Phaser.Types.GameObjects.Text.TextStyle)
+        .text(sprite.x, sprite.y - sprite.displayHeight / 2 - 26, 'loose — tap SPACE', display(15, '#ffe2b8', 2))
         .setOrigin(0.5)
         .setDepth(7)
         .setAlpha(0)
@@ -1154,12 +1157,7 @@ export class DayScene extends Phaser.Scene {
     const sx = Phaser.Math.Clamp(this.flock.centerX - this.scrollX, 220, VIEW_W - 220)
     const sy = Phaser.Math.Clamp(this.flock.centerY - 120, 80, VIEW_H - 80)
     const t = this.add
-      .text(sx, sy, 'PERFECT FLOW', {
-        fontFamily: 'Georgia, serif',
-        fontSize: '21px',
-        color: '#ffe6bf',
-        letterSpacing: 4,
-      } as Phaser.Types.GameObjects.Text.TextStyle)
+      .text(sx, sy, 'PERFECT FLOW', display(19, '#ffe6bf', 8, 500))
       .setOrigin(0.5)
       .setAlpha(0)
       .setScrollFactor(0)
@@ -1638,7 +1636,7 @@ export class DayScene extends Phaser.Scene {
       const name = this.checkpoint.name || 'the morning sky'
       const mk = (y: number, txt: string, size: number, color: string, ls = 0) =>
         this.add
-          .text(cx, y, txt, { fontFamily: 'Georgia, serif', fontSize: `${size}px`, color, letterSpacing: ls } as Phaser.Types.GameObjects.Text.TextStyle)
+          .text(cx, y, txt, ls >= 3 ? display(size, color, ls, 300) : voice(size, color))
           .setOrigin(0.5)
           .setAlpha(0)
           .setScrollFactor(0)

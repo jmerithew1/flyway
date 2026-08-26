@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { Flock } from '../flock'
 import { Obstacle } from '../obstacles'
 import { makeSkyTexture } from '../textures'
+import { FONT_DISPLAY } from '../ui'
 
 /**
  * Phase 1 deliverable: an empty gradient-sky sandbox where moving the mouse
@@ -59,7 +60,7 @@ export class SandboxScene extends Phaser.Scene {
 
     this.debugText = this.add
       .text(14, 12, '', {
-        fontFamily: 'Georgia, serif',
+        fontFamily: FONT_DISPLAY,
         fontSize: '16px',
         color: '#ffffff',
       })
@@ -68,7 +69,7 @@ export class SandboxScene extends Phaser.Scene {
 
     this.add
       .text(W / 2, H - 34, 'steer with mouse   ·   hold SPACE to gather   ·   hold SHIFT to spread', {
-        fontFamily: 'Georgia, serif',
+        fontFamily: FONT_DISPLAY,
         fontSize: '15px',
         color: '#ffffff',
       })

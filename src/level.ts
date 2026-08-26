@@ -310,6 +310,138 @@ export function buildObstacles(): { obstacles: Obstacle[]; byFeature: Map<PieceF
   return { obstacles, byFeature }
 }
 
+// ===========================================================================
+// SECTION MOOD PLATES — six readable acts
+// ===========================================================================
+
+/**
+ * One act's light. `tint` is composited by a screen-space OVERLAY rectangle,
+ * so alphas stay tiny — this is a wash over the painted plate, never a filter.
+ * `particleTint` re-tints the drifting leaf/grit field so the AIR changes with
+ * the stone. Palette stays inside the game's navy/violet/lavender + peach/gold
+ * language: nothing saturated, nothing that reads as a colour filter.
+ */
+export interface ActPlate {
+  x0: number
+  x1: number
+  /** OVERLAY wash colour. */
+  tint: number
+  /** OVERLAY wash alpha — capped at 0.14 by house rule. */
+  tintAlpha: number
+  /** target alpha for the far fog band. */
+  fogAlpha: number
+  /** drifting-particle tints for this act. */
+  particleTint: number[]
+  name: string
+}
+
+/** Acts align to the level's existing section comments and its landmarks. */
+export const ACT_PLATES: ActPlate[] = [
+  // pale open dawn — cool lavender air, the world not yet warm
+  { x0: 0, x1: 4600, tint: 0xbfc8e6, tintAlpha: 0.08, fogAlpha: 0.16, particleTint: [0x4a4468, 0x5a5480], name: 'Dawn Approach' },
+  // warm stone — the sun finds the ruins; peach on every western face
+  { x0: 4600, x1: 9600, tint: 0xe8b487, tintAlpha: 0.1, fogAlpha: 0.11, particleTint: [0x5c4a52, 0x6e5a4e], name: 'The Sun Gate' },
+  // green-violet overgrown — muted sage under violet shade
+  { x0: 9600, x1: 12000, tint: 0xa6c2a8, tintAlpha: 0.09, fogAlpha: 0.13, particleTint: [0x3f5a48, 0x4d6b52], name: 'The Overgrown' },
+  // bleached windy heights — colour scoured out, haze thick
+  { x0: 12000, x1: 14400, tint: 0xdfe3ee, tintAlpha: 0.11, fogAlpha: 0.24, particleTint: [0x8f93a8, 0xa8a5b8], name: 'Wind Heights' },
+  // cool dark gauntlet ramp — the long slide into violet dusk
+  { x0: 14400, x1: 23200, tint: 0x4a4570, tintAlpha: 0.14, fogAlpha: 0.12, particleTint: [0x2a2440, 0x37304f], name: 'The Gauntlet' },
+  // golden final flow — homecoming light, feeding the existing dusk ramp
+  { x0: 23200, x1: SLICE_END, tint: 0xffc98a, tintAlpha: 0.13, fogAlpha: 0.08, particleTint: [0xc9a06a, 0xb08a5e], name: 'Homeward Light' },
+]
+
+// ===========================================================================
+// SUNBEAM THREADING — god rays aimed through REAL openings
+// ===========================================================================
+
+/**
+ * A placed shaft of light. `x`/`y` are the sprite CENTRE, `angle` the sprite
+ * rotation in degrees (the god_ray art's long axis is its width), `h` the
+ * displayed length along that axis. Thickness follows the art's aspect.
+ */
+export interface Beam {
+  x: number
+  y: number
+  angle: number
+  h: number
+  alpha: number
+}
+
+/** one sun: every shaft falls within a few degrees of the same direction */
+const BEAM_ANGLE = 72
+/** fraction of the shaft that sits ABOVE the hole it lands in */
+const BEAM_RISE = 0.3
+
+interface BeamSpec {
+  /** feature x to attach to */
+  x: number
+  art: keyof typeof ART & string
+  /** index into ART[art].openings; falls back to the piece heart if absent */
+  opening: number
+  h: number
+  alpha: number
+  angle?: number
+  /** what this shaft marks, for the record */
+  note: string
+}
+
+/**
+ * Chosen so the light is DIEGETIC: every shaft lands in a hole the flock can
+ * actually thread, and all six Perfect-Flow gates are lit. The 900 shaft is the
+ * front-loaded one — it is on screen inside the first ~10 seconds.
+ */
+const BEAM_SPECS: BeamSpec[] = [
+  { x: 900, art: 'grand_arch', opening: 0, h: 1000, alpha: 0.3, angle: 70, note: 'first-minute beam — the grand arch mouth' },
+  { x: 2600, art: 'triple_arcade', opening: 0, h: 940, alpha: 0.24, angle: 74, note: 'left bay of the three-route arcade' },
+  { x: 3650, art: 'gothic_arch', opening: 0, h: 980, alpha: 0.32, angle: 71, note: 'FLOW GATE (gather)' },
+  { x: 4150, art: 'wall_multi_window', opening: 1, h: 960, alpha: 0.3, angle: 73, note: 'FLOW GATE (spread) — centre window bay' },
+  { x: 6650, art: 'tall_gate', opening: 0, h: 1000, alpha: 0.24, angle: 70, note: 'the tall narrow gate' },
+  { x: 8450, art: 'keyhole_arch', opening: 0, h: 940, alpha: 0.28, angle: 75, note: 'the keyhole' },
+  { x: 11800, art: 'lattice_gate', opening: 0, h: 900, alpha: 0.3, angle: 72, note: 'FLOW GATE (spread) — lattice has no authored hole, aimed at its heart' },
+  { x: 13500, art: 'wall_four_arch', opening: 2, h: 880, alpha: 0.2, angle: 76, note: 'centre arch of the wind-heights row (thin, storm-washed)' },
+  { x: 15300, art: 'wall_multi_window', opening: 1, h: 960, alpha: 0.3, angle: 72, note: 'FLOW GATE (spread) — under the shut sky' },
+  { x: 18900, art: 'oval_window_wall', opening: 0, h: 900, alpha: 0.22, angle: 74, note: 'the oval window' },
+  { x: 23600, art: 'pointed_arch', opening: 0, h: 980, alpha: 0.34, angle: 69, note: 'FLOW GATE (gather) — flipped, opening mirrored' },
+  { x: 24250, art: 'gauntlet_gate', opening: 0, h: 760, alpha: 0.36, angle: 68, note: 'FLOW GATE (spread) — the monumental final gate' },
+]
+
+/** World centre of one authored opening (flip-aware); piece heart if absent. */
+function openingCenter(f: PieceFeature, i: number): { x: number; y: number } {
+  const art = ART[f.art]
+  const d = pieceDisplay(f)
+  const r = art.openings[i]
+  if (!r) return { x: f.x, y: d.y }
+  const rx = f.flipX ? art.w - r.x - r.w : r.x
+  return {
+    x: f.x - d.w / 2 + (rx + r.w / 2) * d.s,
+    y: d.y - d.h / 2 + (r.y + r.h / 2) * d.s,
+  }
+}
+
+/** Derived at module load from the real placements, so beams can never drift
+ * off their holes when a piece is re-tuned. */
+function buildBeams(): Beam[] {
+  const out: Beam[] = []
+  for (const spec of BEAM_SPECS) {
+    const f = FEATURES.find((q) => q.x === spec.x && q.art === spec.art)
+    if (!f) continue
+    const c = openingCenter(f, spec.opening)
+    const deg = spec.angle ?? BEAM_ANGLE
+    const a = (deg * Math.PI) / 180
+    out.push({
+      x: c.x - Math.cos(a) * spec.h * BEAM_RISE,
+      y: c.y - Math.sin(a) * spec.h * BEAM_RISE,
+      angle: deg,
+      h: spec.h,
+      alpha: spec.alpha,
+    })
+  }
+  return out
+}
+
+export const BEAMS: Beam[] = buildBeams()
+
 /** Dev assertion: no obstacle event closer than the 2s reaction floor. */
 export function pacingReport(): { gaps: number[]; violations: string[] } {
   const xs = [...new Set(FEATURES.map((f) => f.x))].sort((a, b) => a - b)

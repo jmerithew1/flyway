@@ -25,17 +25,24 @@ class BootScene extends Phaser.Scene {
   }
 }
 
-// pre-check the optional falcon art slot, then boot
-fetch('assets/processed/falcon.png', { method: 'HEAD' })
-  .then((r) => {
-    ;(window as unknown as Record<string, unknown>).__hasFalconArt = r.ok
-  })
-  .catch(() => {
-    ;(window as unknown as Record<string, unknown>).__hasFalconArt = false
-  })
-  .finally(() => {
-    new Phaser.Game(config)
-  })
+// pre-check the optional falcon art slot AND wait for webfonts, then boot —
+// Phaser measures text at creation, so booting early bakes fallback metrics
+const fontsReady = document.fonts
+  ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))])
+  : Promise.resolve()
+
+Promise.all([
+  fetch('assets/processed/falcon.png', { method: 'HEAD' })
+    .then((r) => {
+      ;(window as unknown as Record<string, unknown>).__hasFalconArt = r.ok
+    })
+    .catch(() => {
+      ;(window as unknown as Record<string, unknown>).__hasFalconArt = false
+    }),
+  fontsReady,
+]).finally(() => {
+  new Phaser.Game(config)
+})
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,

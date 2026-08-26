@@ -229,6 +229,13 @@ export class Flock {
   private prevHeading = 0
   private turnRateSmooth = 0
 
+  /** Bleed both strain clocks — sunbeams, roosting, anything restorative.
+   * Must drain the CLOCKS: gatherStrain/spreadStrain are recomputed each step. */
+  relieveStrain(seconds: number): void {
+    this.gatherTime = Math.max(0, this.gatherTime - seconds)
+    this.spreadTime = Math.max(0, this.spreadTime - seconds)
+  }
+
   /** Tap SPACE: the flock snaps tight and slingshots forward. Strained
    * flocks produce a ragged, weaker pulse — strain is the anti-spam. */
   surge(): void {
