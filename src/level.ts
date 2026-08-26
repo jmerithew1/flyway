@@ -158,7 +158,7 @@ export const FEATURES: PieceFeature[] = [
   gnd(14700, 'gothic_arch', 500, { flipX: true }),
   gnd(15300, 'wall_multi_window', 560, { flow: 'spread' }),
   top(15300, 'ceiling_pods', 250, { flipX: true }), // drop-window: the sky is shut — flare and thread the bays
-  gnd(15900, 'keyhole_arch', 460, { flipX: true }), // large-native: no upscale blur
+  gnd(15900, 'grand_arch', 460, { flipX: true }), // large-native, light stone: matches the act's palette
   top(15900, 'root_tangle', 280, { flipX: true }),
   gnd(16500, 'triple_arcade', 480, { flipX: true }),
   top(16500, 'seed_pod_cluster_b', 260, { motion: { kind: 'bob', amp: 52, period: 3.6 } }), // breathing gap: the canopy sinks toward the columns

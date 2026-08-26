@@ -327,16 +327,28 @@ export class DayScene extends Phaser.Scene {
     this.motes = []
     for (const arc of MOTE_ARCS) {
       for (let i = 0; i < arc.count; i++) {
-        const t = i / (arc.count - 1)
+        // scatter along the arc rather than stepping it: evenly spaced,
+        // identical dots read as a ruler, not as drifting light
+        const t = (i + (Math.random() - 0.5) * 0.55) / (arc.count - 1)
         const mx = arc.x - arc.spanX / 2 + arc.spanX * t
-        const my = arc.y + Math.sin(t * Math.PI) * -arc.spanY * 0.5 + arc.spanY * 0.18
+        const my =
+          arc.y + Math.sin(t * Math.PI) * -arc.spanY * 0.5 + arc.spanY * 0.18 + (Math.random() - 0.5) * 46
+        const size = 26 + Math.random() * 18
         const img = this.add
-          .image(mx, my, 'softdot').setTint(0xffd9a0)
-          .setDisplaySize(34, 34)
-          .setAlpha(0.75)
+          .image(mx, my, 'softdot')
+          .setTint(0xffd9a0)
+          .setDisplaySize(size, size)
+          .setAlpha(0.6 + Math.random() * 0.25)
           .setBlendMode(Phaser.BlendModes.ADD)
           .setDepth(2.5)
-        this.tweens.add({ targets: img, alpha: 0.45, duration: 900 + i * 90, yoyo: true, repeat: -1 })
+        this.tweens.add({
+          targets: img,
+          alpha: 0.38 + Math.random() * 0.12,
+          duration: 800 + Math.random() * 900,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        })
         this.motes.push({ x: mx, y: my, img })
       }
     }
