@@ -10,6 +10,7 @@ import { FalconSystem } from '../falcon'
 import { birdFrameKey } from '../textures'
 import { ART } from '../artManifest'
 import {
+  passableGaps,
   FEATURES,
   STRAYS,
   PROMPTS,
@@ -650,6 +651,7 @@ export class DayScene extends Phaser.Scene {
     for (const t of introBits) t.setAlpha(0)
     this.tweens.add({ targets: introBits, alpha: 0.95, duration: 550, hold: 1300, yoyo: true, onComplete: () => introBits.forEach((t) => t.destroy()) })
 
+    this.placeRouteLights()
     this.placeGhostFlyways()
     this.beginDeparture()
 
@@ -2201,6 +2203,87 @@ export class DayScene extends Phaser.Scene {
   /** Dawn bookend: the flock is asleep in a roadside roost and lifts off in
    * ones and twos as the day begins. Control is live throughout — the player
    * is already steering the forming flock, so there is no dead cinematic. */
+  /**
+   * ROUTE LIGHT — the game's one honest answer to "over it or through it?".
+   *
+   * For every place the world narrows, we ask the COLLIDER FIELD (never the
+   * paintings) which vertical spans are actually flyable, and hang a soft
+   * warm light with a few drifting motes in each one. Because it is derived
+   * from collision it can never lie, and it marks the gaps BETWEEN pieces —
+   * usually the real routes — which per-piece art data never could.
+   */
+  private placeRouteLights(): void {
+    const xs = [...new Set(FEATURES.map((f) => Math.round(f.x)))].sort((a, b) => a - b)
+    for (const x of xs) {
+      // Sample ACROSS the piece, not just down its centreline: a ruin is often
+      // broken open exactly at its middle, and the route that matters is the
+      // narrowest slice the flock must actually thread.
+      let gaps: Array<{ y0: number; y1: number }> = []
+      let tightest = Infinity
+      const lightX = x
+      for (const dx of [-140, -70, 0, 70, 140]) {
+        const sx = x + dx
+        const blocking = this.obstacles.some(
+          (o) => o.kind === 'solid' && Math.abs(o.x - sx) < (o.shape === 'circle' ? o.r : o.hw),
+        )
+        if (!blocking) continue
+        const g = passableGaps(sx, this.obstacles)
+        const open = g.reduce((sum, s2) => sum + (s2.y1 - s2.y0), 0)
+        if (open < tightest) {
+          tightest = open
+          gaps = g
+        }
+      }
+      // open sky, or a piece with no real constriction, needs no signage
+      if (!gaps.length || tightest > SKY_BOTTOM - SKY_TOP - 60) continue
+      for (const g of gaps) {
+        const h = g.y1 - g.y0
+        const cy = (g.y0 + g.y1) / 2
+        if (cy > SKY_BOTTOM - 30) continue
+        // the light itself: wide, soft, and quiet — a suggestion, not a sign
+        const glow = this.add
+          .image(lightX, cy, 'softdot')
+          .setTint(0xffd2a0)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDisplaySize(Math.min(230, h * 1.25), Math.min(360, h * 1.05))
+          .setAlpha(0.17)
+          .setDepth(2.6)
+        this.tweens.add({
+          targets: glow,
+          alpha: 0.28,
+          duration: 2200 + Math.random() * 1200,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        })
+        // motes drifting THROUGH the gap: the route reads as a current
+        const n = h > 260 ? 4 : 3
+        for (let i = 0; i < n; i++) {
+          const m = this.add
+            .image(lightX + rand(-60, 60), g.y0 + (h * (i + 0.5)) / n + rand(-16, 16), 'softdot')
+            .setTint(0xffe3bd)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setDisplaySize(13, 13)
+            .setAlpha(0.62)
+            .setDepth(2.7)
+          this.tweens.add({
+            targets: m,
+            x: m.x + rand(70, 130),
+            alpha: 0,
+            duration: 2600 + Math.random() * 1600,
+            delay: Math.random() * 2200,
+            repeat: -1,
+            repeatDelay: Math.random() * 900,
+            onRepeat: () => {
+              m.x = lightX + rand(-70, -30)
+              m.setAlpha(0.62)
+            },
+          })
+        }
+      }
+    }
+  }
+
   /** Faint spectral bird-streams along the historic route — the flocks that
    * came before. They mark the generous lines through each act. */
   /** Wind Heights becomes a storm: the sky darkens, wisps race, and the

@@ -34,37 +34,14 @@ CELL = 12          # native px per grid cell (finest pass)
 SOLID_A = 110      # alpha above which a cell is solid
 OPEN_A = 60        # alpha below which a cell counts as open for hole detection
 MIN_HOLE = 20      # native px — smaller holes are decoration, not passages
-HOLE_INFLATE = 0.30  # inflate passages so they're forgiving at flock scale
-MIN_PASSAGE = 44   # native px — punched passages open to at least this (≈90px world)
+HOLE_INFLATE = 0.12  # inflate passages so they're forgiving at flock scale
+MIN_PASSAGE = 30   # native px — punched passages open to at least this (≈90px world)
 MAX_RECTS = 22
 
-# Hand-authored passages (native px) for route-advertising pieces whose
-# openings the alpha scan can't see (painted windows) or sees only as
-# to-the-edge corridors (arch mouths/bays). Punched like holes (widened to
-# MIN_PASSAGE) and emitted in `openings` for celebrations/sunbeams.
-HAND_OPENINGS = {
-    'wall_multi_window': [
-        {'x': 60, 'y': 70, 'w': 42, 'h': 90},
-        {'x': 120, 'y': 70, 'w': 46, 'h': 90},
-        {'x': 170, 'y': 70, 'w': 46, 'h': 90},
-        {'x': 18, 'y': 54, 'w': 28, 'h': 28},
-        {'x': 200, 'y': 40, 'w': 32, 'h': 32},
-    ],
-    'wall_two_window': [
-        {'x': 92, 'y': 32, 'w': 42, 'h': 75},
-        {'x': 52, 'y': 58, 'w': 30, 'h': 45},
-    ],
-    'wall_double_arch': [
-        {'x': 52, 'y': 38, 'w': 50, 'h': 74},
-        {'x': 132, 'y': 48, 'w': 54, 'h': 64},
-        {'x': 198, 'y': 68, 'w': 30, 'h': 44},
-    ],
-    'gothic_arch': [{'x': 68, 'y': 80, 'w': 82, 'h': 190}],
-    'tall_gate': [{'x': 55, 'y': 55, 'w': 85, 'h': 135}],
-    'grand_arch': [{'x': 95, 'y': 90, 'w': 155, 'h': 186}],
-    'keyhole_arch': [{'x': 130, 'y': 40, 'w': 85, 'h': 160}],
-}
-
+# Hand-authoring was tried and rejected: eyeballing hole rectangles from a
+# thumbnail is a guess, and a guess that overshoots deletes real structure
+# (a too-large 'opening' on grand_arch erased its left pier and crown). The
+# passage detector below derives them instead — see find_passages().
 
 def grid_of(piece, cell):
     w, h = piece.size
@@ -75,6 +52,60 @@ def grid_of(piece, cell):
     solid = [[px[x, y] > SOLID_A for x in range(gw)] for y in range(gh)]
     open_ = [[px[x, y] < OPEN_A for x in range(gw)] for y in range(gh)]
     return solid, open_, gw, gh
+
+
+def find_passages(solid, open_, gw, gh):
+    """Passages = open space WALLED ON BOTH SIDES.
+
+    An arch mouth, a window, a gate: at each row, an open run with solid mass
+    somewhere to its left AND somewhere to its right is a way through the
+    piece. This finds them whether or not they touch the crop border (an arch
+    mouth opens downward, so enclosed-hole detection alone always missed it),
+    and it can never mistake open sky beside a piece for a route.
+    """
+    passage = [[False] * gw for _ in range(gh)]
+    for y in range(gh):
+        row_solid = solid[y]
+        first = next((x for x in range(gw) if row_solid[x]), None)
+        last = next((x for x in range(gw - 1, -1, -1) if row_solid[x]), None)
+        if first is None or last is None or last - first < 2:
+            continue
+        x = first
+        while x <= last:
+            if row_solid[x]:
+                x += 1
+                continue
+            run0 = x
+            while x <= last and not row_solid[x]:
+                x += 1
+            # walled on both sides by construction (inside first..last)
+            for xx in range(run0, x):
+                passage[y][xx] = True
+    # group the passage mask into rects
+    seen = [[False] * gw for _ in range(gh)]
+    out = []
+    for y in range(gh):
+        for x in range(gw):
+            if not passage[y][x] or seen[y][x]:
+                continue
+            q = deque([(x, y)])
+            seen[y][x] = True
+            x0 = x1 = x
+            y0 = y1 = y
+            n = 0
+            while q:
+                cx, cy = q.popleft()
+                n += 1
+                x0, x1 = min(x0, cx), max(x1, cx)
+                y0, y1 = min(y0, cy), max(y1, cy)
+                for nx, ny in ((cx - 1, cy), (cx + 1, cy), (cx, cy - 1), (cx, cy + 1)):
+                    if 0 <= nx < gw and 0 <= ny < gh and passage[ny][nx] and not seen[ny][nx]:
+                        seen[ny][nx] = True
+                        q.append((nx, ny))
+            # ignore slivers between adjacent stones
+            if (x1 - x0 + 1) >= 2 and (y1 - y0 + 1) >= 2 and n >= 6:
+                out.append((x0, y0, x1, y1))
+    return out
 
 
 def enclosed_holes(open_, gw, gh):
@@ -151,7 +182,7 @@ def merge_rects(solid, gw, gh, w, h, cell):
     return [r for r in rects if r['w'] * r['h'] >= 2 * cell * cell]
 
 
-def silhouette_colliders(path, hand=None):
+def silhouette_colliders(path):
     """Returns (collider_rects, opening_bboxes). Openings are the TRUE hole
     bboxes (for clean-pass detection / sunbeams); the collider punch is wider
     (inflation + minimum passage) so play is forgiving."""
@@ -161,16 +192,7 @@ def silhouette_colliders(path, hand=None):
     for cell in (CELL, 16, 20, 26):
         solid, open_, gw, gh = grid_of(piece, cell)
         openings = []
-        hand_cells = [
-            (
-                int(r['x'] * gw / w),
-                int(r['y'] * gh / h),
-                int((r['x'] + r['w']) * gw / w),
-                int((r['y'] + r['h']) * gh / h),
-            )
-            for r in (hand or [])
-        ]
-        for (x0, y0, x1, y1) in hand_cells + enclosed_holes(open_, gw, gh):
+        for (x0, y0, x1, y1) in find_passages(solid, open_, gw, gh):
             hw = (x1 - x0 + 1) * w / gw
             hh = (y1 - y0 + 1) * h / gh
             if hw < MIN_HOLE or hh < MIN_HOLE:
@@ -216,7 +238,7 @@ def main():
         if fam in NO_COLLIDE or fam in KEEP_AS_IS:
             return m.group(0)
         png = PUBLIC / m.group('file')
-        rects, openings = silhouette_colliders(png, HAND_OPENINGS.get(m.group('key')))
+        rects, openings = silhouette_colliders(png)
         if not rects:
             # thin structures (rings, filigree) can vanish under the speck
             # filter — keep the previous colliders rather than going ghost

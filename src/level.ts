@@ -300,6 +300,38 @@ export function pieceObstacles(f: PieceFeature): Obstacle[] {
   })
 }
 
+/** Minimum world-space span the flock treats as a route worth lighting. */
+export const MIN_GAP = 86
+
+/**
+ * The TRUE routes through the world: sample the collider field at a world x
+ * and return every open vertical span in the playable band.
+ *
+ * This is derived from collision, never from the paintings, so the route
+ * language can't disagree with the physics — and unlike per-piece opening
+ * data it also finds the gaps BETWEEN pieces, which are usually the routes
+ * that matter most.
+ */
+export function passableGaps(x: number, obstacles: Obstacle[], minGap = MIN_GAP): Array<{ y0: number; y1: number }> {
+  const spans: Array<[number, number]> = []
+  for (const o of obstacles) {
+    if (o.broken || o.kind !== 'solid') continue
+    const half = o.shape === 'circle' ? o.r : o.hw
+    if (x < o.x - half || x > o.x + half) continue
+    const vh = o.shape === 'circle' ? o.r : o.hh
+    spans.push([o.y - vh, o.y + vh])
+  }
+  spans.sort((a, b) => a[0] - b[0])
+  const gaps: Array<{ y0: number; y1: number }> = []
+  let cursor = SKY_TOP
+  for (const [a, b] of spans) {
+    if (a - cursor >= minGap) gaps.push({ y0: cursor, y1: a })
+    cursor = Math.max(cursor, b)
+  }
+  if (SKY_BOTTOM - cursor >= minGap) gaps.push({ y0: cursor, y1: SKY_BOTTOM })
+  return gaps
+}
+
 export function buildObstacles(): { obstacles: Obstacle[]; byFeature: Map<PieceFeature, Obstacle[]> } {
   const obstacles: Obstacle[] = []
   const byFeature = new Map<PieceFeature, Obstacle[]>()
