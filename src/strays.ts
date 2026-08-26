@@ -35,7 +35,7 @@ export class StrayGroup {
     this.remaining = count
     // warm glow marker: signals "optional birds here" from a distance
     this.glow = scene.add
-      .image(x, y, 'glow_warm')
+      .image(x, y, 'softdot').setTint(0xffc98f)
       .setDisplaySize(88, 88)
       .setAlpha(0.5)
       .setBlendMode(Phaser.BlendModes.ADD)
@@ -126,7 +126,7 @@ export class StrayGroup {
     // re-populate after a checkpoint restart
     if (!this.glow) {
       this.glow = this.scene.add
-        .image(this.x, this.y, 'glow_warm')
+        .image(this.x, this.y, 'softdot').setTint(0xffc98f)
         .setDisplaySize(88, 88)
         .setAlpha(0.5)
         .setBlendMode(Phaser.BlendModes.ADD)

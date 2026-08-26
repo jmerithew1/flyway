@@ -136,6 +136,8 @@ export class Flock {
   brushHits: { bird: Bird; obstacle: Obstacle }[] = []
   /** Birds flung out of formation by violent last-second evasions. */
   flungBirds: Bird[] = []
+  /** Close passes this frame (urgency spike without contact) for AV feedback. */
+  grazes: { bird: Bird; obstacle: Obstacle }[] = []
 
   private grid: Grid = { cell: TUNING.viewRadius, map: new Map() }
   private tint: number
@@ -204,6 +206,7 @@ export class Flock {
     this.breakthroughHits.length = 0
     this.brushHits.length = 0
     this.flungBirds.length = 0
+    this.grazes.length = 0
     this.stepAccum = Math.min(this.stepAccum + dtRaw, STEP * MAX_STEPS)
     while (this.stepAccum >= STEP) {
       this.stepAccum -= STEP
@@ -452,6 +455,9 @@ export class Flock {
         ax += res.fx * power
         ay += res.fy * power
         if (res.urgency > 0.75 && o.kind !== 'soft') b.panic = Math.min(1, b.panic + dt * 3)
+        if (res.urgency > 0.72 && !res.inside && o.kind === 'solid' && this.grazes.length < 40) {
+          this.grazes.push({ bird: b, obstacle: o })
+        }
         // Blown wide: LINGERING near stone while ungathered accumulates danger;
         // past the limit the bird is flung from the formation. Quick clean
         // threads pass free; a wide neutral flock dragged along dense terrain

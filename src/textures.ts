@@ -8,6 +8,7 @@ import { ART } from './artManifest'
 export function createCoreTextures(scene: Phaser.Scene): void {
   makeSoftDot(scene)
   makeLeafTexture(scene)
+  makeFeatherTexture(scene)
 }
 
 /** Load every curated piece from the manifest as a plain image. */
@@ -59,6 +60,36 @@ function makeSoftDot(scene: Phaser.Scene): void {
   grd.addColorStop(1, 'rgba(255,255,255,0)')
   ctx.fillStyle = grd
   ctx.fillRect(0, 0, size, size)
+  canvas.refresh()
+}
+
+/** Procedural feather (fallback until the painted feather sheet arrives):
+ * tapered vane around a pale spine, drawn white for runtime tinting. */
+function makeFeatherTexture(scene: Phaser.Scene): void {
+  if (scene.textures.exists('feather')) return
+  const w = 44
+  const h = 14
+  const canvas = scene.textures.createCanvas('feather', w, h)
+  if (!canvas) return
+  const ctx = canvas.context
+  ctx.translate(0, h / 2)
+  // vane: two mirrored quadratic lobes, tapering to the tip
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'
+  ctx.beginPath()
+  ctx.moveTo(2, 0)
+  ctx.quadraticCurveTo(w * 0.35, -h * 0.48, w - 3, -1.2)
+  ctx.quadraticCurveTo(w * 0.55, 1.6, 2, 0)
+  ctx.moveTo(2, 0)
+  ctx.quadraticCurveTo(w * 0.3, h * 0.42, w - 6, 1.4)
+  ctx.quadraticCurveTo(w * 0.5, -1.2, 2, 0)
+  ctx.fill()
+  // spine
+  ctx.strokeStyle = 'rgba(255,255,255,0.65)'
+  ctx.lineWidth = 1.2
+  ctx.beginPath()
+  ctx.moveTo(1, 0)
+  ctx.lineTo(w - 2, -0.6)
+  ctx.stroke()
   canvas.refresh()
 }
 

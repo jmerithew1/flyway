@@ -15,6 +15,7 @@ export class GameAudio {
   private master!: GainNode
   private noiseGain!: GainNode
   private noiseFilter!: BiquadFilterNode
+  private noiseBuf: AudioBuffer | null = null
   private started = false
   private layerGains = new Map<string, GainNode>()
   private stems = new Map<string, AudioBuffer>()
@@ -45,6 +46,7 @@ export class GameAudio {
       last = (last + 0.04 * white) / 1.04
       data[i] = last * 3.2
     }
+    this.noiseBuf = buffer
     const src = ctx.createBufferSource()
     src.buffer = buffer
     src.loop = true
@@ -193,6 +195,103 @@ export class GameAudio {
     this.noiseGain.gain.setTargetAtTime(0.35 + gather * 0.25 + speed * 0.15 - this.sStrain * 0.12, t, 0.5)
   }
 
+  /** ±ratio random pitch so repeated one-shots never sound stamped. */
+  private pv(base: number, ratio = 0.08): number {
+    return base * (1 + (Math.random() * 2 - 1) * ratio)
+  }
+
+  /** Short filtered-noise one-shot (whooshes, snaps, rustles). */
+  private noiseShot(dur: number, f0: number, f1: number, peak: number, type: BiquadFilterType = 'bandpass', q = 1.1): void {
+    if (!this.ctx || !this.noiseBuf) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const src = ctx.createBufferSource()
+    src.buffer = this.noiseBuf
+    src.playbackRate.value = this.pv(1, 0.1)
+    const f = ctx.createBiquadFilter()
+    f.type = type
+    f.Q.value = q
+    f.frequency.setValueAtTime(f0, t)
+    f.frequency.exponentialRampToValueAtTime(Math.max(f1, 40), t + dur)
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(peak, t + dur * 0.25)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    src.connect(f).connect(g).connect(this.master)
+    src.start(t, Math.random() * 1.2, dur + 0.05)
+  }
+
+  /** Near-miss: a brief high air-rush — danger acknowledged, not punished. */
+  nearMissWhoosh(): void {
+    this.noiseShot(0.32, this.pv(1500), this.pv(2400), 0.085, 'bandpass', 1.6)
+  }
+
+  /** Rising creak as a brittle curtain charges toward breaking. */
+  brittleCreak(charge01: number): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const o = ctx.createOscillator()
+    o.type = 'triangle'
+    o.frequency.setValueAtTime(this.pv(85 + charge01 * 120), t)
+    o.frequency.exponentialRampToValueAtTime(this.pv(60 + charge01 * 80), t + 0.11)
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.05 + charge01 * 0.09, t)
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.13)
+    o.connect(g).connect(this.master)
+    o.start(t)
+    o.stop(t + 0.15)
+    this.noiseShot(0.1, this.pv(340), this.pv(180), 0.05, 'lowpass')
+  }
+
+  /** One-shot transient for formation press/release edges. */
+  formSnap(kind: 'gather' | 'spread' | 'release'): void {
+    if (kind === 'gather') {
+      // wing-snap fwoomp: tight noise burst + quick pitch drop
+      this.noiseShot(0.11, this.pv(750), this.pv(380), 0.15)
+      if (this.ctx) {
+        const ctx = this.ctx
+        const t = ctx.currentTime
+        const o = ctx.createOscillator()
+        o.type = 'sine'
+        o.frequency.setValueAtTime(this.pv(230), t)
+        o.frequency.exponentialRampToValueAtTime(110, t + 0.1)
+        const g = ctx.createGain()
+        g.gain.setValueAtTime(0.09, t)
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.12)
+        o.connect(g).connect(this.master)
+        o.start(t)
+        o.stop(t + 0.14)
+      }
+    } else if (kind === 'spread') {
+      // airy exhale bloom
+      this.noiseShot(0.3, this.pv(850), this.pv(1700), 0.1, 'highpass', 0.8)
+    } else {
+      // relieved settling
+      this.noiseShot(0.22, this.pv(600), this.pv(320), 0.06, 'lowpass')
+    }
+  }
+
+  /** Golden two-note bloom for a clean pass through an opening. */
+  cleanPassBloom(): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const base = this.pv(660, 0.04)
+    ;[base, base * 1.5].forEach((f, i) => {
+      const o = ctx.createOscillator()
+      o.type = 'sine'
+      o.frequency.value = f
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0.0001, t + i * 0.09)
+      g.gain.exponentialRampToValueAtTime(0.085, t + i * 0.09 + 0.03)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.8)
+      o.connect(g).connect(this.master)
+      o.start(t + i * 0.09)
+      o.stop(t + i * 0.09 + 0.85)
+    })
+  }
+
   /** Soft thud/scatter sound on a bird-loss event. */
   collisionThump(): void {
     if (!this.ctx) return
@@ -200,7 +299,7 @@ export class GameAudio {
     const t = ctx.currentTime
     const o = ctx.createOscillator()
     o.type = 'sine'
-    o.frequency.setValueAtTime(180, t)
+    o.frequency.setValueAtTime(this.pv(180, 0.12), t)
     o.frequency.exponentialRampToValueAtTime(60, t + 0.18)
     const g = ctx.createGain()
     g.gain.setValueAtTime(0.18, t)

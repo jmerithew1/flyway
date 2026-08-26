@@ -135,6 +135,22 @@ export class DayScene extends Phaser.Scene {
   private stats: DayStats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0, flow: 0, flowTotal: 0, recovered: 0 }
   private checkpoint: CheckpointState = { x: 0, name: '', count: START_BIRDS, found: 0, flow: 0 }
   private mercyTime = 0
+  private lastGrazeTime = -10
+  private prevGather = false
+  private prevSpread = false
+  private hitStop = 0
+  private camKick = 0
+  private lastCreak = new Map<Obstacle, number>()
+  private openingZones: {
+    f: PieceFeature
+    x: number
+    y: number
+    hw: number
+    hh: number
+    seen: Set<Bird>
+    entryLost: number
+    state: 'idle' | 'active' | 'done'
+  }[] = []
   private failing = false
   private finishing = false
   private finishTimer = 0
@@ -162,6 +178,15 @@ export class DayScene extends Phaser.Scene {
     this.featureSprites.clear()
     this.obstacleFeature.clear()
     this.prompt = null
+    this.mercyTime = 0
+    this.flingTimes = []
+    this.lastGrazeTime = -10
+    this.prevGather = false
+    this.prevSpread = false
+    this.hitStop = 0
+    this.camKick = 0
+    this.lastCreak.clear()
+    this.openingZones = []
     this.mouseTravel = 0
     this.gatherHeld = 0
     this.spreadHeld = 0
@@ -240,6 +265,27 @@ export class DayScene extends Phaser.Scene {
     this.drawRoost()
     this.flowGates.clear()
     for (const f of FEATURES) if (f.flow) this.flowGates.set(f, { state: 'idle', clean: true, entryCount: 0 })
+    // real openings (arch mouths, window bays) become clean-pass zones
+    for (const f of FEATURES) {
+      const art = ART[f.art]
+      if (!art.openings.length || f.brittle) continue
+      const disp = pieceDisplay(f)
+      const tlx = f.x - disp.w / 2
+      const tly = disp.y - disp.h / 2
+      for (const r of art.openings) {
+        const rx = f.flipX ? art.w - r.x - r.w : r.x
+        this.openingZones.push({
+          f,
+          x: tlx + (rx + r.w / 2) * disp.s,
+          y: tly + (r.y + r.h / 2) * disp.s,
+          hw: (r.w * disp.s) / 2,
+          hh: (r.h * disp.s) / 2,
+          seen: new Set(),
+          entryLost: 0,
+          state: 'idle',
+        })
+      }
+    }
     // moving obstacles: art and colliders travel together
     this.movers = []
     for (const [f, sprite] of this.featureSprites) {
@@ -255,7 +301,7 @@ export class DayScene extends Phaser.Scene {
         const mx = arc.x - arc.spanX / 2 + arc.spanX * t
         const my = arc.y + Math.sin(t * Math.PI) * -arc.spanY * 0.5 + arc.spanY * 0.18
         const img = this.add
-          .image(mx, my, 'glow_warm')
+          .image(mx, my, 'softdot').setTint(0xffd9a0)
           .setDisplaySize(34, 34)
           .setAlpha(0.75)
           .setBlendMode(Phaser.BlendModes.ADD)
@@ -271,21 +317,24 @@ export class DayScene extends Phaser.Scene {
     this.falcon = new FalconSystem(this, this.audio, [8150, 22300])
     this.falcon.onStrikeResolved = (taken, gathered) => {
       if (taken > 0) {
-        // feather burst where the talons crossed the flock
-        const burst = this.add.particles(this.flock.centerX, this.flock.centerY - 60, 'leaf', {
+        // sharp feather burst where the talons crossed the flock
+        const burst = this.add.particles(this.flock.centerX, this.flock.centerY - 60, 'feather', {
           speed: { min: 120, max: 380 },
           angle: { min: -160, max: -20 },
-          lifespan: { min: 500, max: 1200 },
-          quantity: 26,
-          scale: { start: 0.55, end: 0.1 },
+          lifespan: { min: 700, max: 1500 },
+          quantity: 30,
+          scale: { min: 0.35, max: 0.75 },
           alpha: { start: 0.95, end: 0 },
           rotate: { min: 0, max: 360 },
-          tint: [0x222638, 0x3a3355],
+          gravityY: 30,
+          tint: [0x2a2440, 0x453a5e, 0x6b5f85],
           emitting: false,
         })
         burst.setDepth(9)
-        burst.explode(26, 0, 0)
-        this.time.delayedCall(1400, () => burst.destroy())
+        burst.explode(30, 0, 0)
+        this.time.delayedCall(1600, () => burst.destroy())
+        this.hitStop = 0.06
+        this.camKick = 2.6
       } else if (gathered) {
         // defensive success: a satisfying near-miss flourish
         this.perfectFlowFeedback()
@@ -552,7 +601,12 @@ export class DayScene extends Phaser.Scene {
   private simClock = 0
 
   update(timeMs: number, deltaMs: number): void {
-    const dt = Math.min(deltaMs / 1000, 1 / 20)
+    let dt = Math.min(deltaMs / 1000, 1 / 20)
+    // hit-stop: a 40-80ms time-dip that gives the big three impacts a punch
+    if (this.hitStop > 0) {
+      this.hitStop = Math.max(0, this.hitStop - dt)
+      dt *= 0.12
+    }
     // logic clock = accumulated sim time, so cooldown windows track the sim
     // wherever it runs (real loop, slow machines, headless drivers) rather
     // than the wall clock
@@ -574,7 +628,9 @@ export class DayScene extends Phaser.Scene {
       const targetScroll = ROOST_X - VIEW_W * 0.58
       this.scrollX += (targetScroll - this.scrollX) * Math.min(dt * 1.1, 1)
     }
-    cam.scrollX = this.scrollX
+    // decaying micro-kick on the 3 sanctioned impact events (never sustained)
+    this.camKick *= Math.exp(-dt * 13)
+    cam.scrollX = this.scrollX + this.camKick * Math.sin(this.simClock * 70)
 
     // parallax clusters loop across the view at their own depths
     for (const p of this.parallax) {
@@ -602,6 +658,19 @@ export class DayScene extends Phaser.Scene {
     const spread = !this.finishing && this.keyShift.isDown
     if (gather) this.gatherHeld += dt
     if (spread) this.spreadHeld += dt
+
+    // formation snap: every press/release is a felt, heard transient
+    if (gather && !this.prevGather) {
+      this.audio.formSnap('gather')
+      this.formFlourish(true)
+    }
+    if (spread && !this.prevSpread) {
+      this.audio.formSnap('spread')
+      this.formFlourish(false)
+    }
+    if (!gather && !spread && (this.prevGather || this.prevSpread)) this.audio.formSnap('release')
+    this.prevGather = gather
+    this.prevSpread = spread
 
     this.flock.update(
       dt,
@@ -635,7 +704,9 @@ export class DayScene extends Phaser.Scene {
 
     this.processCollisions(time)
     this.processFlung(time)
+    this.processGrazes(time)
     this.processBrittle(dt, time)
+    this.updateOpeningZones()
     this.cullStragglers(dt)
     const spreadAmt = Math.max(-this.flock.form, 0)
     this.scatter.update(dt, time, this.flock, spreadAmt)
@@ -769,26 +840,50 @@ export class DayScene extends Phaser.Scene {
   }
 
   /** Rhythmic obstacle motion: readable, slow, colliders move with the art. */
+  /** Tremble amplitude (0..1) for a brittle feature under charge. */
+  private featureTremble(f: PieceFeature): number {
+    let best = 0
+    for (const [ob, feat] of this.obstacleFeature) {
+      if (feat !== f) continue
+      best = Math.max(best, Math.min((this.brittleCharge.get(ob) ?? 0) / 8, 1))
+    }
+    return best
+  }
+
   private updateMovers(time: number): void {
+    const moverFeatures = new Set<PieceFeature>()
     for (const m of this.movers) {
+      moverFeatures.add(m.f)
       const mo = m.f.motion!
       const t = (time / mo.period) * Math.PI * 2 + m.phase
+      // brittle charge shudders the art (composed with the motion, never fighting it)
+      const tr = m.f.brittle ? this.featureTremble(m.f) : 0
+      const jx = Math.sin(time * 55) * 4 * tr
+      const ja = Math.sin(time * 47) * 0.022 * tr
       if (mo.kind === 'bob') {
         const dy = Math.sin(t) * mo.amp
         m.sprite.y = m.baseY + dy
+        m.sprite.x = m.f.x + jx
         for (const e of m.obs) e.o.y = e.baseY + dy
       } else {
         // pendulum: sway the sprite and swing colliders along the arc's x
         const a = Math.sin(t) * 0.14
-        m.sprite.setRotation(a)
+        m.sprite.setRotation(a + ja)
         const dy = Math.abs(Math.sin(t)) * mo.amp * 0.2
         const dx = Math.sin(t) * mo.amp
-        m.sprite.x = m.f.x + dx * 0.4
+        m.sprite.x = m.f.x + dx * 0.4 + jx
         for (const e of m.obs) {
           e.o.x = m.f.x + dx * 0.4
           e.o.y = e.baseY + dy
         }
       }
+    }
+    // static brittle pieces shudder in place under charge
+    for (const [f, sprite] of this.featureSprites) {
+      if (!f.brittle || moverFeatures.has(f)) continue
+      const tr = this.featureTremble(f)
+      sprite.x = f.x + (tr > 0 ? Math.sin(time * 55) * 4 * tr : 0)
+      sprite.setAngle(tr > 0 ? Math.sin(time * 47) * 1.2 * tr : 0)
     }
   }
 
@@ -849,7 +944,7 @@ export class DayScene extends Phaser.Scene {
     this.tweens.add({ targets: t, alpha: 0.95, y: sy - 26, duration: 700, hold: 900, yoyo: true, onComplete: () => t.destroy() })
     // restrained ripple: a soft expanding glow through the flock
     const ring = this.add
-      .image(this.flock.centerX, this.flock.centerY, 'glow_warm')
+      .image(this.flock.centerX, this.flock.centerY, 'softdot').setTint(0xffd9a0)
       .setDisplaySize(120, 120)
       .setAlpha(0.5)
       .setBlendMode(Phaser.BlendModes.ADD)
@@ -870,7 +965,7 @@ export class DayScene extends Phaser.Scene {
           m.img.setVisible(false)
           this.audio.collectBloom(1)
           const spark = this.add
-            .image(m.x, m.y, 'glow_warm')
+            .image(m.x, m.y, 'softdot').setTint(0xffd9a0)
             .setDisplaySize(40, 40)
             .setAlpha(0.9)
             .setBlendMode(Phaser.BlendModes.ADD)
@@ -947,6 +1042,7 @@ export class DayScene extends Phaser.Scene {
         this.lossTimes.push(time)
         this.stats.collisionEvents++
         this.audio.collisionThump()
+        this.featherPuff(bird.x, bird.y, 4, this.flock.meanVX * 0.35, -20)
         if (!this.scatter.spawn(bird.x, bird.y, bird.x - this.flock.centerX, bird.y - this.flock.centerY)) this.stats.lost++
         this.flock.removeBird(bird)
         this.lastHit.delete(bird)
@@ -962,6 +1058,114 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
+  /** Feathers: the universal loss language. Small puffs per bird; the
+   * failure sequence erupts a full cloud. White art tinted flock-navy. */
+  private featherPuff(x: number, y: number, n: number, vx = 0, vy = 0): void {
+    const p = this.add
+      .particles(x, y, 'feather', {
+        speedX: { min: vx - 90, max: vx + 90 },
+        speedY: { min: vy - 80, max: vy + 30 },
+        lifespan: { min: 900, max: 1800 },
+        scale: { min: 0.35, max: 0.72 },
+        alpha: { start: 0.95, end: 0 },
+        rotate: { min: 0, max: 360 },
+        gravityY: 26,
+        tint: [0x2a2440, 0x453a5e, 0x6b5f85],
+        emitting: false,
+      })
+      .setDepth(6.5)
+    p.explode(n)
+    this.time.delayedCall(1900, () => p.destroy())
+  }
+
+  /** Near-miss: several birds skim stone at once → air-rush + stone dust. */
+  private processGrazes(time: number): void {
+    if (this.flock.grazes.length < 3 || time - this.lastGrazeTime < 0.8) return
+    this.lastGrazeTime = time
+    let mx = 0
+    let my = 0
+    for (const g of this.flock.grazes) {
+      mx += g.bird.x
+      my += g.bird.y
+    }
+    mx /= this.flock.grazes.length
+    my /= this.flock.grazes.length
+    this.audio.nearMissWhoosh()
+    const puff = this.add
+      .particles(mx, my, 'softdot', {
+        speedX: { min: this.flock.meanVX * 0.3 - 30, max: this.flock.meanVX * 0.3 + 50 },
+        speedY: { min: -40, max: 40 },
+        lifespan: { min: 380, max: 720 },
+        scale: { start: 0.5, end: 0.05 },
+        alpha: { start: 0.45, end: 0 },
+        tint: [0x8d8298, 0xb9a8c0],
+        emitting: false,
+      })
+      .setDepth(6)
+    puff.explode(9)
+    this.time.delayedCall(820, () => puff.destroy())
+  }
+
+  /** Press-edge flourish: a ring that snaps inward (gather) or blooms (spread). */
+  private formFlourish(inward: boolean): void {
+    const ring = this.add
+      .image(this.flock.centerX, this.flock.centerY, 'softdot').setTint(0xffd9a0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(6)
+      .setAlpha(0.42)
+      .setDisplaySize(inward ? 260 : 90, inward ? 260 : 90)
+    this.tweens.add({
+      targets: ring,
+      displayWidth: inward ? 70 : 300,
+      displayHeight: inward ? 70 : 300,
+      alpha: 0,
+      duration: 300,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy(),
+    })
+  }
+
+  /** Clean pass: enough birds thread a real opening with zero losses. */
+  private updateOpeningZones(): void {
+    const cx = this.flock.centerX
+    for (const z of this.openingZones) {
+      if (z.state === 'done') continue
+      if (z.state === 'idle') {
+        if (cx > z.x - 700 && cx < z.x) {
+          z.state = 'active'
+          z.entryLost = this.stats.lost
+          z.seen.clear()
+        }
+        continue
+      }
+      for (const b of this.flock.birds) {
+        if (Math.abs(b.x - z.x) < z.hw && Math.abs(b.y - z.y) < z.hh) z.seen.add(b)
+      }
+      if (cx > z.x + 90) {
+        z.state = 'done'
+        if (z.seen.size >= 10 && this.stats.lost === z.entryLost) {
+          this.audio.cleanPassBloom()
+          const bloom = this.add
+            .image(z.x, z.y, 'softdot').setTint(0xffd9a0)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setDepth(6)
+            .setAlpha(0.75)
+            .setDisplaySize(z.hw * 1.4, z.hh * 1.4)
+            .setTint(0xffd9a0)
+          this.tweens.add({
+            targets: bloom,
+            displayWidth: z.hw * 3.4,
+            displayHeight: z.hh * 3.4,
+            alpha: 0,
+            duration: 700,
+            ease: 'Cubic.easeOut',
+            onComplete: () => bloom.destroy(),
+          })
+        }
+      }
+    }
+  }
+
   /** Blown-wide birds tumble into the scatter pool — recoverable if the
    * player reacts (spread / echo call), gone if ignored. The steady cost of
    * unmanaged flying through dense terrain. */
@@ -973,6 +1177,7 @@ export class DayScene extends Phaser.Scene {
       this.flingTimes.push(time)
       const dx = bird.x - this.flock.centerX
       const dy = bird.y - this.flock.centerY
+      this.featherPuff(bird.x, bird.y, 3, dx * 0.6, -30)
       if (!this.scatter.spawn(bird.x, bird.y, dx || 1, dy - 0.4)) this.stats.lost++
       this.flock.removeBird(bird)
       this.lastHit.delete(bird)
@@ -991,6 +1196,29 @@ export class DayScene extends Phaser.Scene {
       if (obstacle.broken) continue
       const charge = (this.brittleCharge.get(obstacle) ?? 0) + 1
       this.brittleCharge.set(obstacle, charge)
+      // audible/visible charge: creak + falling dust every 2 charge steps
+      const lastTick = this.lastCreak.get(obstacle) ?? 0
+      if (Math.floor(charge / 2) > Math.floor(lastTick / 2)) {
+        this.audio.brittleCreak(Math.min(charge / 8, 1))
+        const f = this.obstacleFeature.get(obstacle)
+        const sprite = f ? this.featureSprites.get(f) : undefined
+        if (sprite) {
+          const dust = this.add
+            .particles(sprite.x + (Math.random() - 0.5) * sprite.displayWidth * 0.5, sprite.y - sprite.displayHeight * 0.3, 'leaf', {
+              speedY: { min: 40, max: 120 },
+              speedX: { min: -30, max: 30 },
+              lifespan: { min: 500, max: 900 },
+              scale: { start: 0.5, end: 0.1 },
+              alpha: { start: 0.7, end: 0 },
+              tint: [0x453a5e, 0x2a2440],
+              emitting: false,
+            })
+            .setDepth(6)
+          dust.explode(5)
+          this.time.delayedCall(950, () => dust.destroy())
+        }
+      }
+      this.lastCreak.set(obstacle, charge)
       if (charge >= 8 && this.flock.form > 0.35 && meanSpeed > 230) {
         this.breakFeature(obstacle)
         continue
@@ -1006,6 +1234,7 @@ export class DayScene extends Phaser.Scene {
         this.lossTimes.push(time)
         this.stats.collisionEvents++
         this.audio.collisionThump()
+        this.featherPuff(bird.x, bird.y, 4, -50, -20)
         if (!this.scatter.spawn(bird.x, bird.y, -1, -0.3)) this.stats.lost++
         this.flock.removeBird(bird)
         this.lastHit.delete(bird)
@@ -1043,6 +1272,8 @@ export class DayScene extends Phaser.Scene {
     emitter.setDepth(3)
     emitter.explode(46, 0, 0)
     this.time.delayedCall(1600, () => emitter.destroy())
+    this.hitStop = 0.07
+    this.camKick = 3
     this.cameras.main.zoomTo(1.02, 100, 'Sine.easeOut', true)
     this.time.delayedCall(200, () => this.cameras.main.zoomTo(1, 280, 'Sine.easeInOut', true))
     this.audio.collisionThump()
@@ -1138,12 +1369,28 @@ export class DayScene extends Phaser.Scene {
     this.stats.resets++
     this.audio.failureFade()
 
-    // 1) the remaining flock visibly scatters across the sky
+    // 1) the remaining flock erupts into a cloud of feathers rolling across
+    //    the darkening sky — the dramatic image of the day ending badly
     const survivors = [...this.flock.birds]
+    const cloud = this.add
+      .particles(0, 0, 'feather', {
+        speedX: { min: -110, max: 150 },
+        speedY: { min: -170, max: 40 },
+        lifespan: { min: 1600, max: 3400 },
+        scale: { min: 0.35, max: 0.8 },
+        alpha: { start: 0.95, end: 0 },
+        rotate: { min: 0, max: 360 },
+        gravityY: 22,
+        tint: [0x2a2440, 0x453a5e, 0x6b5f85],
+        emitting: false,
+      })
+      .setDepth(8)
     for (const b of survivors) {
+      cloud.emitParticleAt(b.x, b.y, 4)
       this.scatter.spawn(b.x, b.y, b.x - this.flock.centerX, b.y - this.flock.centerY - 40)
       this.flock.removeBird(b)
     }
+    this.time.delayedCall(3600, () => cloud.destroy())
     // 2) colour drains toward dusk, then the message
     this.promptText.setAlpha(0)
     this.landmarkText.setAlpha(0)
@@ -1201,6 +1448,7 @@ export class DayScene extends Phaser.Scene {
     this.flock.intentY = 430
     this.stats.found = cp.found
     this.stats.flow = cp.flow
+    for (const z of this.openingZones) if (z.x > cp.x) z.state = 'idle'
     // reset flow gates and motes ahead of the checkpoint
     for (const [f, g] of this.flowGates) if (f.x > cp.x) { g.state = 'idle'; g.clean = true }
     for (const m of this.motes) if (m.x > cp.x && !m.img.visible) m.img.setVisible(true)
