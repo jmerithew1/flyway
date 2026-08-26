@@ -74,7 +74,7 @@ export const LANDMARKS: Landmark[] = [
   { x: 23200, name: 'Last Arch' },
 ]
 
-const GROUND = 880 // visual ground line where bottom-mounted pieces sit
+const GROUND = 948 // pieces sink into the foreground garden so bases read planted, never floating
 
 /** bottom-mounted piece: sits on the ground line whatever its final scale */
 const gnd = (x: number, art: PieceFeature['art'], h: number, extra: Partial<PieceFeature> = {}): PieceFeature => ({
@@ -115,6 +115,7 @@ export const FEATURES: PieceFeature[] = [
   top(2600, 'root_tangle', 330),
   gnd(2600, 'triple_arcade', 400),
   gnd(3150, 'obelisk_a', 600), // split obelisk
+  top(3150, 'curtain_beaded', 300, { brittle: true }), // Surge teacher: a small veil to punch through
   gnd(3650, 'gothic_arch', 520, { flow: 'gather' }), // narrow: gather
   gnd(4150, 'wall_multi_window', 520, { flow: 'spread' }), // spread through windows
   top(4150, 'leaf_strand', 260),
@@ -228,6 +229,8 @@ export const PROMPTS: PromptDef[] = [
   { key: 'steer', x: -1, text: 'move the mouse — steer the flock' },
   { key: 'gather', x: 520, text: 'hold SPACE — gather' },
   { key: 'spread', x: 1250, text: 'hold SHIFT — spread' },
+  { key: 'surge', x: 2650, text: 'tap SPACE — surge' },
+  { key: 'flare', x: 9150, text: 'tap SHIFT — flare, and wait' },
 ]
 
 /**

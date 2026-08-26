@@ -126,7 +126,7 @@ export class Flock {
   /** hidden formation strain: 0 = healthy, 1 = at the OVER threshold */
   gatherStrain = 0
   spreadStrain = 0
-  private gatherTime = 0
+  gatherTime = 0
   private spreadTime = 0
   private fraySelect = 0
 
@@ -217,8 +217,35 @@ export class Flock {
 
   private stepAccum = 0
 
+  // ---- ability state (tap verbs layered on the hold verbs) -----------------
+  /** Surge: 0..1 whipcrack acceleration pulse, decays over ~0.5s. */
+  pulse = 0
+  /** Flare: 0..1 air-brake bloom, decays over ~0.4s. */
+  flareAmt = 0
+  /** Drafting: 0..1, builds on straight clean flight, spills on sharp turns. */
+  draft = 0
+  private prevHeading = 0
+  private turnRateSmooth = 0
+
+  /** Tap SPACE: the flock snaps tight and slingshots forward. Strained
+   * flocks produce a ragged, weaker pulse — strain is the anti-spam. */
+  surge(): void {
+    this.pulse = Math.max(this.pulse, 1 - this.gatherStrain * 0.6)
+    this.gatherTime += 0.5
+  }
+
+  /** Tap SHIFT: wings flare, momentum dies — the overshoot panic button. */
+  flare(): void {
+    this.flareAmt = Math.max(this.flareAmt, 1 - this.spreadStrain * 0.5)
+    this.spreadTime += 0.4
+  }
+
   private step(dt: number, input: FlockInput, obstacles: Obstacle[]): void {
     this.time += dt
+
+    // ability envelopes decay
+    this.pulse = Math.max(0, this.pulse - dt / 0.5)
+    this.flareAmt = Math.max(0, this.flareAmt - dt / 0.4)
 
     // shared intent point chases the cursor — collective reaction delay
     const ik = 1 - Math.exp(-TUNING.intentLerp * dt)
@@ -234,10 +261,29 @@ export class Flock {
     const gather = Math.max(f, 0)
     const spread = Math.max(-f, 0)
 
+    // ---- drafting: sustained straight flight strings the flock out and
+    // builds speed; a sharp intent turn spills it. Clean air also halves
+    // gather-strain accrual, making strain situational rather than a tax.
+    const meanSp0 = Math.hypot(this.meanVX, this.meanVY)
+    if (meanSp0 > 40) {
+      const heading = Math.atan2(this.meanVY, this.meanVX)
+      let dh = heading - this.prevHeading
+      while (dh > Math.PI) dh -= Math.PI * 2
+      while (dh < -Math.PI) dh += Math.PI * 2
+      this.prevHeading = heading
+      const rate = Math.abs(dh) / dt
+      this.turnRateSmooth += (rate - this.turnRateSmooth) * (1 - Math.exp(-4 * dt))
+      if (this.turnRateSmooth < 0.35 && meanSp0 > 180) this.draft = Math.min(1, this.draft + dt / 2)
+      else this.draft = Math.max(0, this.draft - dt * 1.6)
+    } else {
+      this.draft = Math.max(0, this.draft - dt * 1.6)
+    }
+
     // ---- hidden strain clocks: holding a formation past its healthy window
     // squeezes birds loose (gather) or lets the edges drift (spread).
     // Neutral is REGROUP: strain drains fast and loose birds return.
-    if (f > 0.5) this.gatherTime += dt
+    const cleanAir = this.draft > 0.5 ? 0.5 : 1
+    if (f > 0.5) this.gatherTime += dt * cleanAir
     else this.gatherTime = Math.max(0, this.gatherTime - dt * STRAIN_RECOVERY_RATE)
     if (f < -0.5) this.spreadTime += dt
     else this.spreadTime = Math.max(0, this.spreadTime - dt * STRAIN_RECOVERY_RATE)
@@ -259,9 +305,10 @@ export class Flock {
     }
 
     const sepRadius =
-      f >= 0
+      (f >= 0
         ? lerp(TUNING.sepRadiusNeutral, TUNING.sepRadiusGather, gather)
-        : lerp(TUNING.sepRadiusNeutral, TUNING.sepRadiusSpread, spread)
+        : lerp(TUNING.sepRadiusNeutral, TUNING.sepRadiusSpread, spread)) *
+      (1 + this.flareAmt * 0.7)
     // neutral flocks cohere loosely (big living cloud); gathering multiplies pull
     const wCoh = TUNING.wCohesion * lerp(0.35, 1, Math.abs(f)) * (1 + gather * 2.1 - spread * 0.6)
     const wSep = TUNING.wSeparation * (1 + spread * 0.5 - gather * 0.25)
@@ -491,7 +538,7 @@ export class Flock {
       b.danger = Math.max(0, b.danger - dt * 0.5)
 
       // --- integrate with capped accel (this is the inertia)
-      const maxA = TUNING.maxAccel * b.agility * (1 + gather * 0.22)
+      const maxA = TUNING.maxAccel * b.agility * (1 + gather * 0.22 + this.pulse * 0.4)
       const am = Math.hypot(ax, ay)
       if (am > maxA) {
         ax = (ax / am) * maxA
@@ -501,16 +548,20 @@ export class Flock {
       b.vy += ay * dt
 
       // --- speed shepherding toward cruise (chasing a far cursor speeds birds up)
+      // surge slingshots, drafting builds on clean straights, flare kills it
       const chase = Math.min(Math.max(idist - 200, 0) / 500, 1) * 0.45
       const cruise =
         TUNING.cruiseSpeed *
         b.speedFactor *
-        (1 + chase + gather * TUNING.gatherSpeedBoost - spread * TUNING.spreadSpeedDrag)
+        (1 + chase + gather * TUNING.gatherSpeedBoost - spread * TUNING.spreadSpeedDrag) *
+        (1 + this.pulse * 0.45 + this.draft * 0.25) *
+        (1 - this.flareAmt * 0.62)
       const sp = Math.hypot(b.vx, b.vy) || 1
+      const shepherd = this.flareAmt > 0.1 ? 5.2 : 2.2
       const targetSp = clamp(
-        sp + (cruise - sp) * (1 - Math.exp(-2.2 * dt)),
-        TUNING.minSpeed,
-        TUNING.maxSpeed,
+        sp + (cruise - sp) * (1 - Math.exp(-shepherd * dt)),
+        TUNING.minSpeed * (1 - this.flareAmt * 0.55),
+        TUNING.maxSpeed * (1 + this.pulse * 0.18),
       )
       b.vx = (b.vx / sp) * targetSp
       b.vy = (b.vy / sp) * targetSp

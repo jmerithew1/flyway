@@ -265,14 +265,14 @@ export class DayScene extends Phaser.Scene {
     // (they sit just behind the flight plane; the flock passes in front)
     const bellH = 660
     this.add
-      .image(9600, 880 - bellH / 2, 'bell_tower')
+      .image(9600, 942 - bellH / 2, 'bell_tower')
       .setDisplaySize((388 / 1056) * bellH, bellH)
       .setDepth(0.6)
       .setAlpha(0.92)
       .setTint(0xd9cfe8)
     const spireH = 600
     this.add
-      .image(13600, 880 - spireH / 2, 'storm_spire')
+      .image(13600, 942 - spireH / 2, 'storm_spire')
       .setDisplaySize((492 / 936) * spireH, spireH)
       .setDepth(0.6)
       .setAlpha(0.9)
@@ -331,8 +331,20 @@ export class DayScene extends Phaser.Scene {
 
     // authored predator zones: one mid-day, one in the final run
     this.falcon = new FalconSystem(this, this.audio, [8150, 22300])
-    this.falcon.onStrikeResolved = (taken, gathered) => {
+    this.falcon.onStrikeResolved = (taken, gathered, mobbed) => {
+      if (mobbed) {
+        // THE FLOCK FIGHTS BACK — triumph, not relief
+        this.mobLift = 1.5
+        this.flock.gatherTime += 1.5
+        this.hitStop = 0.07
+        this.camKick = 2.6
+        this.audio.falconScreech()
+        this.perfectFlowFeedback()
+        this.showLandmark('THE FLOCK FIGHTS BACK')
+        return
+      }
       if (taken > 0) {
+        this.showPrompt('call', 'press C — call them back', () => this.scatter.recoveredThisFrame > 0)
         // sharp feather burst where the talons crossed the flock
         const burst = this.add.particles(this.flock.centerX, this.flock.centerY - 60, 'feather', {
           speed: { min: 120, max: 380 },
@@ -425,6 +437,8 @@ export class DayScene extends Phaser.Scene {
     const kb = this.input.keyboard!
     this.keySpace = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
     this.keyShift = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
+    kb.on('keydown-C', () => this.echoCall())
+    kb.on('keydown-E', () => this.echoCall())
     kb.on('keydown-D', () => {
       this.debugVisible = !this.debugVisible
       this.debugText.setVisible(this.debugVisible)
@@ -586,20 +600,106 @@ export class DayScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ prompts
 
+  private promptQueue: { key: string; text: string; done: () => boolean }[] = []
+  private promptAge = 0
+  private spaceDownT = -10
+  private shiftDownT = -10
+  private callTimer = 0
+  private callCooldown = 0
+  private callStrength = 1
+  private mobLift = 0
+  private draftTrailT = 0
+
+  /** Surge: tap SPACE — whipcrack pulse. Weak and ragged when strained. */
+  private doSurge(): void {
+    this.flock.surge()
+    this.audio.surgeWhoosh(1 - this.flock.gatherStrain * 0.5)
+    // speed streaks along the direction of travel
+    const m = Math.hypot(this.flock.meanVX, this.flock.meanVY) || 1
+    const p = this.add
+      .particles(this.flock.centerX, this.flock.centerY, 'softdot', {
+        speedX: { min: (this.flock.meanVX / m) * 380 - 40, max: (this.flock.meanVX / m) * 520 + 40 },
+        speedY: { min: (this.flock.meanVY / m) * 380 - 40, max: (this.flock.meanVY / m) * 520 + 40 },
+        lifespan: { min: 220, max: 420 },
+        scale: { start: 0.42, end: 0.02 },
+        alpha: { start: 0.7, end: 0 },
+        tint: 0xfff1dc,
+        blendMode: Phaser.BlendModes.ADD,
+        emitting: false,
+      })
+      .setDepth(6)
+    p.explode(14)
+    this.time.delayedCall(500, () => p.destroy())
+  }
+
+  /** Flare: tap SHIFT — the flock blooms wide and air-brakes. */
+  private doFlare(): void {
+    this.flock.flare()
+    this.audio.formSnap('spread')
+    this.formFlourish(false)
+  }
+
+  /** Echo Call: tap C — the flock cries out; the scattered and the stray
+   * turn toward home. Hoarse (weak) while on its diegetic cooldown. */
+  private echoCall(): void {
+    if (this.finishing || this.failing) return
+    const strained = Math.max(this.flock.gatherStrain, this.flock.spreadStrain) > 0.6
+    if (this.callCooldown > 0) {
+      this.audio.echoCall(0.35) // hoarse — the voice hasn't returned yet
+      return
+    }
+    this.callStrength = strained ? 0.55 : 1
+    this.callTimer = 2.5
+    this.callCooldown = 6
+    this.audio.echoCall(this.callStrength)
+    const ring = this.add
+      .image(this.flock.centerX, this.flock.centerY, 'softdot')
+      .setTint(0xffd9a0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(6)
+      .setAlpha(0.5 * this.callStrength)
+      .setDisplaySize(120, 120)
+    this.tweens.add({
+      targets: ring,
+      displayWidth: 900 * this.callStrength,
+      displayHeight: 900 * this.callStrength,
+      alpha: 0,
+      duration: 1100,
+      ease: 'Sine.easeOut',
+      onComplete: () => ring.destroy(),
+    })
+  }
+
+  /** One-time prompts queue instead of being dropped when the slot is busy,
+   * and every prompt times out — nothing can hog the screen. */
   private showPrompt(key: string, text: string, done: () => boolean): void {
-    if (this.shownPrompts.has(key) || this.prompt) return
+    if (this.shownPrompts.has(key)) return
     this.shownPrompts.add(key)
-    this.prompt = { key, done, fading: false }
-    this.promptText.setText(text).setAlpha(0)
+    if (this.prompt) {
+      if (this.promptQueue.length < 4) this.promptQueue.push({ key, text, done })
+      return
+    }
+    this.beginPrompt({ key, text, done })
+  }
+
+  private beginPrompt(p: { key: string; text: string; done: () => boolean }): void {
+    this.prompt = { key: p.key, done: p.done, fading: false }
+    this.promptAge = 0
+    this.promptText.setText(p.text).setAlpha(0)
     this.tweens.add({ targets: this.promptText, alpha: 0.9, duration: 600 })
   }
 
-  private updatePrompt(): void {
-    if (!this.prompt) return
+  private updatePrompt(dt: number): void {
+    if (!this.prompt) {
+      const next = this.promptQueue.shift()
+      if (next) this.beginPrompt(next)
+      return
+    }
+    this.promptAge += dt
     const sx = Phaser.Math.Clamp(this.flock.centerX - this.scrollX, 200, VIEW_W - 220)
     const sy = Phaser.Math.Clamp(this.flock.centerY - 150, 70, VIEW_H - 60)
     this.promptText.setPosition(sx, sy)
-    if (!this.prompt.fading && this.prompt.done()) {
+    if (!this.prompt.fading && (this.prompt.done() || this.promptAge > 7)) {
       this.prompt.fading = true
       this.tweens.add({
         targets: this.promptText,
@@ -656,7 +756,8 @@ export class DayScene extends Phaser.Scene {
       if (x > span) x -= span
       p.img.x = x
     }
-    this.fgGround.tilePositionX = this.scrollX * 0.62
+    // world speed: the meadow the ruins stand in must move WITH them
+    this.fgGround.tilePositionX = this.scrollX
     this.fgBranch.x = -20 - ((this.scrollX * 0.3) % 2200) * 0.12
     this.fgColumn.x = VIEW_W + 20 + ((this.scrollX * 0.24) % 1800) * 0.1
     this.fogFar.tilePositionX = this.scrollX * 0.22 + time * 5
@@ -675,18 +776,28 @@ export class DayScene extends Phaser.Scene {
     if (gather) this.gatherHeld += dt
     if (spread) this.spreadHeld += dt
 
-    // formation snap: every press/release is a felt, heard transient
+    // formation snap: every press/release is a felt, heard transient —
+    // and a short tap is an ABILITY (Surge / Flare)
     if (gather && !this.prevGather) {
+      this.spaceDownT = time
       this.audio.formSnap('gather')
       this.formFlourish(true)
     }
+    if (!gather && this.prevGather && time - this.spaceDownT < 0.22) this.doSurge()
     if (spread && !this.prevSpread) {
+      this.shiftDownT = time
       this.audio.formSnap('spread')
       this.formFlourish(false)
     }
+    if (!spread && this.prevSpread && time - this.shiftDownT < 0.22) this.doFlare()
     if (!gather && !spread && (this.prevGather || this.prevSpread)) this.audio.formSnap('release')
     this.prevGather = gather
     this.prevSpread = spread
+
+    // ability envelopes that live outside the flock sim
+    this.callTimer = Math.max(0, this.callTimer - dt)
+    this.callCooldown = Math.max(0, this.callCooldown - dt)
+    this.mobLift = Math.max(0, this.mobLift - dt)
 
     this.flock.update(
       dt,
@@ -694,7 +805,11 @@ export class DayScene extends Phaser.Scene {
         intentX: this.finishing
           ? ROOST_X
           : Phaser.Math.Clamp(world.x, this.scrollX + VIEW_W * 0.07, this.scrollX + VIEW_W * 0.82),
-        intentY: this.finishing ? ROOST_Y : Phaser.Math.Clamp(world.y, SKY_TOP + 20, SKY_BOTTOM),
+        intentY: this.finishing
+          ? ROOST_Y
+          : this.mobLift > 0
+            ? SKY_TOP + 90 // the mob rises around the falcon
+            : Phaser.Math.Clamp(world.y, SKY_TOP + 20, SKY_BOTTOM),
         gather,
         spread,
       },
@@ -725,11 +840,34 @@ export class DayScene extends Phaser.Scene {
     this.updateOpeningZones()
     this.cullStragglers(dt)
     const spreadAmt = Math.max(-this.flock.form, 0)
-    this.scatter.update(dt, time, this.flock, spreadAmt)
+    // Echo Call: the cry extends recovery reach and stirs distant strays;
+    // Spread still closes the deal — call sets up, spread collects
+    const callBoost = this.callTimer > 0 ? 0.8 * this.callStrength : 0
+    this.scatter.update(dt, time, this.flock, Math.min(1, spreadAmt + callBoost))
     for (const s of this.strays) {
       if (s.group.depleted) continue
-      const joined = s.group.update(dt, time, this.flock, 200 + spreadAmt * 220)
+      const joined = s.group.update(dt, time, this.flock, 200 + spreadAmt * 220 + callBoost * 340)
       if (joined > 0) this.stats.found += joined
+    }
+
+    // drafting streamlines: clean straight flight visibly cuts the air
+    if (this.flock.draft > 0.55) {
+      this.draftTrailT -= dt
+      if (this.draftTrailT <= 0) {
+        this.draftTrailT = 0.1
+        const b = this.flock.birds[(Math.random() * this.flock.birds.length) | 0]
+        if (b) {
+          const streak = this.add
+            .image(b.x - b.vx * 0.06, b.y - b.vy * 0.06, 'softdot')
+            .setTint(0xf5ead8)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setAlpha(0.4)
+            .setDisplaySize(46, 7)
+            .setRotation(Math.atan2(b.vy, b.vx))
+            .setDepth(5.5)
+          this.tweens.add({ targets: streak, alpha: 0, displayWidth: 90, duration: 380, onComplete: () => streak.destroy() })
+        }
+      }
     }
 
     this.updateMovers(time)
@@ -757,6 +895,8 @@ export class DayScene extends Phaser.Scene {
           this.showPrompt('gather', pr.text, () => this.gatherHeld > 0.3 && this.flock.centerX > 1020)
         else if (pr.key === 'spread')
           this.showPrompt('spread', pr.text, () => this.stats.found > 0 || this.spreadHeld > 1.6)
+        else if (pr.key === 'surge') this.showPrompt('surge', pr.text, () => this.flock.pulse > 0.3)
+        else if (pr.key === 'flare') this.showPrompt('flare', pr.text, () => this.flock.flareAmt > 0.3)
       }
     }
     // teach Neutral once, right after the spread lesson lands
@@ -767,7 +907,7 @@ export class DayScene extends Phaser.Scene {
     if (zoneAhead) {
       this.showPrompt('wind', 'wind ahead — Gather cuts through it', () => this.flock.centerX > zoneAhead.x0 + 600)
     }
-    this.updatePrompt()
+    this.updatePrompt(dt)
 
     this.checkCheckpoints()
     this.checkFail()
@@ -789,7 +929,7 @@ export class DayScene extends Phaser.Scene {
     if (displayed <= WARN_BIRDS && !this.finishing) {
       this.countText.setColor('#e0a898')
       this.audio.setThin(true)
-      this.showPrompt('lowflock', 'the flock is too small to hold together', () => displayed > WARN_BIRDS + 6)
+      this.showPrompt('lowflock', 'the flock is too small to hold together', () => this.flock.count + this.scatter.recoverableCount > WARN_BIRDS + 6)
     } else if (displayed > WARN_BIRDS) {
       this.audio.setThin(false)
       if (this.countText.style.color === '#e0a898') this.countText.setColor('#f2e8f5')
@@ -808,7 +948,7 @@ export class DayScene extends Phaser.Scene {
     // scattered-but-recoverable birds still count — they aren't lost yet
     const n = this.flock.count + this.scatter.recoverableCount
     if (this.scatter.recoverableCount > 0) {
-      this.scatteredText.setText(`${this.scatter.recoverableCount} scattered`).setAlpha(0.85)
+      this.scatteredText.setText(`${this.scatter.recoverableCount} scattered`).setAlpha(0.85).setPosition(16, 74)
     } else {
       this.scatteredText.setAlpha(0)
     }
@@ -920,7 +1060,9 @@ export class DayScene extends Phaser.Scene {
         // outcome-based: permanent losses or losing control voids the pass —
         // HOW the player flew it (gather, spread, neutral) is their choice
         if (this.flock.count + this.scatter.recoverableCount < g.entryCount) g.clean = false
-        if (Math.max(this.flock.gatherStrain, this.flock.spreadStrain) > 0.85) g.clean = false
+        // 0.92 (not 0.85) so ability strain surcharges never void exciting
+        // play, and the mob's commanded climb is exempt entirely
+        if (Math.max(this.flock.gatherStrain, this.flock.spreadStrain) > 0.92 && this.mobLift <= 0) g.clean = false
         if (cx >= exit) {
           // cohesion: most of the flock made it through together
           let near = 0
@@ -1235,7 +1377,8 @@ export class DayScene extends Phaser.Scene {
         }
       }
       this.lastCreak.set(obstacle, charge)
-      if (charge >= 8 && this.flock.form > 0.35 && meanSpeed > 230) {
+      if (charge >= 8 && (this.flock.form > 0.35 || this.flock.pulse > 0.2) && meanSpeed > 230) {
+        // a held Gather OR a well-timed Surge carries the breaking commitment
         this.breakFeature(obstacle)
         continue
       }

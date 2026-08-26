@@ -272,6 +272,34 @@ export class GameAudio {
     }
   }
 
+  /** Surge: a whipcrack air-rush that scales with the pulse's health. */
+  surgeWhoosh(strength = 1): void {
+    this.noiseShot(0.34, this.pv(520), this.pv(1900), 0.14 * strength, 'bandpass', 1.2)
+  }
+
+  /** Echo Call: rising chirp cascade; weak strength = hoarse, half-voiced. */
+  echoCall(strength = 1): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const n = strength > 0.5 ? 4 : 2
+    for (let i = 0; i < n; i++) {
+      const o = ctx.createOscillator()
+      o.type = 'sine'
+      const f0 = this.pv(1150 + i * 160, 0.05)
+      o.frequency.setValueAtTime(f0, t + i * 0.13)
+      o.frequency.exponentialRampToValueAtTime(f0 * 1.8, t + i * 0.13 + 0.11)
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0.0001, t + i * 0.13)
+      g.gain.exponentialRampToValueAtTime(0.1 * strength, t + i * 0.13 + 0.03)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.13 + 0.3)
+      o.connect(g).connect(this.master)
+      o.start(t + i * 0.13)
+      o.stop(t + i * 0.13 + 0.35)
+    }
+    if (strength <= 0.5) this.noiseShot(0.25, this.pv(700), this.pv(400), 0.06, 'bandpass', 2.5)
+  }
+
   /** Golden two-note bloom for a clean pass through an opening. */
   cleanPassBloom(): void {
     if (!this.ctx) return

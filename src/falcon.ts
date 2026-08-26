@@ -41,7 +41,9 @@ export class FalconSystem {
   firstEncounter = true
   /** birds taken this strike, for HUD messaging */
   lastTaken = 0
-  onStrikeResolved: ((taken: number, gathered: boolean) => void) | null = null
+  onStrikeResolved: ((taken: number, gathered: boolean, mobbed: boolean) => void) | null = null
+  /** Flock size when the zone armed — mobbing needs ~70% of it intact. */
+  private zoneArrivalCount = 120
 
   constructor(scene: Phaser.Scene, audio: GameAudio, zoneXs: number[]) {
     this.scene = scene
@@ -90,6 +92,7 @@ export class FalconSystem {
           this.window = z.window
           this.phase = 'unease'
           this.timer = 0
+          this.zoneArrivalCount = flock.count
         }
       }
       return
@@ -173,6 +176,22 @@ export class FalconSystem {
     this.falcon.setVisible(true).setFlipX(false)
     this.strikeX = flock.centerX
     const gathered = flock.form > 0.35
+
+    // MOBBING: a large, healthy, committed flock turns the tables — it rises
+    // around the falcon in a screeching column and drives it off. Triple-gated
+    // (size + form + low strain) so it pays out the whole game's discipline.
+    if (gathered && flock.count >= this.zoneArrivalCount * 0.7 && flock.gatherStrain < 0.4) {
+      this.lastTaken = 0
+      this.phase = 'exit'
+      this.timer = 0
+      this.audio.falconMiss()
+      for (const b of flock.birds) {
+        b.vy -= 260 + Math.random() * 160
+        b.panic = Math.max(b.panic, 0.5)
+      }
+      this.onStrikeResolved?.(0, true, true)
+      return
+    }
     const spreadOrFrayed = flock.form < -0.3 || flock.spreadStrain > 0.4 || flock.gatherStrain > 0.6
 
     const range = gathered ? FALCON_TAKE_GATHER : spreadOrFrayed ? FALCON_TAKE_SPREAD : FALCON_TAKE_NEUTRAL
@@ -221,7 +240,7 @@ export class FalconSystem {
 
     if (this.lastTaken > 0) this.audio.falconHit()
     else this.audio.falconMiss()
-    this.onStrikeResolved?.(this.lastTaken, gathered)
+    this.onStrikeResolved?.(this.lastTaken, gathered, false)
   }
 
   get active(): boolean {

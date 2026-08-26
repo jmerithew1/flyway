@@ -61,12 +61,13 @@ export class TitleScene extends Phaser.Scene {
       t.setShadow(0, 2, '#3a2f4a', 8)
       title = t
     }
-    const tag = this.add.text(cx, 378, TAGLINE, serif(21, '#eddfd8', 2)).setOrigin(0.5).setAlpha(0)
+    const tag = this.add.text(cx, 396, TAGLINE, serif(21, '#eddfd8', 2)).setOrigin(0.5).setAlpha(0)
 
     const controls = [
       ['Mouse', 'Steer'],
-      ['SPACE', 'Gather'],
-      ['SHIFT', 'Spread'],
+      ['SPACE', 'hold Gather · tap Surge'],
+      ['SHIFT', 'hold Spread · tap Flare'],
+      ['C', 'Call the lost home'],
     ]
     const ctrlObjs: Phaser.GameObjects.Text[] = []
     controls.forEach(([k, v], i) => {
