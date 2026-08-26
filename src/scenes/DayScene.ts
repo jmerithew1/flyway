@@ -261,6 +261,22 @@ export class DayScene extends Phaser.Scene {
       for (const o of obs) this.obstacleFeature.set(o, feature)
     }
     this.placePieces()
+    // hero landmark scenery: checkpoint identity, deliberately non-colliding
+    // (they sit just behind the flight plane; the flock passes in front)
+    const bellH = 660
+    this.add
+      .image(9600, 880 - bellH / 2, 'bell_tower')
+      .setDisplaySize((388 / 1056) * bellH, bellH)
+      .setDepth(0.6)
+      .setAlpha(0.92)
+      .setTint(0xd9cfe8)
+    const spireH = 600
+    this.add
+      .image(13600, 880 - spireH / 2, 'storm_spire')
+      .setDisplaySize((492 / 936) * spireH, spireH)
+      .setDepth(0.6)
+      .setAlpha(0.9)
+      .setTint(0xc9c2dd)
     this.placeWindFx()
     this.drawRoost()
     this.flowGates.clear()

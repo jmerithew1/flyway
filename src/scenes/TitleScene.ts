@@ -13,10 +13,25 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
-    const plate = ART['bg_plate']
+    // the supplied title/home painting; fall back to the day plate
+    const bgKey = this.textures.exists('title_bg') ? 'title_bg' : 'bg_plate'
+    const plate = ART[bgKey] ?? ART['bg_plate']
     const cover = Math.max(VIEW_W / plate.w, VIEW_H / plate.h)
-    this.add.image(VIEW_W / 2, VIEW_H / 2, 'bg_plate').setDisplaySize(plate.w * cover, plate.h * cover)
+    this.add.image(VIEW_W / 2, VIEW_H / 2, bgKey).setDisplaySize(plate.w * cover, plate.h * cover)
     this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x1a1530, 0.18).setOrigin(0)
+
+    // perched birds resting on the foreground — the flock at home
+    if (this.textures.exists('perched_a')) {
+      const perches: Array<[string, number, number, number]> = [
+        ['perched_a', VIEW_W * 0.115, VIEW_H * 0.83, 64],
+        ['perched_sleep', VIEW_W * 0.165, VIEW_H * 0.845, 46],
+        ['perched_b', VIEW_W * 0.88, VIEW_H * 0.79, 60],
+      ]
+      for (const [key, x, y, h] of perches) {
+        const art = ART[key]
+        this.add.image(x, y, key).setDisplaySize((art.w / art.h) * h, h).setAlpha(0.95)
+      }
+    }
 
     // a handful of birds drifting lazily across the sky
     this.drifting = []
@@ -32,8 +47,20 @@ export class TitleScene extends Phaser.Scene {
     const serif = (size: number, color = '#f5edf3', ls = 0) =>
       ({ fontFamily: 'Georgia, serif', fontSize: `${size}px`, color, letterSpacing: ls }) as Phaser.Types.GameObjects.Text.TextStyle
 
-    const title = this.add.text(cx, 300, GAME_TITLE, serif(84, '#f7f0ea', 26)).setOrigin(0.5).setAlpha(0)
-    title.setShadow(0, 2, '#3a2f4a', 8)
+    // the painted FLYWAY wordmark (never tiny); text fallback keeps it working
+    let title: Phaser.GameObjects.Image | Phaser.GameObjects.Text
+    if (this.textures.exists('wordmark')) {
+      const wm = ART['wordmark']
+      const wmW = Math.min(560, VIEW_W * 0.42)
+      title = this.add
+        .image(cx, 288, 'wordmark')
+        .setDisplaySize(wmW, (wm.h / wm.w) * wmW)
+        .setAlpha(0)
+    } else {
+      const t = this.add.text(cx, 300, GAME_TITLE, serif(84, '#f7f0ea', 26)).setOrigin(0.5).setAlpha(0)
+      t.setShadow(0, 2, '#3a2f4a', 8)
+      title = t
+    }
     const tag = this.add.text(cx, 378, TAGLINE, serif(21, '#eddfd8', 2)).setOrigin(0.5).setAlpha(0)
 
     const controls = [

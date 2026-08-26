@@ -62,8 +62,22 @@ export class FalconSystem {
     const tex = scene.textures.get('falcon').getSourceImage() as { width: number; height: number }
     const span = 310
     this.falcon.setScale(span / tex.width)
-    if (!scene.textures.exists('falcon-art')) this.falcon.setTint(0x151024)
+    if (!scene.textures.exists('falcon-art') && !scene.textures.exists('falcon_dive')) this.falcon.setTint(0x151024)
     this.shadow.setScale((span * 1.45) / tex.width)
+    this.setPose('bank')
+  }
+
+  /** Authored pose sequence from the supplied art (bank/dive/strike/retreat);
+   * falls back to the legacy single texture when the sheet isn't loaded. */
+  private setPose(pose: 'bank' | 'dive' | 'strike' | 'retreat'): void {
+    const key = `falcon_${pose}`
+    if (!this.scene.textures.exists(key)) return
+    if (this.falcon.texture.key !== key) {
+      this.falcon.setTexture(key)
+      this.falcon.clearTint()
+      const src = this.scene.textures.get(key).getSourceImage() as { width: number; height: number }
+      this.falcon.setScale(310 / src.width)
+    }
   }
 
   update(dt: number, flock: Flock, scrollX: number, viewW: number, obstacles: Obstacle[] = []): void {
@@ -109,14 +123,22 @@ export class FalconSystem {
       }
     } else if (this.phase === 'window') {
       this.shadow.setAlpha(Math.max(0, 0.34 - this.timer * 0.5))
+      // the falcon banks visibly high above the flock — the readable "decide
+      // NOW" tell (art: falcon_bank)
+      this.setPose('bank')
+      this.falcon.setVisible(true)
+      const wob = Math.sin(this.timer * 4.2)
+      this.falcon.setPosition(flock.centerX + 60 + wob * 30, 120 + wob * 16)
+      this.falcon.setRotation(wob * 0.08)
       if (t > this.window) {
         this.phase = 'strike'
         this.timer = 0
         this.beginStrike(flock)
       }
     } else if (this.phase === 'strike') {
-      // dive along a steep arc through the flock's x
+      // dive along a steep arc through the flock's x (art: dive, then talons)
       const p = Math.min(1, this.timer / 0.55)
+      this.setPose(p < 0.6 ? 'dive' : 'strike')
       const fx = this.strikeX + (p - 0.5) * 260
       const fy = -160 + p * (flock.centerY + 240)
       this.falcon.setPosition(fx, fy)
@@ -128,6 +150,8 @@ export class FalconSystem {
         this.timer = 0
       }
     } else if (this.phase === 'exit') {
+      // wheeling away (art: falcon_retreat) — also the mob/defense pose
+      this.setPose('retreat')
       const p = Math.min(1, this.timer / 0.8)
       const fx = this.strikeX + 130 + p * 900
       const fy = flock.centerY + 80 - p * (flock.centerY + 500)

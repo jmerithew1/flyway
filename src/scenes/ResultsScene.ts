@@ -60,15 +60,20 @@ export class ResultsScene extends Phaser.Scene {
     ]
 
     const row = this.add.container(cx, 448).setAlpha(0)
+    const ratingKeys = ['rating_home', 'rating_flock', 'rating_flow']
     feathers.forEach(([label, earned, why], i) => {
       const x = (i - 1) * 320
-      // feather glyph: our own bird silhouette, warm-lit when earned
-      const icon = this.add
-        .image(x, 0, 'bird-up')
-        .setScale(0.42)
-        .setAngle(-18)
-      if (earned) icon.setTintFill(0xf6d9b8)
-      else icon.setTintFill(0x504664).setAlpha(0.8)
+      // the painted HOME/FLOCK/FLOW rating icons (earned vs unearned states)
+      const key = `${ratingKeys[i]}_${earned ? 'on' : 'off'}`
+      const icon = this.textures.exists(key)
+        ? this.add.image(x, 0, key).setDisplaySize(96, 96)
+        : this.add.image(x, 0, 'bird-up').setScale(0.42).setAngle(-18)
+      if (!this.textures.exists(key)) {
+        if (earned) icon.setTintFill(0xf6d9b8)
+        else icon.setTintFill(0x504664).setAlpha(0.8)
+      } else if (!earned) {
+        icon.setAlpha(0.75)
+      }
       row.add(icon)
       row.add(this.add.text(x, 52, label, style(15, earned ? '#f2e4d5' : '#8d8298', 4)).setOrigin(0.5))
       row.add(this.add.text(x, 80, why, style(13, earned ? '#c9b8a2' : '#a08f96')).setOrigin(0.5))

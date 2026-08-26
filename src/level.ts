@@ -183,7 +183,7 @@ export const FEATURES: PieceFeature[] = [
 
   // ===== FINAL FLOW (23200-25400) ===========================================
   gnd(23600, 'pointed_arch', 520, { flipX: true, flow: 'gather' }), // gather, thread
-  gnd(24250, 'wall_multi_window', 600, { flow: 'spread' }), // spread through windows
+  gnd(24250, 'gauntlet_gate', 720, { wide: true, flow: 'spread' }), // the monumental final gate — spread through its arches
   gnd(25000, 'aqueduct_run', 520, { wide: true }), // huge final split — the aqueduct run
   top(25000, 'root_tangle', 300, { sway: true }),
   // then open sky to the roost
