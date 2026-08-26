@@ -66,26 +66,34 @@ export class TitleScene extends Phaser.Scene {
     const tag = this.add.text(cx, 396, TAGLINE, voice(24, '#eddfd8')).setOrigin(0.5).setAlpha(0)
 
     // the same grammar, named for the hand that's playing it
+    // every verb, and what it DOES — the audit found half the control set
+    // undocumented and the documented half naming effects it never explained
     const controls = isTouch
       ? [
-          ['Drag', 'Steer'],
-          ['GATHER', 'hold Gather · tap Surge'],
-          ['SPREAD', 'hold Spread · tap Flare'],
-          ['CALL', 'Bring the lost home'],
+          ['Drag', 'steer the flock'],
+          ['GATHER', 'hold: tighten · tap: surge forward'],
+          ['SPREAD', 'hold: widen, gather strays · tap: brake'],
+          ['DIVE', 'hold: trade height for speed'],
+          ['CALL', 'cry out — the lost turn home'],
+          ['BOTH PADS', 'brace: the world slows'],
+          ['circle', 'whirl the flock into a column'],
         ]
       : [
-          ['Mouse', 'Steer'],
-          ['SPACE', 'hold Gather · tap Surge'],
-          ['SHIFT', 'hold Spread · tap Flare'],
-          ['C', 'Call the lost home'],
+          ['Mouse', 'steer the flock'],
+          ['SPACE', 'hold: tighten · tap: surge forward'],
+          ['SHIFT', 'hold: widen, gather strays · tap: brake'],
+          ['Mouse hold', 'dive: trade height for speed'],
+          ['C', 'cry out — the lost turn home'],
+          ['SPACE+SHIFT', 'brace: the world slows'],
+          ['circle', 'whirl the flock into a column'],
         ]
     const ctrlObjs: Phaser.GameObjects.Text[] = []
     controls.forEach(([k, v], i) => {
-      const y = 484 + i * 34
-      ctrlObjs.push(this.add.text(cx - 24, y, k, serif(18, '#f5edf3', 2)).setOrigin(1, 0.5).setAlpha(0))
-      ctrlObjs.push(this.add.text(cx + 24, y, v, serif(18, '#cdbdd4', 1)).setOrigin(0, 0.5).setAlpha(0))
+      const y = 470 + i * 27
+      ctrlObjs.push(this.add.text(cx - 18, y, k, serif(15, '#f5edf3', 2)).setOrigin(1, 0.5).setAlpha(0))
+      ctrlObjs.push(this.add.text(cx + 18, y, v, serif(15, '#bdb0c9', 0)).setOrigin(0, 0.5).setAlpha(0))
     })
-    const hint = this.add.text(cx, 612, TITLE_HINT, voice(17, '#f0e6ee')).setOrigin(0.5).setAlpha(0)
+    const hint = this.add.text(cx, 676, TITLE_HINT, voice(17, '#f0e6ee')).setOrigin(0.5).setAlpha(0)
     hint.setShadow(0, 1, '#3a2f4a', 4)
 
     const begin = this.add

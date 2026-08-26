@@ -19,7 +19,13 @@ export function loadArt(scene: Phaser.Scene): void {
   }
   // falcon: replaceable art slot — drop a real falcon at assets/processed/falcon.png
   // (existence is pre-checked in main.ts so a missing file never logs errors)
+  // only queue the optional slot when the HEAD pre-check actually found it,
+  // AND swallow a late failure so no session logs a load error for a file
+  // that is legitimately absent (the 4-pose sheet is the real falcon now)
   if ((window as unknown as Record<string, unknown>).__hasFalconArt) {
+    scene.load.once('loaderror', (f: { key?: string }) => {
+      if (f?.key === 'falcon-art') scene.load.off('loaderror')
+    })
     scene.load.image('falcon-art', 'assets/processed/falcon.png')
   }
 }

@@ -316,6 +316,8 @@ export class FlywayMapScene extends Phaser.Scene {
         .setAlpha(0)
         .setDepth(6)
         .setInteractive({ useHandCursor: true })
+      btn.input!.hitArea = new Phaser.Geom.Rectangle(-60, -30, btn.width + 120, btn.height + 60)
+      btn.input!.hitAreaCallback = Phaser.Geom.Rectangle.Contains
       btn.on('pointerover', () => btn.setColor('#ffe6bf'))
       btn.on('pointerout', () => btn.setColor(base))
       btn.on('pointerdown', run)

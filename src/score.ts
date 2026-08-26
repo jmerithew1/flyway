@@ -19,14 +19,15 @@ export type ScoreSource =
   | 'nightfall'
 
 export const POINTS: Record<ScoreSource, number> = {
-  flow: 500, // a whole passage flown clean and controlled
-  cleanPass: 150, // threading one real opening without losses
-  breakthrough: 200, // bursting a brittle curtain
+  flow: 900, // a whole passage flown clean and controlled
+  cleanPass: 260, // threading one real opening without losses
+  breakthrough: 300, // bursting a brittle curtain
   mob: 1000, // driving the falcon off
-  recovered: 50, // winning a scattered bird back
+  recovered: 15, // winning a scattered bird back — a rebate on your own
+  // mistake, never a payday (audit: a sloppy run banked 2,250 here)
   found: 60, // a stray joining the flock
   light: 25, // a mote of the old flyway
-  birds: 100, // per bird that reaches the roost
+  birds: 90, // per bird that reaches the roost
   nightfall: 20, // per second saved against par
 }
 
@@ -79,8 +80,11 @@ export class ScoreBook {
     return { source, points, multiplier, label: SOURCE_LABEL[source] }
   }
 
-  /** Clean flying compounds: x2 from the 3rd link, x3 from the 6th. */
+  /** Clean flying compounds: x2 from the 3rd link, x3 from the 6th, x4 from
+   * the 10th. The top tier exists so mastery can out-run luck — the audit
+   * measured run-to-run variance (1.79x) exceeding the whole skill gap. */
   streakMultiplier(): number {
+    if (this.streak >= 10) return 4
     if (this.streak >= 6) return 3
     if (this.streak >= 3) return 2
     return 1

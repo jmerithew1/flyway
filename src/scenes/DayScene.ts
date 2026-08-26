@@ -45,7 +45,7 @@ import {
   TAILWIND_ALIGN_MIN,
   TAILWIND_SPREAD_MIN,
 } from '../config'
-import { display, voice, INK } from '../ui'
+import { display, voice, INK, safeArea } from '../ui'
 import { Atmosphere, hazeScenery } from '../atmosphere'
 import { TouchControls, decorScale, isTouch } from '../touch'
 
@@ -417,6 +417,14 @@ export class DayScene extends Phaser.Scene {
       .setDepth(7.2)
     this.storm = 0
 
+    this.chainText = this.add
+      .text(0, 0, '', display(15, '#cdbdd4', 4, 500))
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(21)
+      .setAlpha(0)
+    this.chainText.setShadow(0, 2, '#2a2036', 6)
+
     this.leaderGlow = this.add
       .image(0, 0, 'softdot')
       .setTint(0xffd9a0)
@@ -428,6 +436,7 @@ export class DayScene extends Phaser.Scene {
     this.leaderMourn = 0
     this.turnedAway = false
     this.resultsSent = false
+    this.homecomingJoiners = 0
 
     this.colliderGfx = this.add.graphics().setDepth(19).setVisible(false)
 
@@ -549,6 +558,7 @@ export class DayScene extends Phaser.Scene {
     this.touch.onSurge = () => this.doSurge()
     this.touch.onFlare = () => this.doFlare()
     this.touch.onCall = () => this.echoCall()
+    this.touch.onPause = () => this.togglePause()
     kb.on('keydown-P', () => this.togglePause())
     kb.on('keydown-M', () => {
       this.muted = !this.muted
@@ -581,13 +591,14 @@ export class DayScene extends Phaser.Scene {
       .setAlpha(0.9)
       .setScrollFactor(0)
       .setDepth(20)
+    const safe = safeArea(this)
     this.countText = this.add
-      .text(52, 18, '120', display(28, INK.bright, 1))
+      .text(safe.x + 52, safe.y + 18, '120', display(28, INK.bright, 1))
       .setAlpha(0.92)
       .setScrollFactor(0)
       .setDepth(20)
     this.debugText = this.add
-      .text(14, 60, '', display(14, '#ffffff'))
+      .text(safe.x + 14, safe.y + 60, '', display(14, '#ffffff'))
       .setAlpha(0.7)
       .setScrollFactor(0)
       .setDepth(20)
@@ -605,31 +616,31 @@ export class DayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(20)
     this.scoreText = this.add
-      .text(VIEW_W - 26, 20, '0', display(26, INK.bright, 3))
+      .text(safe.x + safe.w - 26, safe.y + 20, '0', display(26, INK.bright, 3))
       .setOrigin(1, 0)
       .setAlpha(0.9)
       .setScrollFactor(0)
       .setDepth(20)
     this.streakText = this.add
-      .text(VIEW_W - 26, 56, '', display(17, '#ffd9a0', 5, 500))
+      .text(safe.x + safe.w - 26, safe.y + 56, '', display(17, '#ffd9a0', 5, 500))
       .setOrigin(1, 0)
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
     this.deltaText = this.add
-      .text(96, 44, '', display(19, INK.bright, 1))
+      .text(safe.x + 122, safe.y + 44, '', display(19, INK.bright, 1))
       .setOrigin(0, 0.5)
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
     this.scatteredText = this.add
-      .text(52, 46, '', display(13, '#d8c0a8', 1, 300))
+      .text(safe.x + 52, safe.y + 50, '', display(13, '#d8c0a8', 1, 300))
       .setOrigin(0, 0.5)
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
     this.recoveredText = this.add
-      .text(52, 68, '', display(13, '#ffd9a0', 1, 300))
+      .text(safe.x + 52, safe.y + 74, '', display(13, '#ffd9a0', 1, 300))
       .setOrigin(0, 0.5)
       .setAlpha(0)
       .setScrollFactor(0)
@@ -786,6 +797,7 @@ export class DayScene extends Phaser.Scene {
 
   private promptQueue: { key: string; text: string; done: () => boolean }[] = []
   private falconWarned = false
+  private popupSlot = 0
   private promptAge = 0
   private spaceDownT = -10
   private shiftDownT = -10
@@ -903,6 +915,7 @@ export class DayScene extends Phaser.Scene {
     this.prompt = { key: 'alert', done: () => !this.falcon.inWarning, fading: false }
     this.promptAge = 0
     this.promptText.setText(text).setAlpha(0).setColor('#ffd0b8')
+    this.promptText.setShadow(0, 2, '#3a1a1a', 8)
     this.tweens.add({ targets: this.promptText, alpha: 1, duration: 200 })
   }
 
@@ -921,9 +934,14 @@ export class DayScene extends Phaser.Scene {
       return
     }
     this.promptAge += dt
-    const sx = Phaser.Math.Clamp(this.flock.centerX - this.scrollX, 200, VIEW_W - 220)
-    const sy = Phaser.Math.Clamp(this.flock.centerY - 150, 70, VIEW_H - 60)
-    this.promptText.setPosition(sx, sy)
+    // sit clear of BOTH the flock and the HUD corners (audit: prompts drawn
+    // over the flock, prompt/HUD collision)
+    const above = this.flock.centerY > VIEW_H * 0.45
+    const at = this.floatAt(
+      this.flock.centerX - this.scrollX,
+      above ? this.flock.centerY - 190 : this.flock.centerY + 170,
+    )
+    this.promptText.setPosition(at.x, at.y)
     if (!this.prompt.fading && (this.prompt.done() || this.promptAge > 7)) {
       this.prompt.fading = true
       this.tweens.add({
@@ -1009,7 +1027,7 @@ export class DayScene extends Phaser.Scene {
     if (spread) this.spreadHeld += dt
 
     // ---- DIVE: hold to stoop, release to slingshot (the flock owns the impulse)
-    const diving = !this.finishing && !this.failing && (p.isDown || this.keyDive.isDown)
+    const diving = !this.finishing && !this.failing && (p.isDown || this.keyDive.isDown || this.touch.diving)
     if (diving !== this.prevDive) {
       this.flock.setDive(diving)
       if (diving) this.audio.formSnap('gather')
@@ -1096,6 +1114,9 @@ export class DayScene extends Phaser.Scene {
     this.processBrittle(dt, time)
     this.updateBrittleHints()
     this.updateLeader(dt)
+    // the chain rides with the flock, just under it
+    const chainAt = this.floatAt(this.flock.centerX - this.scrollX, this.flock.centerY + 96)
+    this.chainText.setPosition(chainAt.x, chainAt.y)
     this.updateStorm(dt)
     this.updateOpeningZones()
     this.cullStragglers(dt)
@@ -1173,6 +1194,18 @@ export class DayScene extends Phaser.Scene {
     // teach Neutral once, right after the spread lesson lands
     if (this.shownPrompts.has('spread') && !this.prompt && !this.shownPrompts.has('regroup') && this.scrollX > 1900) {
       this.showPrompt('regroup', '', () => Math.abs(this.flock.form) < 0.15 && this.flock.gatherStrain < 0.1)
+    }
+    // Dive: taught on the long open descent before the mid-game
+    if (this.scrollX > 6100 && this.scrollX < 7400) {
+      this.showPrompt('dive', '', () => this.flock.diveLift > 0.1)
+    }
+    // Vortex: taught where scattered birds are worth hoovering back
+    if (this.scrollX > 10100 && this.scrollX < 11200 && this.scatter.recoverableCount >= 3) {
+      this.showPrompt('vortex', '', () => this.flock.vortex > 0.1)
+    }
+    // Brace: taught entering the gauntlet, where reading the world matters
+    if (this.scrollX > 20500 && this.scrollX < 21600) {
+      this.showPrompt('brace', '', () => this.braceOn)
     }
     const zoneAhead = this.windZoneAt(this.flock.centerX + 500)
     if (zoneAhead) {
@@ -1257,7 +1290,7 @@ export class DayScene extends Phaser.Scene {
     // scattered-but-recoverable birds still count — they aren't lost yet
     const n = this.flock.count + this.scatter.recoverableCount
     if (this.scatter.recoverableCount > 0) {
-      this.scatteredText.setText(`${this.scatter.recoverableCount} scattered`).setAlpha(0.85).setPosition(16, 74)
+      this.scatteredText.setText(`${this.scatter.recoverableCount} scattered`).setAlpha(0.85)
     } else {
       this.scatteredText.setAlpha(0)
     }
@@ -1570,14 +1603,25 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
+  /** Keep floating text inside the visible rect AND clear of the touch pads. */
+  private floatAt(x: number, y: number): { x: number; y: number } {
+    const safe = safeArea(this)
+    const padGuard = isTouch ? 230 : 90
+    return {
+      x: Phaser.Math.Clamp(x, safe.x + 210, safe.x + safe.w - 210),
+      y: Phaser.Math.Clamp(y, safe.y + 70, safe.y + safe.h - padGuard),
+    }
+  }
+
   /** Say WHY birds were lost, at the place it happened. Rate-limited so a
    * bad passage explains itself once instead of shouting every frame. */
   private lastCauseT = -10
   private lossCause(text: string, x: number, y: number, time: number): void {
     if (time - this.lastCauseT < 2.4) return
     this.lastCauseT = time
-    const sx = Phaser.Math.Clamp(x - this.scrollX, 170, VIEW_W - 170)
-    const sy = Phaser.Math.Clamp(y + 44, 110, VIEW_H - 120)
+    const at = this.floatAt(x - this.scrollX, y + 44)
+    const sx = at.x
+    const sy = at.y
     const t = this.add
       .text(sx, sy, text, display(15, '#e6b3a4', 3, 400))
       .setOrigin(0.5)
@@ -1595,37 +1639,50 @@ export class DayScene extends Phaser.Scene {
     if (!ev) return
     const wx = at?.x ?? this.flock.centerX
     const wy = at?.y ?? this.flock.centerY
-    const sx = Phaser.Math.Clamp(wx - this.scrollX, 190, VIEW_W - 190)
-    const sy = Phaser.Math.Clamp(wy - 90, 90, VIEW_H - 150)
+    const spot = this.floatAt(wx - this.scrollX, wy - 90)
+    const sx = spot.x
+    const sy = spot.y
     const big = ev.points >= 500
+    // stagger against anything still on screen so popups never stack
+    this.popupSlot = (this.popupSlot + 1) % 4
+    const slotY = (this.popupSlot - 1.5) * 30
     const label = this.add
-      .text(sx, sy, `${ev.label}  +${ev.points}`, display(big ? 21 : 17, big ? '#ffe6bf' : '#f2e4d5', big ? 6 : 4, big ? 500 : 400))
+      .text(sx, sy + slotY, `${ev.label}  +${ev.points}`, display(big ? 21 : 17, big ? '#ffe6bf' : '#f2e4d5', big ? 6 : 4, big ? 500 : 400))
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(21)
       .setAlpha(0)
     label.setShadow(0, 2, '#2a2036', 6)
-    this.tweens.add({ targets: label, alpha: 1, y: sy - 26, duration: 380, ease: 'Cubic.easeOut' })
-    this.tweens.add({ targets: label, alpha: 0, y: sy - 64, duration: 700, delay: 620, onComplete: () => label.destroy() })
-    if (ev.multiplier > 1) {
-      this.streakText.setText(`×${ev.multiplier}  ${this.score.streak} clean`).setAlpha(1)
-      this.tweens.killTweensOf(this.streakText)
-      this.tweens.add({ targets: this.streakText, alpha: 0, duration: 900, delay: 1300 })
-    }
+    this.tweens.add({ targets: label, alpha: 1, y: sy + slotY - 26, duration: 380, ease: 'Cubic.easeOut' })
+    this.tweens.add({ targets: label, alpha: 0, y: sy + slotY - 64, duration: 700, delay: 620, onComplete: () => label.destroy() })
+    if (this.score.streak > 0) this.showChain(ev.multiplier)
   }
 
-  /** A collision breaks the chain — the loss the player feels most. */
+  /** The live chain, pinned beside the flock and PERSISTENT — the audit found
+   * it invisible until x2, for 2.2s, in a corner the player never looks at. */
+  private chainText!: Phaser.GameObjects.Text
+  private showChain(mult: number): void {
+    const n = this.score.streak
+    const next = n < 3 ? 3 : n < 6 ? 6 : 10
+    const label = mult > 1 ? `×${mult}  ${n} CLEAN` : `${n} CLEAN  ·  ×2 at ${next}`
+    this.chainText
+      .setText(label)
+      .setColor(mult >= 3 ? '#ffe6bf' : mult > 1 ? '#ffd9a0' : '#cdbdd4')
+      .setAlpha(1)
+      .setScale(1.25)
+    this.tweens.killTweensOf(this.chainText)
+    this.tweens.add({ targets: this.chainText, scale: 1, duration: 260, ease: 'Back.easeOut' })
+  }
+
+  /** A collision breaks the chain — the loss the player feels most. Even a
+   * 2-link chain says so now; silence was reading as "nothing was lost". */
   private breakScoreStreak(): void {
-    if (!this.score.breakStreak()) return
-    this.streakText.setText('streak lost').setColor('#e0a898').setAlpha(1)
-    this.tweens.killTweensOf(this.streakText)
-    this.tweens.add({
-      targets: this.streakText,
-      alpha: 0,
-      duration: 700,
-      delay: 500,
-      onComplete: () => this.streakText.setColor('#ffd9a0'),
-    })
+    const had = this.score.streak
+    this.score.breakStreak()
+    if (had < 1) return
+    this.chainText.setText(had >= 3 ? `CHAIN BROKEN  ${had}` : 'chain broken').setColor('#e0a898').setAlpha(1)
+    this.tweens.killTweensOf(this.chainText)
+    this.tweens.add({ targets: this.chainText, alpha: 0, duration: 800, delay: 900 })
   }
 
   /** Feathers: the universal loss language. Small puffs per bird; the
@@ -2015,6 +2072,11 @@ export class DayScene extends Phaser.Scene {
     // 3) restart from the landmark
     this.time.delayedCall(4300, () => {
       this.respawnAtCheckpoint()
+      // the world must be VISIBLE before it is dangerous again
+      this.paused = true
+      this.time.delayedCall(1150, () => {
+        this.paused = false
+      })
       if (this.checkpoint.name) this.audio.landmarkTone(this.checkpoint.name)
       for (const t of this.failTexts) t.destroy()
       this.failTexts = []
@@ -2024,15 +2086,24 @@ export class DayScene extends Phaser.Scene {
     })
   }
 
+  private failsHere = 0
+  private lastFailX = -1
+
   private respawnAtCheckpoint(): void {
     const cp = this.checkpoint
+    // repeated failure at the same landmark earns real help, never a silent
+    // difficulty nerf: more birds back, and the terrain that beat you is
+    // pointed out explicitly
+    if (Math.abs(cp.x - this.lastFailX) < 40) this.failsHere++
+    else this.failsHere = 1
+    this.lastFailX = cp.x
     this.scrollX = Math.max(cp.x - VIEW_W * 0.35, 0)
     this.cameras.main.scrollX = this.scrollX
     this.scatter.clear()
     this.lastHit.clear()
     this.brittleCharge.clear()
     this.stuckTime.clear()
-    const targetCount = Math.max(cp.count, 60)
+    const targetCount = Math.max(cp.count, 60 + (this.failsHere - 1) * 18)
     while (this.flock.count > targetCount) this.flock.removeBird(this.flock.birds[this.flock.birds.length - 1])
     while (this.flock.count < targetCount) this.flock.spawnBird(cp.x + rand(-120, 120), 430 + rand(-80, 80))
     for (const b of this.flock.birds) {
@@ -2057,6 +2128,18 @@ export class DayScene extends Phaser.Scene {
     this.promptQueue.length = 0
     this.prompt = null
     this.promptText.setAlpha(0)
+    if (this.failsHere >= 2) {
+      this.shownPrompts.delete('help')
+      this.time.delayedCall(1200, () =>
+        this.showPrompt(
+          'help',
+          isTouch
+            ? 'hold GATHER through tight stone — a tight flock survives it'
+            : 'hold SPACE through tight stone — a tight flock survives it',
+          () => this.flock.gatherStrain > 0.15,
+        ),
+      )
+    }
     for (const z of this.openingZones) if (z.x > cp.x) z.state = 'idle'
     // reset flow gates and motes ahead of the checkpoint
     for (const [f, g] of this.flowGates) if (f.x > cp.x) { g.state = 'idle'; g.clean = true }
@@ -2081,6 +2164,8 @@ export class DayScene extends Phaser.Scene {
 
   private turnedAway = false
   private resultsSent = false
+  /** birds the homecoming adds for spectacle — never counted as YOUR flock */
+  private homecomingJoiners = 0
   private leader: Bird | null = null
   private leaderGlow!: Phaser.GameObjects.Image
   private leaderMourn = 0
@@ -2134,7 +2219,8 @@ export class DayScene extends Phaser.Scene {
    * so letting go never fires Surge and Flare on the way out. */
   private updateBrace(rawDt: number): void {
     this.braceCool = Math.max(0, this.braceCool - rawDt)
-    const chord = !this.finishing && !this.failing && this.keySpace.isDown && this.keyShift.isDown
+    const chord =
+      !this.finishing && !this.failing && ((this.keySpace.isDown && this.keyShift.isDown) || this.touch.brace)
     if (chord && this.braceCool <= 0) {
       this.braceHeld += rawDt
       const live = this.braceHeld > BRACE_CHORD_DELAY && this.braceHeld < BRACE_CHORD_DELAY + BRACE_MAX_TIME
@@ -2509,6 +2595,7 @@ export class DayScene extends Phaser.Scene {
         if (this.flock.count < 220) {
           for (let i = 0; i < 5; i++) {
             const side = Math.random() < 0.5 ? -1 : 1
+            this.homecomingJoiners++
             this.flock.spawnBird(
               cx + rand(300, 700) * side * 0.6 + 200,
               this.flock.centerY + rand(-320, 320),
@@ -2554,10 +2641,12 @@ export class DayScene extends Phaser.Scene {
       this.runArrivalCeremony(dt)
       if (this.finishTimer > 8.6 && !this.resultsSent) {
         this.resultsSent = true
-        this.stats.returned = this.flock.count
+        // the homecoming's joiners are spectacle, not achievement
+        const arrived = Math.max(0, this.flock.count - this.homecomingJoiners)
+        this.stats.returned = arrived
         // survival + the nightfall bonus land last, so the ceremony can
         // count them up as the closing beats
-        this.awardScore('birds', this.flock.count)
+        this.awardScore('birds', arrived)
         const saved = Math.max(0, Math.round(NIGHTFALL_PAR - this.flightSeconds))
         if (saved > 0) this.awardScore('nightfall', saved)
         const result = scoreFeathers({
@@ -2566,7 +2655,7 @@ export class DayScene extends Phaser.Scene {
           strayBirdsFound: this.stats.found,
           scatteredBirdsRecovered: this.stats.recovered,
           birdsPermanentlyLost: this.stats.lost,
-          birdsArrived: this.flock.count,
+          birdsArrived: arrived,
           perfectFlows: this.stats.flow,
           totalFlowOpportunities: this.stats.flowTotal,
           collisionEvents: this.stats.collisionEvents,

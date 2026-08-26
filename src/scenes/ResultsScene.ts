@@ -147,6 +147,9 @@ export class ResultsScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setAlpha(0)
         .setInteractive({ useHandCursor: true })
+      // a text-sized hit box is a miss on a phone; pad it to a real target
+      btn.input!.hitArea = new Phaser.Geom.Rectangle(-60, -30, btn.width + 120, btn.height + 60)
+      btn.input!.hitAreaCallback = Phaser.Geom.Rectangle.Contains
       btn.on('pointerover', () => btn.setColor('#ffe6bf'))
       btn.on('pointerout', () => btn.setColor(base))
       btn.on('pointerdown', run)
@@ -154,9 +157,9 @@ export class ResultsScene extends Phaser.Scene {
       this.at(featherBase + 1800, () => this.tweens.add({ targets: [btn, sub], alpha: 0.92, duration: 480 }))
     }
     mk(cx - 175, 'REPLAY FLIGHT', 'press R', () => this.scene.start('Day'), true)
-    mk(cx + 175, 'CONTINUE JOURNEY', 'press M', () => this.scene.start('FlywayMap'))
+    mk(cx + 175, 'CONTINUE JOURNEY', 'press J', () => this.scene.start('FlywayMap'))
     this.input.keyboard?.once('keydown-R', () => this.scene.start('Day'))
-    this.input.keyboard?.once('keydown-M', () => this.scene.start('FlywayMap'))
+    this.input.keyboard?.once('keydown-J', () => this.scene.start('FlywayMap'))
 
     this.tweens.add({ targets: title, alpha: 0.96, duration: 800 })
     this.tweens.add({ targets: rowObjs, alpha: 0.92, duration: 600, delay: 600 })

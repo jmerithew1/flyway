@@ -23,7 +23,7 @@
  */
 
 import Phaser from 'phaser'
-import { display, INK } from './ui'
+import { display, INK, safeArea } from './ui'
 
 /** Coarse pointer or a real touch digitiser — the only gate in this file. */
 /** Decorative density multiplier. Phones pay for every tweened sprite, and
@@ -203,11 +203,20 @@ export class TouchControls {
   onSurge: () => void = () => {}
   onFlare: () => void = () => {}
   onCall: () => void = () => {}
+  onPause: () => void = () => {}
+  /** true while BOTH formation pads are held — the touch Brace chord. */
+  get brace(): boolean {
+    return this.gather && this.spread
+  }
+  /** true while the DIVE pad is held. */
+  dive = false
 
   private pads: Pad[] = []
   private gatherPad?: Pad
   private spreadPad?: Pad
   private callPad?: Pad
+  private divePad?: Pad
+  private pausePad?: Pad
   private scene?: Phaser.Scene
   /** Pointer ids currently owned by a pad — excluded from steering. */
   private padPointers = new Set<number>()
@@ -220,11 +229,13 @@ export class TouchControls {
     this.scene = scene
     ensurePadTexture(scene)
 
-    const w = scene.scale.width
-    const h = scene.scale.height
-    const bottom = h - MARGIN_Y
+    // anchor to what the player can actually SEE, not the raw canvas
+    const safe = safeArea(scene)
+    const w = safe.x + safe.w
+    const bottom = safe.y + safe.h - MARGIN_Y
+    const left = safe.x + MARGIN_X
 
-    this.gatherPad = new Pad(scene, MARGIN_X, bottom, PAD_R, { label: 'GATHER' }, depth, () => this.onSurge())
+    this.gatherPad = new Pad(scene, left, bottom, PAD_R, { label: 'GATHER' }, depth, () => this.onSurge())
     this.spreadPad = new Pad(scene, w - MARGIN_X, bottom, PAD_R, { label: 'SPREAD' }, depth, () => this.onFlare())
     this.callPad = new Pad(
       scene,
@@ -235,7 +246,11 @@ export class TouchControls {
       depth,
       () => this.onCall(),
     )
-    this.pads = [this.gatherPad, this.spreadPad, this.callPad]
+    // DIVE pad above GATHER — the audit found Dive/Brace unreachable on touch
+    this.divePad = new Pad(scene, left, bottom - PAD_R - CALL_R - 26, CALL_R, { label: 'DIVE' }, depth, () => {})
+    // PAUSE: small, out of the thumb arcs, top-right — touch had no chrome at all
+    this.pausePad = new Pad(scene, w - 74, safe.y + 74, 42, { label: 'II' }, depth, () => this.onPause())
+    this.pads = [this.gatherPad, this.spreadPad, this.callPad, this.divePad, this.pausePad]
 
     scene.input.on(Phaser.Input.Events.POINTER_DOWN, this.onDown, this)
     scene.input.on(Phaser.Input.Events.POINTER_MOVE, this.onMove, this)
@@ -250,6 +265,11 @@ export class TouchControls {
     this.shimmed = true
 
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroy())
+  }
+
+  /** True while the DIVE pad is held (touch equivalent of the mouse hold). */
+  get diving(): boolean {
+    return !!this.divePad?.held
   }
 
   /** True while the GATHER pad is held. */
