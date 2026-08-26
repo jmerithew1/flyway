@@ -340,6 +340,15 @@ export class GameAudio {
     this.noiseGain.gain.setTargetAtTime(0.35 + gather * 0.25 + speed * 0.15 - this.sStrain * 0.12, t, 0.5)
   }
 
+  /** Storm pressure: the wing bed roughens and widens as weather closes in. */
+  setStormy(amount01: number): void {
+    if (!this.ctx) return
+    const t = this.ctx.currentTime
+    const a = Math.max(0, Math.min(1, amount01))
+    this.noiseFilter.Q.setTargetAtTime(0.6 + a * 2.2, t, 0.6)
+    this.noiseGain.gain.setTargetAtTime(0.5 + a * 0.35, t, 0.6)
+  }
+
   /** Master mute — the whole graph ducks, nothing is torn down. */
   setMuted(on: boolean): void {
     if (!this.ctx) return

@@ -378,6 +378,24 @@ export class DayScene extends Phaser.Scene {
       }
     }
 
+    this.stormVeil = this.add
+      .rectangle(0, 0, VIEW_W, VIEW_H, 0x2a2450, 0)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(7.2)
+    this.storm = 0
+
+    this.leaderGlow = this.add
+      .image(0, 0, 'softdot')
+      .setTint(0xffd9a0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDisplaySize(46, 46)
+      .setAlpha(0)
+      .setDepth(3.9)
+    this.leader = null
+    this.leaderMourn = 0
+    this.turnedAway = false
+
     this.colliderGfx = this.add.graphics().setDepth(19).setVisible(false)
 
     // authored predator zones: one mid-day, one in the final run
@@ -595,6 +613,7 @@ export class DayScene extends Phaser.Scene {
     for (const t of introBits) t.setAlpha(0)
     this.tweens.add({ targets: introBits, alpha: 0.95, duration: 550, hold: 1300, yoyo: true, onComplete: () => introBits.forEach((t) => t.destroy()) })
 
+    this.placeGhostFlyways()
     this.beginDeparture()
 
     this.time.delayedCall(2600, () =>
@@ -988,6 +1007,8 @@ export class DayScene extends Phaser.Scene {
     this.processGrazes(time)
     this.processBrittle(dt, time)
     this.updateBrittleHints()
+    this.updateLeader(dt)
+    this.updateStorm(dt)
     this.updateOpeningZones()
     this.cullStragglers(dt)
     const spreadAmt = Math.max(-this.flock.form, 0)
@@ -1893,6 +1914,51 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
+  private turnedAway = false
+  private leader: Bird | null = null
+  private leaderGlow!: Phaser.GameObjects.Image
+  private leaderMourn = 0
+
+  /** Crown the strongest flier as a visible vanguard. Judges bond with
+   * individuals, not clouds — and her loss is felt, never punished. */
+  private updateLeader(dt: number): void {
+    if (this.leaderMourn > 0) this.leaderMourn -= dt
+    if (!this.leader || !this.leader.alive) {
+      if (this.leader) {
+        // she was lost: the wing bed thins and no one leads for a while
+        this.leader = null
+        this.leaderMourn = 8
+        this.leaderGlow.setAlpha(0)
+        this.audio.setThin(true)
+        this.time.delayedCall(2600, () => this.audio.setThin(false))
+      }
+      if (this.leaderMourn <= 0 && this.flock.count > 4) {
+        let best: Bird | null = null
+        let bestScore = -1
+        for (const b of this.flock.birds) {
+          const sc = b.speedFactor * b.intentResponse
+          if (sc > bestScore) {
+            bestScore = sc
+            best = b
+          }
+        }
+        this.leader = best
+        if (this.leader) {
+          this.leader.sprite.setScale(this.leader.sprite.scale * 1.22)
+          this.audio.chime(587, 0)
+          this.showPrompt('leader', 'she leads', () => true)
+        }
+      }
+    }
+    if (this.leader && this.leader.alive) {
+      this.leaderGlow.setPosition(this.leader.x, this.leader.y).setAlpha(0.3)
+      // a crisper flock while she flies — a bonus, never a penalty when gone
+      this.flock.leaderAura = 1
+    } else {
+      this.flock.leaderAura = 0
+    }
+  }
+
   private paused = false
   private muted = false
   private pauseVeil: Phaser.GameObjects.Container | null = null
@@ -1937,6 +2003,58 @@ export class DayScene extends Phaser.Scene {
   /** Dawn bookend: the flock is asleep in a roadside roost and lifts off in
    * ones and twos as the day begins. Control is live throughout — the player
    * is already steering the forming flock, so there is no dead cinematic. */
+  /** Faint spectral bird-streams along the historic route — the flocks that
+   * came before. They mark the generous lines through each act. */
+  /** Wind Heights becomes a storm: the sky darkens, wisps race, and the
+   * gusts bite — the act earns its name instead of being a modifier. */
+  private storm = 0
+  private stormVeil!: Phaser.GameObjects.Rectangle
+  private updateStorm(dt: number): void {
+    const inStorm = this.scrollX > 11800 && this.scrollX < 14900
+    this.storm = Phaser.Math.Clamp(this.storm + (inStorm ? dt : -dt) * 0.55, 0, 1)
+    if (this.storm <= 0 && this.stormVeil.alpha === 0) return
+    this.stormVeil.setAlpha(this.storm * 0.3)
+    if (this.storm > 0.25) {
+      // the flock is buffeted: readable pressure, never invisible damage
+      const gust = Math.sin(this.simClock * 1.7) * Math.sin(this.simClock * 0.6)
+      for (const b of this.flock.birds) b.vy += gust * 46 * this.storm * dt * 60 * 0.016
+      this.audio.setStormy(this.storm)
+    }
+  }
+
+  private placeGhostFlyways(): void {
+    const routes: Array<[number, number, number]> = [
+      [2300, 300, 520],
+      [7000, 430, 900],
+      [12600, 250, 640],
+      [18600, 520, 700],
+      [24400, 360, 820],
+    ]
+    for (const [x, y, len] of routes) {
+      for (let i = 0; i < 14; i++) {
+        const t = i / 13
+        const gx = x + len * t
+        const gy = y + Math.sin(t * Math.PI * 1.4) * 46
+        const g = this.add
+          .image(gx, gy, 'bird-mid')
+          .setScale(0.1 + Math.random() * 0.04)
+          .setAlpha(0)
+          .setTint(0xd9cff0)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(1.8)
+        this.tweens.add({
+          targets: g,
+          alpha: 0.16 + Math.random() * 0.1,
+          duration: 1400 + Math.random() * 900,
+          delay: i * 90,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        })
+      }
+    }
+  }
+
   private beginDeparture(): void {
     if (!this.textures.exists('perched_a')) return
     const treeArt = ART[this.textures.exists('roost_tree_hero') ? 'roost_tree_hero' : 'roost_tree']
@@ -2106,6 +2224,28 @@ export class DayScene extends Phaser.Scene {
         })
       }
       return
+    }
+    // the threat acknowledges the flock made it — high, distant, and gone
+    if (!this.turnedAway && cx > ROOST_X - 2100 && this.textures.exists('falcon_retreat')) {
+      this.turnedAway = true
+      const f = this.add
+        .image(cx + 700, 150, 'falcon_retreat')
+        .setDisplaySize(150, 132)
+        .setAlpha(0)
+        .setDepth(9)
+        .setTint(0xd8c6dc)
+      this.audio.falconScreech()
+      this.tweens.add({ targets: f, alpha: 0.75, duration: 900 })
+      this.tweens.add({
+        targets: f,
+        x: cx + 1500,
+        y: 60,
+        alpha: 0,
+        duration: 5200,
+        delay: 900,
+        ease: 'Sine.easeIn',
+        onComplete: () => f.destroy(),
+      })
     }
     if (cx >= ROOST_X - 240) {
       this.finishing = true

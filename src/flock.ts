@@ -226,6 +226,9 @@ export class Flock {
   draft = 0
   /** Late-game intensity: scales danger accrual as dusk closes in (set per act). */
   dangerScale = 1
+  /** 0..1 — a crowned leader makes the whole flock track intent a touch
+   * crisper. Positive-only: losing her removes a bonus, never adds a tax. */
+  leaderAura = 0
   private prevHeading = 0
   private turnRateSmooth = 0
 
@@ -321,7 +324,7 @@ export class Flock {
     // neutral flocks cohere loosely (big living cloud); gathering multiplies pull
     const wCoh = TUNING.wCohesion * lerp(0.35, 1, Math.abs(f)) * (1 + gather * 2.1 - spread * 0.6)
     const wSep = TUNING.wSeparation * (1 + spread * 0.5 - gather * 0.25)
-    const wInt = TUNING.wIntent * (1 + gather * 0.35)
+    const wInt = TUNING.wIntent * (1 + gather * 0.35 + this.leaderAura * 0.1)
     const wJit = TUNING.wJitter * (1 + spread * 0.9) * (1 + gStrain * 1.2 + sStrain * 0.5)
 
     this.rebuildGrid()
