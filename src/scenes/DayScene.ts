@@ -217,9 +217,10 @@ export class DayScene extends Phaser.Scene {
 
     // ---- slow parallax: misty ruin clusters from the panorama sheet
     const clusters: Array<[string, number, number, number, number]> = [
-      // key, factor, spacing, y, alpha
-      ['panorama_1', 0.08, 2600, 742, 0.5],
-      ['panorama_3', 0.12, 3400, 726, 0.55],
+      // key, factor, spacing, y, alpha — TRUE painted vistas only (01/03/04
+      // are segmentation fragments that upscale into blurry cards)
+      ['panorama_2', 0.08, 3400, 738, 0.5],
+      ['panorama_6', 0.12, 2900, 730, 0.55],
       ['panorama_5', 0.16, 2900, 748, 0.6],
       ['panorama_0', 0.12, 4100, 734, 0.5],
     ]
@@ -615,6 +616,7 @@ export class DayScene extends Phaser.Scene {
   private callStrength = 1
   private mobLift = 0
   private draftTrailT = 0
+  private journeyTick = 0
 
   /** Surge: tap SPACE — whipcrack pulse. Weak and ragged when strained. */
   private doSurge(): void {
@@ -658,22 +660,37 @@ export class DayScene extends Phaser.Scene {
     this.callTimer = 2.5
     this.callCooldown = 6
     this.audio.echoCall(this.callStrength)
-    const ring = this.add
-      .image(this.flock.centerX, this.flock.centerY, 'softdot')
-      .setTint(0xffd9a0)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setDepth(6)
-      .setAlpha(0.5 * this.callStrength)
-      .setDisplaySize(120, 120)
-    this.tweens.add({
-      targets: ring,
-      displayWidth: 900 * this.callStrength,
-      displayHeight: 900 * this.callStrength,
-      alpha: 0,
-      duration: 1100,
-      ease: 'Sine.easeOut',
-      onComplete: () => ring.destroy(),
-    })
+    // the cry propagates: three expanding rings, and birds flash warm as
+    // the wave passes over them
+    for (let i = 0; i < 3; i++) {
+      const ring = this.add
+        .image(this.flock.centerX, this.flock.centerY, 'softdot')
+        .setTint(0xffd9a0)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(6)
+        .setAlpha((0.45 - i * 0.1) * this.callStrength)
+        .setDisplaySize(120, 120)
+      this.tweens.add({
+        targets: ring,
+        displayWidth: (700 + i * 260) * this.callStrength,
+        displayHeight: (700 + i * 260) * this.callStrength,
+        alpha: 0,
+        duration: 1000 + i * 260,
+        delay: i * 140,
+        ease: 'Sine.easeOut',
+        onComplete: () => ring.destroy(),
+      })
+    }
+    const cx = this.flock.centerX
+    const cy = this.flock.centerY
+    for (const b of this.flock.birds) {
+      const d = Math.hypot(b.x - cx, b.y - cy)
+      this.time.delayedCall(d * 1.6, () => {
+        if (!b.sprite.active) return
+        b.sprite.setTint(0xffe6c4)
+        this.time.delayedCall(130, () => b.sprite.active && b.sprite.clearTint())
+      })
+    }
   }
 
   /** One-time prompts queue instead of being dropped when the slot is busy,
@@ -926,7 +943,16 @@ export class DayScene extends Phaser.Scene {
     this.checkFinish(dt)
 
     const meanSpeed = Math.hypot(this.flock.meanVX, this.flock.meanVY) / 430
-    this.audio.musicTick(dt, Phaser.Math.Clamp(this.flock.centerX / ROOST_X + this.flowStreak * 0.08, 0, 1))
+    const journey01 = Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1)
+    // gauntlet intensity drives the low drone; the act index colors the key
+    const intensity = this.scrollX > 20400 ? 0.85 : this.scrollX > 14400 ? 0.5 : 0.15
+    this.audio.musicTick(dt, Phaser.Math.Clamp(journey01 + this.flowStreak * 0.08, 0, 1), intensity)
+    this.journeyTick -= dt
+    if (this.journeyTick <= 0) {
+      this.journeyTick = 0.5
+      const ratio = Phaser.Math.Clamp((this.flock.count + this.scatter.recoverableCount) / START_BIRDS, 0, 1)
+      this.audio.setJourney(journey01, ratio, this.scrollX > 20400 ? 2 : this.scrollX > 12000 ? 1 : 0)
+    }
     this.audio.setStrain(this.flock.gatherStrain, this.flock.spreadStrain)
     this.audio.setFlockState(this.flock.form, Phaser.Math.Clamp(meanSpeed, 0, 1))
     // first-time strain hints, once each, fading on recovery
@@ -1560,6 +1586,7 @@ export class DayScene extends Phaser.Scene {
         if (lm.name) {
           this.showLandmark(`${lm.name} reached`)
           this.audio.landmarkTone(lm.name)
+          this.audio.celebrationSwell(0.55)
         }
       }
     }
@@ -1710,7 +1737,10 @@ export class DayScene extends Phaser.Scene {
             this.echoes.push({ img, leader, dx: rand(-70, 70), dy: rand(-56, 56), ph: rand(0, 6) })
           }
         }
-        if (this.echoes.length === 9) this.audio.homeSwell()
+        if (this.echoes.length === 9) {
+          this.audio.homeSwell()
+          this.audio.celebrationSwell(1)
+        }
       }
     }
     // echoes trail their leaders — hundreds of birds for the cost of a lerp

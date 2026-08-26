@@ -4,6 +4,7 @@ import { SandboxScene } from './scenes/SandboxScene'
 import { DayScene } from './scenes/DayScene'
 import { TitleScene } from './scenes/TitleScene'
 import { ResultsScene } from './scenes/ResultsScene'
+import { FlywayMapScene } from './scenes/FlywayMapScene'
 
 class BootScene extends Phaser.Scene {
   constructor() {
@@ -18,7 +19,9 @@ class BootScene extends Phaser.Scene {
     createCoreTextures(this)
     resolveFalconTexture(this)
     const params = new URLSearchParams(window.location.search)
-    this.scene.start(params.has('sandbox') ? 'Sandbox' : params.has('day') ? 'Day' : 'Title')
+    this.scene.start(
+      params.has('sandbox') ? 'Sandbox' : params.has('day') ? 'Day' : params.has('map') ? 'FlywayMap' : 'Title',
+    )
   }
 }
 
@@ -43,5 +46,5 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, TitleScene, SandboxScene, DayScene, ResultsScene],
+  scene: [BootScene, TitleScene, SandboxScene, DayScene, ResultsScene, FlywayMapScene],
 }

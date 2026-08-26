@@ -92,21 +92,34 @@ export class ResultsScene extends Phaser.Scene {
     const best = this.add.text(cx, 622, bestLine, style(14, '#a597ae')).setOrigin(0.5).setAlpha(0)
 
     const replay = this.add
-      .text(cx, 692, 'REPLAY DAY', style(22, '#f7f0ea', 5))
+      .text(cx - 200, 692, 'REPLAY DAY', style(22, '#f7f0ea', 5))
       .setOrigin(0.5)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true })
-    const replayHint = this.add.text(cx, 724, 'click, or press R', style(13, '#a597ae')).setOrigin(0.5).setAlpha(0)
+    const replayHint = this.add.text(cx - 200, 724, 'click, or press R', style(13, '#a597ae')).setOrigin(0.5).setAlpha(0)
     replay.on('pointerover', () => replay.setColor('#ffe6bf'))
     replay.on('pointerout', () => replay.setColor('#f7f0ea'))
     const restart = () => this.scene.start('Day')
     replay.on('pointerdown', restart)
     this.input.keyboard?.once('keydown-R', restart)
 
+    // onward to the migration map — the journey is bigger than one flight
+    const journey = this.add
+      .text(cx + 200, 692, 'CONTINUE JOURNEY', style(22, '#f6d9b8', 5))
+      .setOrigin(0.5)
+      .setAlpha(0)
+      .setInteractive({ useHandCursor: true })
+    const journeyHint = this.add.text(cx + 200, 724, 'click, or press M', style(13, '#a597ae')).setOrigin(0.5).setAlpha(0)
+    journey.on('pointerover', () => journey.setColor('#ffe6bf'))
+    journey.on('pointerout', () => journey.setColor('#f6d9b8'))
+    const toMap = () => this.scene.start('FlywayMap')
+    journey.on('pointerdown', toMap)
+    this.input.keyboard?.once('keydown-M', toMap)
+
     this.tweens.add({ targets: title, alpha: 0.96, duration: 900 })
     this.tweens.add({ targets: rowObjs, alpha: 0.92, duration: 800, delay: 500 })
     this.tweens.add({ targets: row, alpha: 1, duration: 900, delay: 1100 })
     this.tweens.add({ targets: [overall, best], alpha: 1, duration: 700, delay: 1900 })
-    this.tweens.add({ targets: [replay, replayHint], alpha: 0.9, duration: 700, delay: 2400 })
+    this.tweens.add({ targets: [replay, replayHint, journey, journeyHint], alpha: 0.9, duration: 700, delay: 2400 })
   }
 }

@@ -595,8 +595,17 @@ export class Flock {
       const target = Math.atan2(b.vy, b.vx)
       b.renderAngle += wrapAngle(target - b.renderAngle) * rk
       s.rotation = b.renderAngle
-      const key = birdFrameKey(this.time, b.flapPhase, b.flapFreq)
+      // FLARE: the whole flock snaps wings-up in unison — a one-beat firework
+      const key = this.flareAmt > 0.45 ? 'bird-up' : birdFrameKey(this.time, b.flapPhase, b.flapFreq)
       if (s.texture.key !== key) s.setTexture(key)
+      // SURGE: the leading edge catches the light — warm rim on the spear-tip
+      if (this.pulse > 0.3) {
+        const ahead = (b.x - this.centerX) * Math.cos(b.renderAngle) + (b.y - this.centerY) * Math.sin(b.renderAngle)
+        if (ahead > 20) s.setTint(0xffdfb8)
+        else s.clearTint()
+      } else if (s.isTinted) {
+        s.clearTint()
+      }
       // faint breathing keeps silhouettes from feeling stamped
       const flap = Math.sin(this.time * b.flapFreq + b.flapPhase)
       s.scaleY = this.scale * b.depth * (0.94 + 0.08 * flap)

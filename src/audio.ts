@@ -10,6 +10,19 @@
  */
 const STEM_LAYERS = ['pad', 'bells', 'wings'] as const
 
+// ---- act key-color: each act nudges the whole palette up a few semitones.
+// Pad bank + bell motif + drone all shift together, so intervals (and the
+// pentatonic character) are preserved — color changes, never dissonance.
+const ACT_SEMIS = [0, 2, 4] as const
+// G-major pentatonic motif (G4 A4 C5 D5 E5 G5), precomputed per act.
+const BELL_BASE = [392, 440, 523.3, 587.3, 659.3, 784] as const
+const BELL_TABLES: ReadonlyArray<ReadonlyArray<number>> = ACT_SEMIS.map((s) =>
+  BELL_BASE.map((f) => f * Math.pow(2, s / 12)),
+)
+// Low D2 — the fifth below the pad's G root, dropped an octave.
+const DRONE_BASE = 73.42
+const DRONE_FREQS: ReadonlyArray<number> = ACT_SEMIS.map((s) => DRONE_BASE * Math.pow(2, s / 12))
+
 export class GameAudio {
   private ctx: AudioContext | null = null
   private master!: GainNode
@@ -22,6 +35,16 @@ export class GameAudio {
   private bellTimer = 0
   private bellStep = 0
   private progress01 = 0
+  // ---- journey / escalation state
+  private padVoices: Array<{ osc: OscillatorNode; baseDetune: number }> = []
+  private actIdx = 0
+  private bellDensity = 1 // 0..1 motif density (flock grief thins it)
+  private motifBoost = 1 // >=1, from gauntlet intensity
+  private padTarget = 0.055
+  private bellsTarget = 1
+  private wingsTarget = 1
+  private drone: OscillatorNode | null = null
+  private droneGain: GainNode | null = null
 
   /** Must be called from a user gesture (first pointer move / keydown). */
   start(): void {
@@ -97,8 +120,30 @@ export class GameAudio {
         o.connect(g).connect(lp)
         o.start()
         lfo.start()
+        this.padVoices.push({ osc: o, baseDetune: detune })
       }
     }
+  }
+
+  /** Lazy low-fifth drone that sits under the pad during gauntlet intensity.
+   * Lives whether the pad is procedural or a stem; hard-capped at gain 0.05. */
+  private ensureDrone(): GainNode | null {
+    if (!this.ctx) return null
+    if (this.droneGain) return this.droneGain
+    const ctx = this.ctx
+    const o = ctx.createOscillator()
+    o.type = 'triangle'
+    o.frequency.value = DRONE_FREQS[this.actIdx]
+    const lp = ctx.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.value = 240
+    const g = ctx.createGain()
+    g.gain.value = 0
+    o.connect(lp).connect(g).connect(this.master)
+    o.start()
+    this.drone = o
+    this.droneGain = g
+    return g
   }
 
   /** Replace procedural layers with any stems found at public/audio/<layer>.mp3. */
@@ -128,13 +173,27 @@ export class GameAudio {
    * Sparse pentatonic bell motif; density grows with journey progress so the
    * melody strengthens as home nears. Call every frame with dt + progress.
    */
-  musicTick(dt: number, progress01: number): void {
-    if (!this.ctx || this.stems.has('bells')) return
+  musicTick(dt: number, progress01: number, intensity01 = 0): void {
+    if (!this.ctx) return
     this.progress01 = progress01
+    // gauntlet drone: fades in above ~0.55 intensity, out below — smooth, capped
+    const droneOn = intensity01 > 0.55
+    if (droneOn || this.droneGain) {
+      const g = this.ensureDrone()
+      if (g) {
+        const target = droneOn ? Math.min(0.05, 0.015 + intensity01 * 0.035) : 0
+        g.gain.setTargetAtTime(target, this.ctx.currentTime, droneOn ? 1.6 : 1.0)
+      }
+    }
+    this.motifBoost = 1 + Math.max(0, Math.min(1, intensity01)) * 0.35
+    if (this.stems.has('bells')) return
     this.bellTimer -= dt
     if (this.bellTimer > 0) return
-    this.bellTimer = 5.2 - progress01 * 3.1 + Math.random() * 2.4
-    const scale = [392, 440, 523.3, 587.3, 659.3, 784]
+    // density: journey progress quickens the motif; intensity nudges it further;
+    // a grieving (thinned) flock stretches the silences instead
+    const interval = (5.2 - progress01 * 3.1 + Math.random() * 2.4) / this.motifBoost
+    this.bellTimer = interval / Math.max(0.3, this.bellDensity)
+    const scale = BELL_TABLES[this.actIdx]
     const step = (this.bellStep + 1 + ((Math.random() * 2) | 0)) % scale.length
     this.bellStep = step
     const f = scale[step]
@@ -159,6 +218,92 @@ export class GameAudio {
     h.start(t)
     o.stop(t + 2.5)
     h.stop(t + 1.2)
+  }
+
+  /**
+   * Music as state feedback — call every ~0.5s. The day's arc escalates the
+   * layers (early: wings + sparse pad → mid: fuller pad, bells enter → late:
+   * everything rich), the flock's health breathes through pad/bell fullness
+   * (losses thin the score, recovery re-blooms it over ~4s), and each act
+   * recolors the palette a few semitones up. Richer, never louder: all shaping
+   * happens under the fixed master ceiling, and because it drives the shared
+   * layerGains it shapes Suno stems and procedural layers identically.
+   */
+  setJourney(progress01: number, flockRatio01: number, act: number): void {
+    if (!this.ctx) return
+    const p = Math.max(0, Math.min(1, progress01))
+    const r = Math.max(0, Math.min(1, flockRatio01))
+    const t = this.ctx.currentTime
+
+    // ---- act key-color (pad detune center + bell/drone tables shift together)
+    const idx = Math.max(0, Math.min(BELL_TABLES.length - 1, Math.round(act) - 1))
+    if (idx !== this.actIdx) {
+      this.actIdx = idx
+      const cents = ACT_SEMIS[idx] * 100
+      for (const v of this.padVoices) v.osc.detune.setTargetAtTime(v.baseDetune + cents, t, 3.0)
+      this.drone?.frequency.setTargetAtTime(DRONE_FREQS[idx], t, 3.0)
+    }
+
+    // ---- flock health: below ~half strength the score grieves with the flock
+    const health = Math.max(0, Math.min(1, (r - 0.15) / 0.4)) // 0 at 15%, 1 at 55%
+    const padHealth = 0.45 + health * 0.55
+    const bellHealth = 0.3 + health * 0.7
+    // grief lands quickly (τ≈0.9s); recovery re-blooms over ~4s (τ≈1.4s)
+    const padWant = (0.03 + p * 0.05) * padHealth
+    const bellsWant = (0.2 + Math.min(1, p * 1.6) * 0.95) * bellHealth
+    const wingsWant = 1 - p * 0.15 // bed recedes a touch as the music fills in
+    const tau = (want: number, have: number) => (want > have ? 1.4 : 0.9)
+    const pad = this.layerGains.get('pad')
+    const bells = this.layerGains.get('bells')
+    const wings = this.layerGains.get('wings')
+    pad?.gain.setTargetAtTime(padWant, t, tau(padWant, this.padTarget))
+    bells?.gain.setTargetAtTime(bellsWant, t, tau(bellsWant, this.bellsTarget))
+    wings?.gain.setTargetAtTime(wingsWant, t, 1.6)
+    this.padTarget = padWant
+    this.bellsTarget = bellsWant
+    this.wingsTarget = wingsWant
+
+    // motif density follows the same grief/re-bloom shape (~0.5s call cadence)
+    const densWant = bellHealth
+    const k = densWant > this.bellDensity ? 0.12 : 0.3 // rise ≈4s, fall ≈1.5s
+    this.bellDensity += (densWant - this.bellDensity) * k
+  }
+
+  /**
+   * A 2s pad+bell bloom for ceremonies (departure/arrival). Reuses the layer
+   * gains and the pentatonic tables — safe to call anytime, even pre-start.
+   */
+  celebrationSwell(strength01 = 1): void {
+    if (!this.ctx) return
+    const s = Math.max(0, Math.min(1, strength01))
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const pad = this.layerGains.get('pad')
+    const bells = this.layerGains.get('bells')
+    // swell up over ~0.6s, settle back to the journey targets by ~2s
+    pad?.gain.setTargetAtTime(this.padTarget * (1 + 0.9 * s), t, 0.25)
+    pad?.gain.setTargetAtTime(this.padTarget, t + 0.9, 0.5)
+    bells?.gain.setTargetAtTime(Math.min(1.4, this.bellsTarget * (1 + 0.6 * s) + 0.15), t, 0.25)
+    bells?.gain.setTargetAtTime(this.bellsTarget, t + 0.9, 0.5)
+    // two gentle motif notes riding the swell (skip when a bell stem sings)
+    if (!this.stems.has('bells')) {
+      const scale = BELL_TABLES[this.actIdx]
+      const dest = bells ?? this.master
+      ;[scale[0], scale[2]].forEach((f, i) => {
+        const o = ctx.createOscillator()
+        o.type = 'sine'
+        o.frequency.value = this.pv(f, 0.015)
+        const g = ctx.createGain()
+        const at = t + 0.1 + i * 0.35
+        g.gain.setValueAtTime(0, at)
+        g.gain.linearRampToValueAtTime(0.05 + 0.025 * s, at + 0.05)
+        g.gain.exponentialRampToValueAtTime(0.0001, at + 1.8)
+        o.connect(g).connect(dest)
+        o.start(at)
+        o.stop(at + 1.9)
+      })
+      this.bellTimer = Math.min(this.bellTimer, 1.2) // let the motif answer soon
+    }
   }
 
   private gStrain = 0
