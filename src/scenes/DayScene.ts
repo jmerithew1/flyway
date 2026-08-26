@@ -134,6 +134,7 @@ export class DayScene extends Phaser.Scene {
 
   private stats: DayStats = { startCount: 120, found: 0, lost: 0, collisionEvents: 0, resets: 0, returned: 0, flow: 0, flowTotal: 0, recovered: 0 }
   private checkpoint: CheckpointState = { x: 0, name: '', count: START_BIRDS, found: 0, flow: 0 }
+  private mercyTime = 0
   private failing = false
   private finishing = false
   private finishTimer = 0
@@ -548,18 +549,27 @@ export class DayScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------- update
 
+  private simClock = 0
+
   update(timeMs: number, deltaMs: number): void {
     const dt = Math.min(deltaMs / 1000, 1 / 20)
-    const time = this.game.loop.time / 1000
+    // logic clock = accumulated sim time, so cooldown windows track the sim
+    // wherever it runs (real loop, slow machines, headless drivers) rather
+    // than the wall clock
+    this.simClock += dt
+    const time = this.simClock
     const cam = this.cameras.main
 
     if (!this.finishing && !this.failing) {
       const rel = this.flock.centerX - this.scrollX
       const baseSpeed = this.scrollX >= PRESSURE_START ? PRESSURE_SPEED : SCROLL_SPEED
-      // rubber-band mercy: a battered flock that falls behind gets a moment to
-      // recover instead of being ground through obstacles by the screen edge
-      const speed = rel < VIEW_W * 0.3 ? baseSpeed * 0.55 : baseSpeed
-      this.scrollX += speed * dt
+      // rubber-band mercy: a battered flock that falls behind gets a MOMENT to
+      // recover — but mercy decays under sustained neglect, so parking at the
+      // screen edge is a death sentence, not a strategy
+      if (rel < VIEW_W * 0.3) this.mercyTime += dt
+      else this.mercyTime = Math.max(0, this.mercyTime - dt * 2)
+      const mercy = rel < VIEW_W * 0.3 && this.mercyTime < 6 ? 0.55 : 1
+      this.scrollX += baseSpeed * mercy * dt
     } else if (this.finishing) {
       const targetScroll = ROOST_X - VIEW_W * 0.58
       this.scrollX += (targetScroll - this.scrollX) * Math.min(dt * 1.1, 1)
@@ -624,6 +634,7 @@ export class DayScene extends Phaser.Scene {
     }
 
     this.processCollisions(time)
+    this.processFlung(time)
     this.processBrittle(dt, time)
     this.cullStragglers(dt)
     const spreadAmt = Math.max(-this.flock.form, 0)
@@ -714,6 +725,8 @@ export class DayScene extends Phaser.Scene {
     } else {
       this.scatteredText.setAlpha(0)
     }
+    // a recoverable bird becomes a real loss only when its window expires
+    this.stats.lost += this.scatter.expiredThisFrame
     if (this.scatter.recoveredThisFrame > 0) {
       this.stats.recovered += this.scatter.recoveredThisFrame
       this.tweens.killTweensOf(this.recoveredText)
@@ -882,7 +895,17 @@ export class DayScene extends Phaser.Scene {
 
   // --------------------------------------------------------------- subsystems
 
+  private visCache: Obstacle[] = []
+  private visCacheScroll = -1
+
   private visibleObstacles(): Obstacle[] {
+    if (this.visCacheScroll === this.scrollX) return this.visCache
+    this.visCacheScroll = this.scrollX
+    this.visCache = this.filterVisible()
+    return this.visCache
+  }
+
+  private filterVisible(): Obstacle[] {
     const x0 = this.scrollX - 300
     const x1 = this.scrollX + VIEW_W + 600
     return this.obstacles.filter((o) => {
@@ -916,13 +939,15 @@ export class DayScene extends Phaser.Scene {
       if (time - last < 0.5) continue
       this.lastHit.set(bird, time)
       this.lossTimes = this.lossTimes.filter((t) => time - t < 0.7)
-      const capped = this.lossTimes.length >= 4
+      const capped = this.lossTimes.length >= 5
+      // Contact is full price everywhere — a neglected flock should die in
+      // Act 1-2. Learning players are protected by readable routes and the
+      // burst cap, never by a hidden discount.
       if (!capped && Math.random() < 0.22) {
         this.lossTimes.push(time)
         this.stats.collisionEvents++
-        this.stats.lost++
         this.audio.collisionThump()
-        this.scatter.spawn(bird.x, bird.y, bird.x - this.flock.centerX, bird.y - this.flock.centerY)
+        if (!this.scatter.spawn(bird.x, bird.y, bird.x - this.flock.centerX, bird.y - this.flock.centerY)) this.stats.lost++
         this.flock.removeBird(bird)
         this.lastHit.delete(bird)
       } else {
@@ -934,6 +959,23 @@ export class DayScene extends Phaser.Scene {
         bird.vx = (dx / d) * sp * 0.8
         bird.vy = (dy / d) * sp * 0.8
       }
+    }
+  }
+
+  /** Blown-wide birds tumble into the scatter pool — recoverable if the
+   * player reacts (spread / echo call), gone if ignored. The steady cost of
+   * unmanaged flying through dense terrain. */
+  private flingTimes: number[] = []
+  private processFlung(time: number): void {
+    for (const bird of this.flock.flungBirds) {
+      this.flingTimes = this.flingTimes.filter((t) => time - t < 0.7)
+      if (this.flingTimes.length >= 3) break
+      this.flingTimes.push(time)
+      const dx = bird.x - this.flock.centerX
+      const dy = bird.y - this.flock.centerY
+      if (!this.scatter.spawn(bird.x, bird.y, dx || 1, dy - 0.4)) this.stats.lost++
+      this.flock.removeBird(bird)
+      this.lastHit.delete(bird)
     }
   }
 
@@ -959,13 +1001,12 @@ export class DayScene extends Phaser.Scene {
       if (time - last < 0.5) continue
       this.lastHit.set(bird, time)
       this.lossTimes = this.lossTimes.filter((t) => time - t < 0.7)
-      const capped = this.lossTimes.length >= 4
-      if (!capped && this.flock.form <= 0.1 && Math.random() < 0.08) {
+      const capped = this.lossTimes.length >= 5
+      if (!capped && this.flock.form <= 0.1 && Math.random() < 0.12) {
         this.lossTimes.push(time)
         this.stats.collisionEvents++
-        this.stats.lost++
         this.audio.collisionThump()
-        this.scatter.spawn(bird.x, bird.y, -1, -0.3)
+        if (!this.scatter.spawn(bird.x, bird.y, -1, -0.3)) this.stats.lost++
         this.flock.removeBird(bird)
         this.lastHit.delete(bird)
       } else {
@@ -1061,7 +1102,7 @@ export class DayScene extends Phaser.Scene {
         const t = (this.stuckTime.get(b) ?? 0) + dt
         if (t > 3) {
           this.stuckTime.delete(b)
-          this.scatter.spawn(b.x, b.y, -0.6, -1)
+          if (!this.scatter.spawn(b.x, b.y, -0.6, -1)) this.stats.lost++
           this.flock.removeBird(b)
           continue
         }

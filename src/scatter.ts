@@ -31,8 +31,9 @@ export class ScatterSystem {
     this.scene = scene
   }
 
-  /** Spawn a scattering bird at (x, y). ~30% linger and can be re-collected. */
-  spawn(x: number, y: number, awayX: number, awayY: number): void {
+  /** Spawn a scattering bird at (x, y). Returns whether it can be recovered —
+   * a non-recoverable spawn is a permanent loss the caller should count. */
+  spawn(x: number, y: number, awayX: number, awayY: number): boolean {
     const sprite = this.scene.add.image(x, y, 'bird-mid')
     sprite.setScale(0.3)
     const m = Math.hypot(awayX, awayY) || 1
@@ -46,6 +47,7 @@ export class ScatterSystem {
       recoverable,
       phase: Math.random() * Math.PI * 2,
     })
+    return recoverable
   }
 
   /** Returns number of birds recovered into the flock this frame.

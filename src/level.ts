@@ -137,8 +137,7 @@ export const FEATURES: PieceFeature[] = [
   top(9450, 'wisteria_curtain', 300, { brittle: true, motion: { kind: 'pendulum', amp: 46, period: 4.2 } }), // brittle shortcut above, visibly loose
 
   // ===== OVERGROWN RUINS (9600-12000): the organic turn =====================
-  mid(10200, 420, 'thorn_ring', 430, { motion: { kind: 'bob', amp: 70, period: 3.8 } }), // drifting ring
-  gnd(10200, 'web_column_a', 360),
+  mid(10200, 380, 'thorn_ring', 360, { motion: { kind: 'bob', amp: 34, period: 4.2 } }), // drifting ring — clear lane beneath
   top(10750, 'wisteria_dense', 420, { brittle: true, motion: { kind: 'pendulum', amp: 90, period: 3.4 } }), // swinging brittle curtain
   gnd(10750, 'wall_circle_bite', 360),
   gnd(11300, 'organic_arch', 500), // vine arch
@@ -261,12 +260,17 @@ export function pieceObstacles(f: PieceFeature): Obstacle[] {
   const { s, w, h, y } = pieceDisplay(f)
   const tlx = f.x - w / 2
   const tly = y - h / 2
-  const kind = f.brittle || art.family === 'organic-brittle' ? 'brittle' : 'solid'
+  const kind =
+    f.brittle || art.family === 'organic-brittle'
+      ? 'brittle'
+      : art.family === 'organic-hang'
+        ? 'soft' // dangling vegetation brushes, it doesn't kill
+        : 'solid'
   return art.colliders.map((r) => {
     const rx = f.flipX ? art.w - r.x - r.w : r.x
     return {
       shape: 'rect' as const,
-      kind: kind as 'solid' | 'brittle',
+      kind: kind as 'solid' | 'brittle' | 'soft',
       x: tlx + (rx + r.w / 2) * s,
       y: tly + (r.y + r.h / 2) * s,
       hw: (r.w * s) / 2,

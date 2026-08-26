@@ -80,6 +80,7 @@ export interface Bird {
   // transient
   panic: number // 0..1, spikes on close calls, adds flutter
   fray: number // 0..1, strained birds squeezed loose from the formation
+  danger: number // accumulates while lingering near solids ungathered; flings at 1
   sprite: Phaser.GameObjects.Image
 }
 
@@ -132,6 +133,9 @@ export class Flock {
   /** birds that scraped an obstacle interior this frame (for loss rules later) */
   collisions: Bird[] = []
   breakthroughHits: { bird: Bird; obstacle: Obstacle }[] = []
+  brushHits: { bird: Bird; obstacle: Obstacle }[] = []
+  /** Birds flung out of formation by violent last-second evasions. */
+  flungBirds: Bird[] = []
 
   private grid: Grid = { cell: TUNING.viewRadius, map: new Map() }
   private tint: number
@@ -175,6 +179,7 @@ export class Flock {
       depth,
       panic: 0,
       fray: 0,
+      danger: 0,
       sprite,
     }
     bird.intentLagRate = lerp(2.2, 10, (bird.speedFactor - 0.92) / 0.18) + rand(-0.8, 0.8)
@@ -197,6 +202,8 @@ export class Flock {
   update(dtRaw: number, input: FlockInput, obstacles: Obstacle[]): void {
     this.collisions.length = 0
     this.breakthroughHits.length = 0
+    this.brushHits.length = 0
+    this.flungBirds.length = 0
     this.stepAccum = Math.min(this.stepAccum + dtRaw, STEP * MAX_STEPS)
     while (this.stepAccum >= STEP) {
       this.stepAccum -= STEP
@@ -438,21 +445,44 @@ export class Flock {
       for (const o of obstacles) {
         const res = avoidSteer(o, b.x, b.y, b.vx, b.vy, b.sidePref, this.centerY)
         if (!res) continue
-        // brittle curtains barely repel — a committed flock flies into them
-        const kindScale = o.kind === 'brittle' ? 0.22 : 1
+        // brittle curtains barely repel — a committed flock flies into them;
+        // soft vegetation repels halfway and never hurts
+        const kindScale = o.kind === 'brittle' ? 0.22 : o.kind === 'soft' ? 0.5 : 1
         const power = TUNING.wAvoid * kindScale * res.urgency * res.urgency
         ax += res.fx * power
         ay += res.fy * power
-        if (res.urgency > 0.75) b.panic = Math.min(1, b.panic + dt * 3)
+        if (res.urgency > 0.75 && o.kind !== 'soft') b.panic = Math.min(1, b.panic + dt * 3)
+        // Blown wide: LINGERING near stone while ungathered accumulates danger;
+        // past the limit the bird is flung from the formation. Quick clean
+        // threads pass free; a wide neutral flock dragged along dense terrain
+        // bleeds from its edges. Holding Gather commits the flock and shields
+        // it completely — formation choice matters everywhere, every second.
+        if (o.kind === 'solid' && res.urgency > 0.4 && gather < 0.3) {
+          b.danger += dt * (res.urgency - 0.4) * 2.4
+          if (b.danger > 1) {
+            b.danger = 0
+            this.flungBirds.push(b)
+          }
+        }
         if (res.inside) {
-          if (o.kind === 'brittle') this.breakthroughHits.push({ bird: b, obstacle: o })
-          else this.collisions.push(b)
-          // hard positional correction so birds never sink into solids
-          const field = obstacleField(o, b.x, b.y)
-          b.x += field.nx * (-field.dist + 2)
-          b.y += field.ny * (-field.dist + 2)
+          if (o.kind === 'soft') {
+            // brush-through: drag + flutter, no removal, no hard correction
+            b.vx *= 1 - 1.6 * dt
+            b.vy *= 1 - 1.6 * dt
+            this.brushHits.push({ bird: b, obstacle: o })
+          } else {
+            if (o.kind === 'brittle') this.breakthroughHits.push({ bird: b, obstacle: o })
+            else this.collisions.push(b)
+            // hard positional correction so birds never sink into solids
+            const field = obstacleField(o, b.x, b.y)
+            b.x += field.nx * (-field.dist + 2)
+            b.y += field.ny * (-field.dist + 2)
+          }
         }
       }
+
+      // danger heals in clean air (slower than it accrues, so it "remembers")
+      b.danger = Math.max(0, b.danger - dt * 0.5)
 
       // --- integrate with capped accel (this is the inertia)
       const maxA = TUNING.maxAccel * b.agility * (1 + gather * 0.22)

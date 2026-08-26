@@ -34,8 +34,36 @@ CELL = 12          # native px per grid cell (finest pass)
 SOLID_A = 110      # alpha above which a cell is solid
 OPEN_A = 60        # alpha below which a cell counts as open for hole detection
 MIN_HOLE = 20      # native px — smaller holes are decoration, not passages
-HOLE_INFLATE = 0.18  # inflate passages so they're forgiving at flock scale
+HOLE_INFLATE = 0.30  # inflate passages so they're forgiving at flock scale
+MIN_PASSAGE = 44   # native px — punched passages open to at least this (≈90px world)
 MAX_RECTS = 22
+
+# Hand-authored passages (native px) for route-advertising pieces whose
+# openings the alpha scan can't see (painted windows) or sees only as
+# to-the-edge corridors (arch mouths/bays). Punched like holes (widened to
+# MIN_PASSAGE) and emitted in `openings` for celebrations/sunbeams.
+HAND_OPENINGS = {
+    'wall_multi_window': [
+        {'x': 60, 'y': 70, 'w': 42, 'h': 90},
+        {'x': 120, 'y': 70, 'w': 46, 'h': 90},
+        {'x': 170, 'y': 70, 'w': 46, 'h': 90},
+        {'x': 18, 'y': 54, 'w': 28, 'h': 28},
+        {'x': 200, 'y': 40, 'w': 32, 'h': 32},
+    ],
+    'wall_two_window': [
+        {'x': 92, 'y': 32, 'w': 42, 'h': 75},
+        {'x': 52, 'y': 58, 'w': 30, 'h': 45},
+    ],
+    'wall_double_arch': [
+        {'x': 52, 'y': 38, 'w': 50, 'h': 74},
+        {'x': 132, 'y': 48, 'w': 54, 'h': 64},
+        {'x': 198, 'y': 68, 'w': 30, 'h': 44},
+    ],
+    'gothic_arch': [{'x': 68, 'y': 80, 'w': 82, 'h': 190}],
+    'tall_gate': [{'x': 55, 'y': 55, 'w': 85, 'h': 135}],
+    'grand_arch': [{'x': 95, 'y': 90, 'w': 155, 'h': 186}],
+    'keyhole_arch': [{'x': 130, 'y': 40, 'w': 85, 'h': 160}],
+}
 
 
 def grid_of(piece, cell):
@@ -123,34 +151,61 @@ def merge_rects(solid, gw, gh, w, h, cell):
     return [r for r in rects if r['w'] * r['h'] >= 2 * cell * cell]
 
 
-def silhouette_colliders(path):
+def silhouette_colliders(path, hand=None):
+    """Returns (collider_rects, opening_bboxes). Openings are the TRUE hole
+    bboxes (for clean-pass detection / sunbeams); the collider punch is wider
+    (inflation + minimum passage) so play is forgiving."""
     piece = Image.open(path).convert('RGBA')
     w, h = piece.size
+    openings = []
     for cell in (CELL, 16, 20, 26):
         solid, open_, gw, gh = grid_of(piece, cell)
-        # punch enclosed passages open, inflated for playability
-        for (x0, y0, x1, y1) in enclosed_holes(open_, gw, gh):
+        openings = []
+        hand_cells = [
+            (
+                int(r['x'] * gw / w),
+                int(r['y'] * gh / h),
+                int((r['x'] + r['w']) * gw / w),
+                int((r['y'] + r['h']) * gh / h),
+            )
+            for r in (hand or [])
+        ]
+        for (x0, y0, x1, y1) in hand_cells + enclosed_holes(open_, gw, gh):
             hw = (x1 - x0 + 1) * w / gw
             hh = (y1 - y0 + 1) * h / gh
             if hw < MIN_HOLE or hh < MIN_HOLE:
                 continue
-            ix = max(1, round((x1 - x0 + 1) * HOLE_INFLATE))
-            iy = max(1, round((y1 - y0 + 1) * HOLE_INFLATE))
+            openings.append(
+                {
+                    'x': round(x0 * w / gw),
+                    'y': round(y0 * h / gh),
+                    'w': round(hw),
+                    'h': round(hh),
+                }
+            )
+            # punch: inflate, then widen further until the passage meets the
+            # minimum playable width on each axis
+            ix = (x1 - x0 + 1) * HOLE_INFLATE
+            iy = (y1 - y0 + 1) * HOLE_INFLATE
+            ix = max(ix, (MIN_PASSAGE * gw / w - (x1 - x0 + 1)) / 2)
+            iy = max(iy, (MIN_PASSAGE * gh / h - (y1 - y0 + 1)) / 2)
+            ix = max(1, round(ix))
+            iy = max(1, round(iy))
             for yy in range(max(0, y0 - iy), min(gh, y1 + iy + 1)):
                 for xx in range(max(0, x0 - ix), min(gw, x1 + ix + 1)):
                     solid[yy][xx] = False
         rects = merge_rects(solid, gw, gh, w, h, cell)
         if len(rects) <= MAX_RECTS:
-            return rects
+            return rects, openings
     rects.sort(key=lambda r: -(r['w'] * r['h']))
-    return rects[:MAX_RECTS]
+    return rects[:MAX_RECTS], openings
 
 
 def main():
     src = MANIFEST.read_text(encoding='utf-8')
     entry_re = re.compile(
         r"^(  '(?P<key>[^']+)': \{ key: '[^']+', file: '(?P<file>[^']+)', w: \d+, h: \d+, "
-        r"family: '(?P<family>[^']+)', colliders: )(?P<coll>\[[^\]]*\])(?P<rest>, openings: .*)$",
+        r"family: '(?P<family>[^']+)', colliders: )(?P<coll>\[[^\]]*\]), openings: (?P<open>\[[^\]]*\])(?P<rest> \}.*)$",
         re.M,
     )
     changed = 0
@@ -161,17 +216,18 @@ def main():
         if fam in NO_COLLIDE or fam in KEEP_AS_IS:
             return m.group(0)
         png = PUBLIC / m.group('file')
-        rects = silhouette_colliders(png)
+        rects, openings = silhouette_colliders(png, HAND_OPENINGS.get(m.group('key')))
         if not rects:
             # thin structures (rings, filigree) can vanish under the speck
             # filter — keep the previous colliders rather than going ghost
             print(f"{m.group('key')}: empty result, keeping existing colliders")
             return m.group(0)
         new = json.dumps(rects)
-        if new != m.group('coll'):
+        new_open = json.dumps(openings)
+        if new != m.group('coll') or new_open != m.group('open'):
             changed += 1
-            print(f"{m.group('key')}: {len(json.loads(m.group('coll')))} -> {len(rects)} rects")
-        return m.group(1) + new + m.group('rest')
+            print(f"{m.group('key')}: {len(rects)} rects, {len(openings)} openings")
+        return m.group(1) + new + ', openings: ' + new_open + m.group('rest')
 
     out = entry_re.sub(sub, src)
     n_entries = len(entry_re.findall(src))

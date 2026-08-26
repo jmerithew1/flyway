@@ -3,7 +3,8 @@
  * Kept engine-agnostic (plain data + math) so the sim stays testable and simple.
  */
 
-export type ObstacleKind = 'solid' | 'brittle'
+// 'soft' = brush-through vegetation: slows and rustles, never removes a bird
+export type ObstacleKind = 'solid' | 'brittle' | 'soft'
 
 export interface CircleObstacle {
   shape: 'circle'
@@ -76,8 +77,8 @@ export function obstacleField(o: Obstacle, px: number, py: number): { nx: number
   return { nx: 0, ny: Math.sign(dy || 1), dist: qy }
 }
 
-const AVOID_LOOKAHEAD = 0.7 // seconds of anticipation
-const AVOID_MARGIN = 64 // px of comfortable clearance
+const AVOID_LOOKAHEAD = 0.95 // seconds of anticipation
+const AVOID_MARGIN = 92 // px of comfortable clearance
 
 /**
  * Anticipatory avoidance steering for one bird against one obstacle.
