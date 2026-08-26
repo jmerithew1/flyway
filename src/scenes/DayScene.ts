@@ -1287,13 +1287,21 @@ export class DayScene extends Phaser.Scene {
           this.showPrompt('gather', '', () => this.gatherHeld > 0.3 && this.flock.centerX > 1020)
         else if (pr.key === 'spread')
           this.showPrompt('spread', '', () => this.stats.found > 0 || this.spreadHeld > 1.6)
-        else if (pr.key === 'surge') this.showPrompt('surge', '', () => this.flock.pulse > 0.3)
-        else if (pr.key === 'flare') this.showPrompt('flare', '', () => this.flock.flareAmt > 0.3)
+
+
       }
     }
     // teach Neutral once, right after the spread lesson lands
     if (this.shownPrompts.has('spread') && !this.prompt && !this.shownPrompts.has('regroup') && this.scrollX > 1900) {
       this.showPrompt('regroup', '', () => Math.abs(this.flock.form) < 0.15 && this.flock.gatherStrain < 0.1)
+    }
+    // teach Flare when the flock is genuinely closing too fast on stone
+    if (
+      this.flock.nearObstacles.length >= 2 &&
+      Math.hypot(this.flock.meanVX, this.flock.meanVY) > 300 &&
+      this.scrollX > 8600
+    ) {
+      this.showPrompt('flare', '', () => this.flock.flareAmt > 0.3)
     }
     // Dive: taught on the long open descent before the mid-game
     if (this.scrollX > 6100 && this.scrollX < 7400) {
@@ -1952,6 +1960,11 @@ export class DayScene extends Phaser.Scene {
       if (obstacle.broken) continue
       const charge = (this.brittleCharge.get(obstacle) ?? 0) + 1
       this.brittleCharge.set(obstacle, charge)
+      // teach Surge the instant a curtain refuses to break: the problem is on
+      // screen, and the answer is the next thing the player presses
+      if (charge >= 3 && this.flock.pulse < 0.2) {
+        this.showPrompt('surge', '', () => this.flock.pulse > 0.3)
+      }
       // audible/visible charge: creak + falling dust every 2 charge steps
       const lastTick = this.lastCreak.get(obstacle) ?? 0
       if (Math.floor(charge / 2) > Math.floor(lastTick / 2)) {

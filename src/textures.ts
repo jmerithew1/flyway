@@ -11,6 +11,7 @@ export function createCoreTextures(scene: Phaser.Scene): void {
   makeFeatherTexture(scene)
   makeVerticalFade(scene)
   makeStreakTexture(scene)
+  makeAlarmRing(scene)
 }
 
 /** Load every curated piece from the manifest as a plain image. */
@@ -85,6 +86,27 @@ function makeVerticalFade(scene: Phaser.Scene): void {
   grd.addColorStop(1, 'rgba(255,255,255,1)')
   ctx.fillStyle = grd
   ctx.fillRect(0, 0, 8, h)
+  canvas.refresh()
+}
+
+/** A soft ring — marks a single bird without covering it, so the silhouette
+ * still reads. A filled glow washes the bird out; a ring circles it. */
+function makeAlarmRing(scene: Phaser.Scene): void {
+  if (scene.textures.exists('alarmring')) return
+  const size = 96
+  const canvas = scene.textures.createCanvas('alarmring', size, size)
+  if (!canvas) return
+  const ctx = canvas.context
+  const c = size / 2
+  const grd = ctx.createRadialGradient(c, c, size * 0.24, c, c, size * 0.5)
+  grd.addColorStop(0, 'rgba(255,255,255,0)')
+  grd.addColorStop(0.55, 'rgba(255,255,255,0.95)')
+  grd.addColorStop(0.78, 'rgba(255,255,255,0.5)')
+  grd.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = grd
+  ctx.beginPath()
+  ctx.arc(c, c, c, 0, Math.PI * 2)
+  ctx.fill()
   canvas.refresh()
 }
 

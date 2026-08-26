@@ -242,7 +242,8 @@ export class Flock {
   }
 
   private stepAccum = 0
-  private nearObstacles: Obstacle[] = []
+  /** Colliders close enough to matter this step (broad-phase result). */
+  nearObstacles: Obstacle[] = []
 
   // ---- ability state (tap verbs layered on the hold verbs) -----------------
   /** Surge: 0..1 whipcrack acceleration pulse, decays over ~0.5s. */
@@ -848,7 +849,40 @@ export class Flock {
     }
   }
 
+  /** Pool of alarm halos drawn BEHIND at-risk birds. Bright, cool-white and
+   * pulsing, so they separate from both the navy flock and the warm sky. */
+  private riskHalos: Phaser.GameObjects.Image[] = []
+  private riskUsed = 0
+
+  /** Never more than this many rings at once — past a dozen it stops reading
+   * as "these birds" and starts reading as UI noise. */
+  private static readonly MAX_RISK_RINGS = 12
+
+  private markAtRisk(b: Bird, d01: number): void {
+    if (this.riskUsed >= Flock.MAX_RISK_RINGS) return
+    let h = this.riskHalos[this.riskUsed]
+    if (!h) {
+      h = this.scene.add
+        .image(0, 0, 'alarmring')
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(2.95)
+      this.riskHalos.push(h)
+    }
+    this.riskUsed++
+    const pulse = 0.72 + 0.28 * Math.sin(this.time * 13 + b.flapPhase)
+    const size = 52 - d01 * 14 // the ring CLOSES in as the bird runs out of time
+    h.setVisible(true)
+      .setPosition(b.x, b.y)
+      .setDisplaySize(size, size)
+      // cool white-gold: bright against the navy birds AND the peach sky
+      .setTint(d01 > 0.6 ? 0xfff4e6 : 0xffd9b0)
+      .setAlpha((0.45 + d01 * 0.4) * pulse)
+  }
+
   private render(dt: number): void {
+    // release last frame's halos; markAtRisk() re-claims what it needs
+    for (let i = this.riskUsed; i < this.riskHalos.length; i++) this.riskHalos[i].setVisible(false)
+    this.riskUsed = 0
     const rk = 1 - Math.exp(-9 * dt)
     for (const b of this.birds) {
       const s = b.sprite
@@ -867,9 +901,11 @@ export class Flock {
       // the problem that Gather solves, and watch gathering snuff it out.
       if (b.danger > 0.12) {
         const d01 = Math.min(1, b.danger)
-        s.setTint(d01 > 0.6 ? 0xff7a4e : 0xffa877)
-        s.x += Math.sin(this.time * 42 + b.flapPhase) * d01 * 2.6
+        // keep the bird DARK (silhouette intact) and put the alarm behind it
+        if (s.isTinted) s.clearTint()
         s.setAlpha(1)
+        s.x += Math.sin(this.time * 42 + b.flapPhase) * d01 * 2.6
+        this.markAtRisk(b, d01)
       } else if (this.pulse > 0.3) {
         // SURGE: the leading edge catches the light — a warm spear-tip
         const ahead = (b.x - this.centerX) * Math.cos(b.renderAngle) + (b.y - this.centerY) * Math.sin(b.renderAngle)
