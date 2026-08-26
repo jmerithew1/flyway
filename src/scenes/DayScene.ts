@@ -302,6 +302,12 @@ export class DayScene extends Phaser.Scene {
         })
       }
     }
+    // brittle pieces shimmer faintly at rest — the "this one is different" tell
+    for (const [f, sprite] of this.featureSprites) {
+      if (f.brittle && !f.motion) {
+        this.tweens.add({ targets: sprite, alpha: (f.alpha ?? 1) * 0.82, duration: 1300 + Math.random() * 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      }
+    }
     // moving obstacles: art and colliders travel together
     this.movers = []
     for (const [f, sprite] of this.featureSprites) {
@@ -842,6 +848,7 @@ export class DayScene extends Phaser.Scene {
     this.processFlung(time)
     this.processGrazes(time)
     this.processBrittle(dt, time)
+    this.updateBrittleHints()
     this.updateOpeningZones()
     this.cullStragglers(dt)
     const spreadAmt = Math.max(-this.flock.form, 0)
@@ -1001,6 +1008,33 @@ export class DayScene extends Phaser.Scene {
   }
 
   /** Rhythmic obstacle motion: readable, slow, colliders move with the art. */
+  /** First two brittle encounters get a floating hint ON the structure —
+   * after that the visual language (shimmer, sway, tremble) carries alone. */
+  private brittleHints = 0
+  private hintedFeatures = new Set<PieceFeature>()
+  private updateBrittleHints(): void {
+    if (this.brittleHints >= 2) return
+    for (const [f, sprite] of this.featureSprites) {
+      if (!f.brittle || this.hintedFeatures.has(f)) continue
+      const anyIntact = [...this.obstacleFeature.entries()].some(([o, ft]) => ft === f && !o.broken)
+      if (!anyIntact) continue
+      if (Math.abs(f.x - this.flock.centerX) > 520) continue
+      this.hintedFeatures.add(f)
+      this.brittleHints++
+      const label = this.add
+        .text(sprite.x, sprite.y - sprite.displayHeight / 2 - 26, 'loose — tap SPACE', {
+          fontFamily: 'Georgia, serif',
+          fontSize: '17px',
+          color: '#ffe2b8',
+        } as Phaser.Types.GameObjects.Text.TextStyle)
+        .setOrigin(0.5)
+        .setDepth(7)
+        .setAlpha(0)
+      label.setShadow(0, 1, '#2a2036', 4)
+      this.tweens.add({ targets: label, alpha: 0.95, duration: 400, yoyo: true, hold: 2400, onComplete: () => label.destroy() })
+    }
+  }
+
   /** Tremble amplitude (0..1) for a brittle feature under charge. */
   private featureTremble(f: PieceFeature): number {
     let best = 0
@@ -1394,7 +1428,18 @@ export class DayScene extends Phaser.Scene {
       this.lastHit.set(bird, time)
       this.lossTimes = this.lossTimes.filter((t) => time - t < 0.7)
       const capped = this.lossTimes.length >= 5
-      if (!capped && this.flock.form <= 0.1 && Math.random() < 0.12) {
+      if (this.flock.form < -0.3) {
+        // third technique: a SPREAD flock slips THROUGH the curtain — a
+        // shortcut paid in blown-wide edges instead of a bounce
+        this.flingTimes = this.flingTimes.filter((t) => time - t < 0.7)
+        if (this.flingTimes.length < 3 && Math.random() < 0.4) {
+          this.flingTimes.push(time)
+          this.featherPuff(bird.x, bird.y, 2, 60, -20)
+          if (!this.scatter.spawn(bird.x, bird.y, 1, -0.4)) this.stats.lost++
+          this.flock.removeBird(bird)
+          this.lastHit.delete(bird)
+        }
+      } else if (!capped && this.flock.form <= 0.1 && Math.random() < 0.12) {
         this.lossTimes.push(time)
         this.stats.collisionEvents++
         this.audio.collisionThump()

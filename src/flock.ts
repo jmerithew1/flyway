@@ -539,6 +539,17 @@ export class Flock {
       // danger heals in clean air (slower than it accrues, so it "remembers")
       b.danger = Math.max(0, b.danger - dt * 0.5)
 
+      // SURGE SPIRAL: while the pulse lives, the flock corkscrews around its
+      // flight axis — a travelling helix (phase = position along the heading),
+      // so a surge reads as the murmuration drilling forward like a spear
+      if (this.pulse > 0.12) {
+        const proj = (b.x - this.centerX) * hx + (b.y - this.centerY) * hy
+        const helix = Math.sin(this.time * 11 + proj * 0.025 + b.flapPhase * 0.6)
+        const amp = 640 * this.pulse
+        ax += -hy * helix * amp
+        ay += hx * helix * amp
+      }
+
       // --- integrate with capped accel (this is the inertia)
       const maxA = TUNING.maxAccel * b.agility * (1 + gather * 0.22 + this.pulse * 0.4)
       const am = Math.hypot(ax, ay)
