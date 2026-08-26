@@ -426,6 +426,7 @@ export class DayScene extends Phaser.Scene {
     this.leader = null
     this.leaderMourn = 0
     this.turnedAway = false
+    this.resultsSent = false
 
     this.colliderGfx = this.add.graphics().setDepth(19).setVisible(false)
 
@@ -2019,6 +2020,7 @@ export class DayScene extends Phaser.Scene {
   }
 
   private turnedAway = false
+  private resultsSent = false
   private leader: Bird | null = null
   private leaderGlow!: Phaser.GameObjects.Image
   private leaderMourn = 0
@@ -2480,7 +2482,8 @@ export class DayScene extends Phaser.Scene {
     if (this.finishing) {
       this.finishTimer += dt
       this.runArrivalCeremony(dt)
-      if (this.finishTimer > 8.6) {
+      if (this.finishTimer > 8.6 && !this.resultsSent) {
+        this.resultsSent = true
         this.stats.returned = this.flock.count
         // survival + the nightfall bonus land last, so the ceremony can
         // count them up as the closing beats
