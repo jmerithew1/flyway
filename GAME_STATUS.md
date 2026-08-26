@@ -24,10 +24,31 @@ candidate TENSION archived under `archive/tension/`.)
   variants, storm wisps, god ray, perched birds, HOME/FLOCK/FLOW rating
   icons, wordmark, title painting, 6 roost markers). Ruins grounded
   (GROUND 948 + world-speed garden). Sources: assets_raw/final_artwork.
-- **Pending**: recurring-obstacle content wave, sunbeams/mood plates/music
-  escalation, score+streak layer, living title/embed chrome, ability wave 2,
-  set-piece beats, migration map, award-jury audit loop. Feather FX sheet
-  awaiting owner regen (opaque background); Suno stems awaited.
+- **Route light** (the "over it or through it?" answer): passages are DERIVED
+  (open space walled on both sides) instead of hand-marked, and every flyable
+  span found in the collider field gets a warm glow + drifting motes. Because
+  it reads collision, the light can never point at solid stone — and it marks
+  the gaps BETWEEN pieces too.
+- **Score & ceremony**: two-currency scoring (survival vs mastery, balanced so
+  a stylish bird-poor run rivals a cautious bird-rich one), ×2/×3 streaks that
+  collisions break, floating reasons at the point of skill; roost arrival eases
+  the camera in, lands the flock branch by branch, then the results ceremony
+  spins the tallies, lists every score source, and reveals the three painted
+  feathers one at a time. Skippable for repeat runs.
+- **Both bookends**: the day opens on a home roost (birds waking and lifting
+  off while control is already live) and closes on the destination roost.
+- **Ability wave 2**: Dive, Vortex Whirl, Brace, Harmony, wind riding (with a
+  real tailwind home), Flock Voice — all probe-verified at true framerate.
+- **Mobile**: thumb pads mirroring the keyboard grammar exactly, multi-touch
+  steering, portrait rotate card, branded boot veil, decor profile.
+- **Performance**: broad-phase obstacle culling + mobile decor scaling took
+  both platforms from ~15ms to ~5.4ms per frame in software rendering.
+- **Narrative beats**: leader bird, Storm Crossing, ghost flyways, the falcon
+  turning away; migration map with six roosts driven by stored results.
+- **Verified**: zero-input play dies mid-game; competent autopilot finishes 0
+  resets; pacing floor 0 violations; build clean; no console errors.
+- **Pending**: award-jury audit loop (running), Suno stems, feather FX sheet
+  awaiting owner regen (opaque background).
 
 ## Complete game loop (FLYWAY pass, 2026-08-24)
 Title screen → Day intro → playable tutorial (steer/gather/spread taught by
