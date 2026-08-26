@@ -26,6 +26,15 @@ import Phaser from 'phaser'
 import { display, INK } from './ui'
 
 /** Coarse pointer or a real touch digitiser — the only gate in this file. */
+/** Decorative density multiplier. Phones pay for every tweened sprite, and
+ * the flock must stay smooth — so ambience thins on touch while gameplay
+ * (birds, colliders, abilities) is untouched. */
+export const decorScale = ((): number => {
+  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+  const touchy = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
+  return coarse || touchy ? 0.45 : 1
+})()
+
 export const isTouch: boolean =
   typeof window !== 'undefined' &&
   ((typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches) ||

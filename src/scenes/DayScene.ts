@@ -46,7 +46,7 @@ import {
 } from '../config'
 import { display, voice, INK } from '../ui'
 import { Atmosphere, hazeScenery } from '../atmosphere'
-import { TouchControls } from '../touch'
+import { TouchControls, decorScale } from '../touch'
 
 export interface DayStats {
   startCount: number
@@ -2248,16 +2248,18 @@ export class DayScene extends Phaser.Scene {
           .setDisplaySize(Math.min(230, h * 1.25), Math.min(360, h * 1.05))
           .setAlpha(0.17)
           .setDepth(2.6)
-        this.tweens.add({
-          targets: glow,
-          alpha: 0.28,
-          duration: 2200 + Math.random() * 1200,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        })
+        if (decorScale >= 1) {
+          this.tweens.add({
+            targets: glow,
+            alpha: 0.28,
+            duration: 2200 + Math.random() * 1200,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          })
+        }
         // motes drifting THROUGH the gap: the route reads as a current
-        const n = h > 260 ? 4 : 3
+        const n = Math.max(1, Math.round((h > 260 ? 4 : 3) * decorScale))
         for (let i = 0; i < n; i++) {
           const m = this.add
             .image(lightX + rand(-60, 60), g.y0 + (h * (i + 0.5)) / n + rand(-16, 16), 'softdot')
@@ -2312,8 +2314,9 @@ export class DayScene extends Phaser.Scene {
       [24400, 360, 820],
     ]
     for (const [x, y, len] of routes) {
-      for (let i = 0; i < 14; i++) {
-        const t = i / 13
+      const ghostN = Math.max(5, Math.round(14 * decorScale))
+      for (let i = 0; i < ghostN; i++) {
+        const t = i / (ghostN - 1)
         const gx = x + len * t
         const gy = y + Math.sin(t * Math.PI * 1.4) * 46
         const g = this.add
@@ -2443,7 +2446,7 @@ export class DayScene extends Phaser.Scene {
           }
         }
         // ...plus echo birds for visual mass into the hundreds
-        if (this.echoes.length < 120 && this.flock.birds.length > 0) {
+        if (this.echoes.length < Math.round(120 * decorScale) && this.flock.birds.length > 0) {
           for (let i = 0; i < 9; i++) {
             const leader = this.flock.birds[(Math.random() * this.flock.birds.length) | 0]
             const img = this.add
