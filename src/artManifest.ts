@@ -154,4 +154,8 @@ export const ART: Record<string, ArtPiece> = {
   'wordmark': { key: 'wordmark', file: 'assets/processed/final/wordmark.png', w: 2096, h: 660, family: 'deco', colliders: [], openings: [] },
   'title_bg': { key: 'title_bg', file: 'assets/processed/final/title_bg.png', w: 1672, h: 941, family: 'deco', colliders: [], openings: [] },
   'roost_tree_hero': { key: 'roost_tree_hero', file: 'assets/processed/ending/roost_tree_hero.png', w: 504, h: 340, family: 'deco', colliders: [], openings: [] },
+  'feather_primary': { key: 'feather_primary', file: 'assets/processed/final/feather_primary.png', w: 420, h: 481, family: 'fx', colliders: [], openings: [] },
+  'feather_covert_01': { key: 'feather_covert_01', file: 'assets/processed/final/feather_covert_01.png', w: 420, h: 344, family: 'fx', colliders: [], openings: [] },
+  'feather_covert_02': { key: 'feather_covert_02', file: 'assets/processed/final/feather_covert_02.png', w: 420, h: 514, family: 'fx', colliders: [], openings: [] },
+  'feather_downy': { key: 'feather_downy', file: 'assets/processed/final/feather_downy.png', w: 320, h: 346, family: 'fx', colliders: [], openings: [] },
 }

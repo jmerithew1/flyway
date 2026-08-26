@@ -861,11 +861,20 @@ export class Flock {
       // FLARE: the whole flock snaps wings-up in unison — a one-beat firework
       const key = this.flareAmt > 0.45 ? 'bird-up' : birdFrameKey(this.time, b.flapPhase, b.flapFreq)
       if (s.texture.key !== key) s.setTexture(key)
-      // SURGE: the leading edge catches the light — warm rim on the spear-tip
-      if (this.pulse > 0.3) {
+
+      // ---- ONE OWNER FOR BIRD COLOUR. Danger outranks everything: a bird
+      // about to be torn away burns warm and judders, so the player can SEE
+      // the problem that Gather solves, and watch gathering snuff it out.
+      if (b.danger > 0.12) {
+        const d01 = Math.min(1, b.danger)
+        s.setTint(d01 > 0.6 ? 0xff7a4e : 0xffa877)
+        s.x += Math.sin(this.time * 42 + b.flapPhase) * d01 * 2.6
+        s.setAlpha(1)
+      } else if (this.pulse > 0.3) {
+        // SURGE: the leading edge catches the light — a warm spear-tip
         const ahead = (b.x - this.centerX) * Math.cos(b.renderAngle) + (b.y - this.centerY) * Math.sin(b.renderAngle)
         if (ahead > 20) s.setTint(0xffdfb8)
-        else s.clearTint()
+        else if (s.isTinted) s.clearTint()
       } else if (s.isTinted) {
         s.clearTint()
       }

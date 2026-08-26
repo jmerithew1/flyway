@@ -10,6 +10,7 @@ import { birdFrameKey } from './textures'
 
 interface ScatterBird {
   sprite: Phaser.GameObjects.Image
+  halo: Phaser.GameObjects.Image | null
   vx: number
   vy: number
   life: number
@@ -35,16 +36,38 @@ export class ScatterSystem {
    * a non-recoverable spawn is a permanent loss the caller should count. */
   spawn(x: number, y: number, awayX: number, awayY: number): boolean {
     const sprite = this.scene.add.image(x, y, 'bird-mid')
-    sprite.setScale(0.3)
     const m = Math.hypot(awayX, awayY) || 1
     const recoverable = Math.random() < 0.45
+    // a recoverable bird is a CHANCE, so it has to be visible: bigger than a
+    // flock bird, warm-lit, and haloed. This is what Echo Call is for.
+    sprite.setScale(recoverable ? 0.46 : 0.3).setDepth(6)
+    let halo: Phaser.GameObjects.Image | null = null
+    if (recoverable) {
+      sprite.setTint(0xffd9a0)
+      halo = this.scene.add
+        .image(x, y, 'softdot')
+        .setTint(0xffc98f)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDisplaySize(64, 64)
+        .setAlpha(0.5)
+        .setDepth(5.9)
+      this.scene.tweens.add({
+        targets: halo,
+        alpha: 0.85,
+        duration: 320,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
+    }
     this.birds.push({
       sprite,
       vx: (awayX / m) * (220 + Math.random() * 160) + (Math.random() - 0.5) * 120,
       vy: (awayY / m) * (220 + Math.random() * 160) + (Math.random() - 0.5) * 120 - 60,
-      life: recoverable ? 2.0 : 1.6 + Math.random() * 0.8,
+      life: recoverable ? 3.4 : 1.6 + Math.random() * 0.8,
       spin: (Math.random() - 0.5) * 14,
       recoverable,
+      halo,
       phase: Math.random() * Math.PI * 2,
     })
     return recoverable
@@ -62,6 +85,7 @@ export class ScatterSystem {
       if (b.life <= 0) {
         if (b.recoverable) this.expiredThisFrame++
         b.sprite.destroy()
+        b.halo?.destroy()
         this.birds.splice(i, 1)
         continue
       }
@@ -77,11 +101,21 @@ export class ScatterSystem {
         b.sprite.y += b.vy * dt + Math.cos(time * 4.2 + b.phase) * 26 * dt
         b.sprite.setTexture(birdFrameKey(time, b.phase, 11))
         b.sprite.alpha = Math.min(1, b.life)
+        // the halo rides along, and TIGHTENS as the window runs out — a lost
+        // bird visibly becomes urgent instead of quietly vanishing
+        if (b.halo) {
+          const urgency = 1 - Math.min(1, b.life / 3.4)
+          b.halo.setPosition(b.sprite.x, b.sprite.y)
+          const size = 64 - urgency * 26
+          b.halo.setDisplaySize(size, size)
+          b.halo.setTint(urgency > 0.7 ? 0xff9a7a : 0xffc98f)
+        }
         if (flock) {
           const d = Math.hypot(flock.centerX - b.sprite.x, flock.centerY - b.sprite.y)
           if (d < 130 + spread01 * 280) {
             flock.spawnBird(b.sprite.x, b.sprite.y)
             b.sprite.destroy()
+            b.halo?.destroy()
             this.birds.splice(i, 1)
             recovered++
             this.recoveredThisFrame++
@@ -100,11 +134,20 @@ export class ScatterSystem {
     return recovered
   }
 
+  /** Positions of every bird still inside its recovery window — so the scene
+   * can show the player exactly who the call is reaching. */
+  recoverables(): Array<{ x: number; y: number }> {
+    return this.birds.filter((b) => b.recoverable).map((b) => ({ x: b.sprite.x, y: b.sprite.y }))
+  }
+
   clear(): void {
     this.recoverableCount = 0
     this.recoveredThisFrame = 0
     this.expiredThisFrame = 0
-    for (const b of this.birds) b.sprite.destroy()
+    for (const b of this.birds) {
+      b.sprite.destroy()
+      b.halo?.destroy()
+    }
     this.birds = []
   }
 }

@@ -417,6 +417,13 @@ export class DayScene extends Phaser.Scene {
       .setDepth(7.2)
     this.storm = 0
 
+    this.reachRing = this.add
+      .image(0, 0, 'softdot')
+      .setTint(0xffd9a0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0)
+      .setDepth(2.2)
+
     this.chainText = this.add
       .text(0, 0, '', display(15, '#cdbdd4', 4, 500))
       .setOrigin(0.5)
@@ -817,29 +824,93 @@ export class DayScene extends Phaser.Scene {
   private doSurge(): void {
     this.flock.surge()
     this.audio.surgeWhoosh(1 - this.flock.gatherStrain * 0.5)
-    // speed streaks along the direction of travel
     const m = Math.hypot(this.flock.meanVX, this.flock.meanVY) || 1
-    const p = this.add
-      .particles(this.flock.centerX, this.flock.centerY, 'softdot', {
-        speedX: { min: (this.flock.meanVX / m) * 380 - 40, max: (this.flock.meanVX / m) * 520 + 40 },
-        speedY: { min: (this.flock.meanVY / m) * 380 - 40, max: (this.flock.meanVY / m) * 520 + 40 },
-        lifespan: { min: 220, max: 420 },
-        scale: { start: 0.42, end: 0.02 },
-        alpha: { start: 0.7, end: 0 },
-        tint: 0xfff1dc,
-        blendMode: Phaser.BlendModes.ADD,
-        emitting: false,
+    const hx = this.flock.meanVX / m
+    const hy = this.flock.meanVY / m
+    const cx = this.flock.centerX
+    const cy = this.flock.centerY
+
+    // SPEED LINES streaking BACKWARD past the flock — the read every game
+    // uses for "you just accelerated"
+    for (let i = 0; i < 16; i++) {
+      const off = (Math.random() - 0.5) * 210
+      const sx = cx - hy * off
+      const sy = cy + hx * off
+      const line = this.add
+        .image(sx, sy, 'streak')
+        .setTint(0xfff1dc)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDisplaySize(150 + Math.random() * 150, 7)
+        .setRotation(Math.atan2(hy, hx))
+        .setAlpha(0.95)
+        .setDepth(6)
+      this.tweens.add({
+        targets: line,
+        x: sx - hx * (260 + Math.random() * 220),
+        y: sy - hy * (260 + Math.random() * 220),
+        displayWidth: 20,
+        alpha: 0,
+        duration: 380 + Math.random() * 180,
+        ease: 'Cubic.easeOut',
+        onComplete: () => line.destroy(),
       })
+    }
+    // a shove of air AHEAD of the flock: the thing being pushed through
+    const bow = this.add
+      .image(cx + hx * 90, cy + hy * 90, 'softdot')
+      .setTint(0xffe9c9)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDisplaySize(70, 190)
+      .setRotation(Math.atan2(hy, hx))
+      .setAlpha(0.5)
       .setDepth(6)
-    p.explode(14)
-    this.time.delayedCall(500, () => p.destroy())
+    this.tweens.add({
+      targets: bow,
+      displayWidth: 300,
+      displayHeight: 70,
+      alpha: 0,
+      duration: 420,
+      ease: 'Cubic.easeOut',
+      onComplete: () => bow.destroy(),
+    })
+    this.camKick = 1.6
   }
 
   /** Flare: tap SHIFT — the flock blooms wide and air-brakes. */
   private doFlare(): void {
     this.flock.flare()
-    this.audio.formSnap('spread')
-    this.formFlourish(false)
+    this.audio.formSnap('release')
+    const m = Math.hypot(this.flock.meanVX, this.flock.meanVY) || 1
+    const hx = this.flock.meanVX / m
+    const hy = this.flock.meanVY / m
+    const cx = this.flock.centerX
+    const cy = this.flock.centerY
+
+    // the AIR WALL the flock throws up in front of itself, pushed backward
+    // as the flock's own speed dies against it
+    for (let i = 0; i < 3; i++) {
+      const wall = this.add
+        .image(cx + hx * (120 + i * 26), cy + hy * (120 + i * 26), 'softdot')
+        .setTint(0xe8ddff)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDisplaySize(46, 210 + i * 30)
+        .setRotation(Math.atan2(hy, hx))
+        .setAlpha(0.42 - i * 0.1)
+        .setDepth(6)
+      this.tweens.add({
+        targets: wall,
+        x: cx + hx * (20 - i * 20),
+        y: cy + hy * (20 - i * 20),
+        displayWidth: 130,
+        displayHeight: 300 + i * 40,
+        alpha: 0,
+        duration: 420 + i * 90,
+        ease: 'Cubic.easeOut',
+        onComplete: () => wall.destroy(),
+      })
+    }
+    // feathers shed backward from the braking edge
+    this.featherPuff(cx + hx * 60, cy + hy * 60, 5, -hx * 120, -hy * 120 - 30)
   }
 
   /** Echo Call: tap C — the flock cries out; the scattered and the stray
@@ -885,6 +956,34 @@ export class DayScene extends Phaser.Scene {
         b.sprite.setTint(0xffe6c4)
         this.time.delayedCall(130, () => b.sprite.active && b.sprite.clearTint())
       })
+    }
+
+    // THE ANSWER: every lost bird within reach lights up and a thread of light
+    // runs from the flock to it, so the call visibly DOES something to them
+    const reach = 900 * this.callStrength
+    let answered = 0
+    for (const sb of this.scatter.recoverables()) {
+      const d = Math.hypot(sb.x - cx, sb.y - cy)
+      if (d > reach) continue
+      answered++
+      const g = this.add.graphics().setDepth(5.8).setAlpha(0)
+      g.lineStyle(2, 0xffd9a0, 0.85)
+      g.lineBetween(cx, cy, sb.x, sb.y)
+      this.tweens.add({ targets: g, alpha: 1, duration: 160, delay: d * 0.6 })
+      this.tweens.add({ targets: g, alpha: 0, duration: 420, delay: d * 0.6 + 220, onComplete: () => g.destroy() })
+    }
+    if (answered > 0) {
+      const t = this.add
+        .text(0, 0, `${answered} ${answered === 1 ? 'BIRD ANSWERS' : 'BIRDS ANSWER'}`, display(17, '#ffd9a0', 4, 500))
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(21)
+        .setAlpha(0)
+      const at = this.floatAt(cx - this.scrollX, cy - 130)
+      t.setPosition(at.x, at.y)
+      t.setShadow(0, 2, '#2a2036', 6)
+      this.tweens.add({ targets: t, alpha: 1, y: at.y - 22, duration: 300 })
+      this.tweens.add({ targets: t, alpha: 0, duration: 600, delay: 900, onComplete: () => t.destroy() })
     }
   }
 
@@ -1124,6 +1223,7 @@ export class DayScene extends Phaser.Scene {
     // Echo Call: the cry extends recovery reach and stirs distant strays;
     // Spread still closes the deal — call sets up, spread collects
     const callBoost = this.callTimer > 0 ? 0.8 * this.callStrength : 0
+    this.updateReachRing(spreadAmt, callBoost)
     this.scatter.update(dt, time, this.flock, Math.min(1, spreadAmt + callBoost))
     for (const s of this.strays) {
       if (s.group.depleted) continue
@@ -1142,11 +1242,11 @@ export class DayScene extends Phaser.Scene {
         const b = this.flock.birds[(Math.random() * this.flock.birds.length) | 0]
         if (b) {
           const streak = this.add
-            .image(b.x - b.vx * 0.06, b.y - b.vy * 0.06, 'softdot')
+            .image(b.x - b.vx * 0.06, b.y - b.vy * 0.06, 'streak')
             .setTint(0xf5ead8)
             .setBlendMode(Phaser.BlendModes.ADD)
-            .setAlpha(0.4)
-            .setDisplaySize(46, 7)
+            .setAlpha(0.55)
+            .setDisplaySize(70, 6)
             .setRotation(Math.atan2(b.vy, b.vx))
             .setDepth(5.5)
           this.tweens.add({ targets: streak, alpha: 0, displayWidth: 90, duration: 380, onComplete: () => streak.destroy() })
@@ -1597,6 +1697,21 @@ export class DayScene extends Phaser.Scene {
         bird.vy = (dy / d) * sp * 0.8
       }
     }
+  }
+
+  /** SPREAD'S REACH, drawn. The collection radius was an invisible number,
+   * so spreading looked like "the flock gets wider" instead of "I can now
+   * gather birds from over there". */
+  private reachRing!: Phaser.GameObjects.Image
+  private updateReachRing(spreadAmt: number, callBoost: number): void {
+    const reach = 200 + spreadAmt * 220 + callBoost * 340
+    const strayNear = this.strays.some(
+      (s) => !s.group.depleted && Math.abs(s.def.x - this.flock.centerX) < reach + 320,
+    )
+    const want = (spreadAmt > 0.15 || callBoost > 0) && (strayNear || this.scatter.recoverableCount > 0)
+    this.reachRing.setPosition(this.flock.centerX, this.flock.centerY)
+    this.reachRing.setDisplaySize(reach * 2, reach * 1.5)
+    this.reachRing.setAlpha(Phaser.Math.Linear(this.reachRing.alpha, want ? 0.22 : 0, 0.12))
   }
 
   /** Birds joining the flock are announced as birds — never as points. */

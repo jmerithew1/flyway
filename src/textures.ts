@@ -10,6 +10,7 @@ export function createCoreTextures(scene: Phaser.Scene): void {
   makeLeafTexture(scene)
   makeFeatherTexture(scene)
   makeVerticalFade(scene)
+  makeStreakTexture(scene)
 }
 
 /** Load every curated piece from the manifest as a plain image. */
@@ -84,6 +85,31 @@ function makeVerticalFade(scene: Phaser.Scene): void {
   grd.addColorStop(1, 'rgba(255,255,255,1)')
   ctx.fillStyle = grd
   ctx.fillRect(0, 0, 8, h)
+  canvas.refresh()
+}
+
+/** A speed streak: bright core tapering to nothing at both ends. A stretched
+ * radial dot just makes a smudge — motion needs a real line. */
+function makeStreakTexture(scene: Phaser.Scene): void {
+  if (scene.textures.exists('streak')) return
+  const w = 256
+  const h = 8
+  const canvas = scene.textures.createCanvas('streak', w, h)
+  if (!canvas) return
+  const ctx = canvas.context
+  const grd = ctx.createLinearGradient(0, 0, w, 0)
+  grd.addColorStop(0, 'rgba(255,255,255,0)')
+  grd.addColorStop(0.35, 'rgba(255,255,255,0.85)')
+  grd.addColorStop(0.62, 'rgba(255,255,255,1)')
+  grd.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = grd
+  ctx.fillRect(0, h / 2 - 1.5, w, 3)
+  const soft = ctx.createLinearGradient(0, 0, w, 0)
+  soft.addColorStop(0, 'rgba(255,255,255,0)')
+  soft.addColorStop(0.5, 'rgba(255,255,255,0.28)')
+  soft.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = soft
+  ctx.fillRect(0, 0, w, h)
   canvas.refresh()
 }
 
