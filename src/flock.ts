@@ -2,11 +2,37 @@ import Phaser from 'phaser'
 import { Obstacle, avoidSteer, obstacleField } from './obstacles'
 import { birdFrameKey } from './textures'
 import {
+  BANK_DECAY,
+  BANK_DISCHARGE_GAIN,
+  BANK_DISCHARGE_MIN,
+  BANK_HOLD,
+  BANK_MAX,
+  BANK_RATE,
+  BRACE_STRAIN_MULT,
+  DIVE_FULL_HOLD,
+  DIVE_INTENT_DROP,
+  DIVE_LIFT_ACCEL,
+  DIVE_LIFT_DECAY,
+  DIVE_LIFT_SPEED,
+  DIVE_MIN_HOLD,
+  DIVE_PULL,
+  DIVE_SPEED_BONUS,
   GATHER_HEALTHY,
   GATHER_OVER,
+  HARMONY_ATTACK_MULT,
+  HARMONY_BUILD,
+  HARMONY_DECAY,
+  HARMONY_FORM_BAND,
+  HARMONY_SPEND_MIN,
+  HARMONY_SPEND_TIME,
+  HARMONY_STRAIN_MAX,
   SPREAD_HEALTHY,
   SPREAD_OVER,
   STRAIN_RECOVERY_RATE,
+  VORTEX_ALIGN_RATE,
+  VORTEX_COHESION_BOOST,
+  VORTEX_DECAY,
+  VORTEX_SWIRL_MULT,
 } from './config'
 
 /**
@@ -232,6 +258,47 @@ export class Flock {
   private prevHeading = 0
   private turnRateSmooth = 0
 
+  // ---- second ability wave (Phase 8) ---------------------------------------
+  // Every field below is inert at its default, so a scene that never calls the
+  // new setters gets byte-identical behaviour to the first wave.
+
+  /** Dive: held. Read-only for the scene — flip it with setDive(). */
+  dive = false
+  /** Dive slingshot: 0..1 lift envelope living after a dive is released. */
+  diveLift = 0
+  private diveHold = 0
+  /** Vortex Whirl: 0..1 rotating-column intensity, decays over VORTEX_DECAY. */
+  vortex = 0
+  private vortexDir = 1
+  /** Harmony: 0..1 calm reservoir. Read-only feel value (HUD / audio calm). */
+  harmony = 0
+  /** Harmony is the one ability with no call site — it just happens. This is
+   * the single switch that restores exact pre-Phase-8 strain behaviour, for
+   * autopilot regressions that need the old baseline. */
+  harmonyEnabled = true
+  /** Remaining seconds of harmony-bought strain-free grace. */
+  harmonyGrace = 0
+  private prevFormTarget = 0
+  private braced = false
+  /** Tailwind / updraft bank: 0..1 stored aligned-wind momentum. */
+  bank = 0
+  private bankHold = 0
+
+  /** True while brace is engaged (see setBrace). */
+  get bracing(): boolean {
+    return this.braced
+  }
+
+  /**
+   * Strain-accrual multiplier shared by every strain source in this class.
+   * Harmony's grace zeroes it outright (the gift wins over the brace price);
+   * otherwise bracing doubles it.
+   */
+  private get strainMult(): number {
+    if (this.harmonyGrace > 0) return 0
+    return this.braced ? BRACE_STRAIN_MULT : 1
+  }
+
   /** Bleed both strain clocks — sunbeams, roosting, anything restorative.
    * Must drain the CLOCKS: gatherStrain/spreadStrain are recomputed each step. */
   relieveStrain(seconds: number): void {
@@ -243,21 +310,133 @@ export class Flock {
    * flocks produce a ragged, weaker pulse — strain is the anti-spam. */
   surge(): void {
     this.pulse = Math.max(this.pulse, 1 - this.gatherStrain * 0.6)
-    this.gatherTime += 0.5
+    this.gatherTime += 0.5 * this.strainMult
   }
 
   /** Tap SHIFT: wings flare, momentum dies — the overshoot panic button. */
   flare(): void {
     this.flareAmt = Math.max(this.flareAmt, 1 - this.spreadStrain * 0.5)
-    this.spreadTime += 0.4
+    this.spreadTime += 0.4 * this.strainMult
+  }
+
+  /**
+   * DIVE — hold to trade altitude for speed, release to slingshot.
+   *
+   * While held the shared intention sinks DIVE_INTENT_DROP px below the
+   * cursor and a constant downward accel is added, so the flock commits to a
+   * stoop the player still steers. The speed ceiling lifts by DIVE_SPEED_BONUS
+   * but ONLY for birds that are actually descending (vy > 0) — a dive that has
+   * bottomed out earns nothing, which is what keeps it altitude-for-speed
+   * rather than a free speed button.
+   *
+   * The release impulse is handled here, not by the scene: holding past
+   * DIVE_MIN_HOLD converts the dive into a lift envelope (diveLift) scaled by
+   * how long it was held, and that envelope is what climbs and accelerates.
+   */
+  setDive(on: boolean): void {
+    if (on === this.dive) return
+    this.dive = on
+    if (on) {
+      this.diveHold = 0
+      return
+    }
+    if (this.diveHold >= DIVE_MIN_HOLD) {
+      this.diveLift = Math.max(this.diveLift, clamp(this.diveHold / DIVE_FULL_HOLD, 0, 1))
+    }
+    this.diveHold = 0
+  }
+
+  /**
+   * VORTEX WHIRL — the scene detects the circular gesture, this makes it real.
+   *
+   * `dir` is the gesture's rotation sign (+1 clockwise in screen space, -1
+   * counter-clockwise); its sign is all that is read. While the whirl lives,
+   * every bird's orbitBias slews toward that one direction and the swirl force
+   * is multiplied, so the cloud's normally-cancelling internal currents line up
+   * into a single rotating column, with a gentle cohesion boost holding the
+   * column's radius in. The alignment is deliberately NOT reverted on decay —
+   * a whirled flock keeps a faint after-spin until per-bird noise scatters it.
+   */
+  enterVortex(dir = 1, strength = 1): void {
+    this.vortexDir = dir < 0 ? -1 : 1
+    this.vortex = Math.max(this.vortex, clamp(strength, 0, 1))
+  }
+
+  /**
+   * BRACE — hold SPACE+SHIFT: perception bought with formation health.
+   *
+   * CONTRACT (deliberately NOT a public `braceScale` the scene multiplies dt
+   * by — that would leak time dilation into the sim's envelopes):
+   *  - The SCENE owns the world-slow. It decides what eases to ~60% speed
+   *    (scroll, movers, falcon, timers, particles) and for how long.
+   *  - The FLOCK owns the price. setBrace(true) multiplies EVERY strain-clock
+   *    accrual inside this class by BRACE_STRAIN_MULT — held formations, and
+   *    the surge()/flare() surcharges alike — via `strainMult`.
+   *  - The price is per unit of the dt this class is handed. If the scene also
+   *    slows the dt it passes to update(), the net cost is
+   *    braceScale x BRACE_STRAIN_MULT (0.6 x 2 = 1.2x real time) — still a
+   *    premium, which is the intended shape. What the scene must never do is
+   *    scale dt *in order to* price brace: dt scaling re-times pulse, flare,
+   *    diveLift, vortex and bank too, and the price would then depend on the
+   *    slowdown factor instead of on the player's choice.
+   *  - Harmony's grace outranks brace: while grace runs, accrual is zero.
+   */
+  setBrace(on: boolean): void {
+    this.braced = on
+  }
+
+  /**
+   * TAILWIND KICK / UPDRAFT RIDING — banking half.
+   *
+   * The scene decides what "aligned wind" means (zone kind, form, heading vs
+   * zone vector) and reports it every frame as `alignment01 * dt`; the flock
+   * stays dumb about the level. Bank bleeds away BANK_DECAY/s once the reports
+   * stop (after a BANK_HOLD grace, so a one-frame gap does not empty it).
+   */
+  bankMomentum(amount: number): void {
+    if (!(amount > 0)) return
+    this.bank = Math.min(BANK_MAX, this.bank + amount * BANK_RATE)
+    this.bankHold = BANK_HOLD
+  }
+
+  /**
+   * TAILWIND KICK / UPDRAFT RIDING — discharge half, fired at zone exit.
+   *
+   * Converts the stored bank into a surge-shaped pulse (the SAME envelope
+   * surge() uses, so it decays and reads identically) and returns the strength
+   * spent, 0 if there was nothing worth spending — the scene scales its FX and
+   * its prompt off that return value.
+   */
+  dischargeBank(): number {
+    const banked = this.bank
+    this.bank = 0
+    this.bankHold = 0
+    if (banked < BANK_DISCHARGE_MIN) return 0
+    const strength = Math.min(1, banked * BANK_DISCHARGE_GAIN)
+    this.pulse = Math.max(this.pulse, strength)
+    return strength
+  }
+
+  /** Spend banked harmony on a formation change: HARMONY_SPEND_TIME seconds
+   * of strain-free, fast-attack morphing. No-op below HARMONY_SPEND_MIN. */
+  private spendHarmony(): void {
+    if (!this.harmonyEnabled || this.harmony < HARMONY_SPEND_MIN) return
+    this.harmonyGrace = Math.max(this.harmonyGrace, HARMONY_SPEND_TIME * this.harmony)
+    this.harmony = 0
   }
 
   private step(dt: number, input: FlockInput, obstacles: Obstacle[]): void {
     this.time += dt
 
-    // ability envelopes decay
+    // ability envelopes decay (all of them, inside the fixed step)
     this.pulse = Math.max(0, this.pulse - dt / 0.5)
     this.flareAmt = Math.max(0, this.flareAmt - dt / 0.4)
+    this.diveLift = Math.max(0, this.diveLift - dt / DIVE_LIFT_DECAY)
+    this.vortex = Math.max(0, this.vortex - dt / VORTEX_DECAY)
+    this.harmonyGrace = Math.max(0, this.harmonyGrace - dt)
+    if (this.dive) this.diveHold += dt
+    if (this.bankHold > 0) this.bankHold = Math.max(0, this.bankHold - dt)
+    else this.bank = Math.max(0, this.bank - dt * BANK_DECAY)
 
     // shared intent point chases the cursor — collective reaction delay
     const ik = 1 - Math.exp(-TUNING.intentLerp * dt)
@@ -266,8 +445,13 @@ export class Flock {
 
     // gather/spread axis — quick to respond, slow to relax (shape memory)
     const formTarget = input.gather ? 1 : input.spread ? -1 : 0
+    // HARMONY: a formation change (the press edge out of neutral) cashes in the
+    // calm reservoir — the morph snaps and costs nothing for HARMONY_SPEND_TIME
+    if (formTarget !== 0 && this.prevFormTarget === 0) this.spendHarmony()
+    this.prevFormTarget = formTarget
     const strainRelief = 1 + Math.max(this.gatherStrain, this.spreadStrain) * 0.8
-    const formRate = formTarget === 0 ? TUNING.formLerpRelease * strainRelief : TUNING.formLerpAttack
+    const attack = TUNING.formLerpAttack * (this.harmonyGrace > 0 ? HARMONY_ATTACK_MULT : 1)
+    const formRate = formTarget === 0 ? TUNING.formLerpRelease * strainRelief : attack
     this.form += (formTarget - this.form) * (1 - Math.exp(-formRate * dt))
     const f = this.form
     const gather = Math.max(f, 0)
@@ -294,10 +478,29 @@ export class Flock {
     // ---- hidden strain clocks: holding a formation past its healthy window
     // squeezes birds loose (gather) or lets the edges drift (spread).
     // Neutral is REGROUP: strain drains fast and loose birds return.
+    // HARMONY: calm neutral flight is banked. It builds only while genuinely
+    // idle-handed (near-neutral form AND both strains near zero) and drains
+    // once that stops, so it reads as "the flock settled" rather than a meter.
+    const calm =
+      Math.abs(f) < HARMONY_FORM_BAND &&
+      this.gatherStrain < HARMONY_STRAIN_MAX &&
+      this.spreadStrain < HARMONY_STRAIN_MAX
+    if (!this.harmonyEnabled) {
+      this.harmony = 0
+      this.harmonyGrace = 0
+    } else if (calm) {
+      if (this.harmonyGrace <= 0) this.harmony = Math.min(1, this.harmony + dt * HARMONY_BUILD)
+    } else {
+      this.harmony = Math.max(0, this.harmony - dt * HARMONY_DECAY)
+    }
+
+    // Held-formation accrual runs through strainMult: harmony grace zeroes it,
+    // brace doubles it. Recovery is never scaled — mercy is not for sale.
+    const accrual = this.strainMult
     const cleanAir = this.draft > 0.5 ? 0.5 : 1
-    if (f > 0.5) this.gatherTime += dt * cleanAir
+    if (f > 0.5) this.gatherTime += dt * cleanAir * accrual
     else this.gatherTime = Math.max(0, this.gatherTime - dt * STRAIN_RECOVERY_RATE)
-    if (f < -0.5) this.spreadTime += dt
+    if (f < -0.5) this.spreadTime += dt * accrual
     else this.spreadTime = Math.max(0, this.spreadTime - dt * STRAIN_RECOVERY_RATE)
     this.gatherStrain = clamp((this.gatherTime - GATHER_HEALTHY) / (GATHER_OVER - GATHER_HEALTHY), 0, 1)
     this.spreadStrain = clamp((this.spreadTime - SPREAD_HEALTHY) / (SPREAD_OVER - SPREAD_HEALTHY), 0, 1)
@@ -321,8 +524,14 @@ export class Flock {
         ? lerp(TUNING.sepRadiusNeutral, TUNING.sepRadiusGather, gather)
         : lerp(TUNING.sepRadiusNeutral, TUNING.sepRadiusSpread, spread)) *
       (1 + this.flareAmt * 0.7)
-    // neutral flocks cohere loosely (big living cloud); gathering multiplies pull
-    const wCoh = TUNING.wCohesion * lerp(0.35, 1, Math.abs(f)) * (1 + gather * 2.1 - spread * 0.6)
+    // neutral flocks cohere loosely (big living cloud); gathering multiplies pull.
+    // VORTEX adds a gentle inward term so the whirl reads as a column with a
+    // held radius instead of a cloud that merely spins in place.
+    const wCoh =
+      TUNING.wCohesion *
+      lerp(0.35, 1, Math.abs(f)) *
+      (1 + gather * 2.1 - spread * 0.6) *
+      (1 + this.vortex * VORTEX_COHESION_BOOST)
     const wSep = TUNING.wSeparation * (1 + spread * 0.5 - gather * 0.25)
     const wInt = TUNING.wIntent * (1 + gather * 0.35 + this.leaderAura * 0.1)
     const wJit = TUNING.wJitter * (1 + spread * 0.9) * (1 + gStrain * 1.2 + sStrain * 0.5)
@@ -419,7 +628,9 @@ export class Flock {
       b.myIntentX += (this.intentX - b.myIntentX) * bk
       b.myIntentY += (this.intentY - b.myIntentY) * bk
       const ix = b.myIntentX - b.x
-      const iy = b.myIntentY - b.y
+      // DIVE: the shared intention sinks below the cursor — the player still
+      // steers, but everything the flock wants is now downhill
+      const iy = b.myIntentY + (this.dive ? DIVE_INTENT_DROP : 0) - b.y
       const idist = Math.hypot(ix, iy)
       if (idist > 8) {
         const pull = Math.min(idist / 240, 1.25) * wInt * b.intentResponse
@@ -486,9 +697,16 @@ export class Flock {
       }
 
       // --- internal circulation: each bird carries a lazy orbital tendency
-      // around the local mass, so the cloud churns instead of freezing
+      // around the local mass, so the cloud churns instead of freezing.
+      // VORTEX WHIRL: those biases normally cancel out; the whirl slews every
+      // one of them onto a single sign and multiplies the force, turning the
+      // churn into one rotating column.
+      if (this.vortex > 0.001) {
+        const want = this.vortexDir * Math.abs(b.orbitBias)
+        b.orbitBias += (want - b.orbitBias) * (1 - Math.exp(-VORTEX_ALIGN_RATE * this.vortex * dt))
+      }
       if (gcd > 1) {
-        const swirl = TUNING.wSwirl * b.orbitBias * (1 - gather * 0.7)
+        const swirl = TUNING.wSwirl * b.orbitBias * (1 - gather * 0.7) * (1 + this.vortex * VORTEX_SWIRL_MULT)
         ax += (-gcy / gcd) * swirl
         ay += (gcx / gcd) * swirl
       }
@@ -560,6 +778,11 @@ export class Flock {
         ay += hx * helix * amp
       }
 
+      // DIVE / SLINGSHOT: gravity gets a vote while the stoop is held, and the
+      // release converts it back into climb — one continuous arc, not two moves
+      if (this.dive) ay += DIVE_PULL
+      if (this.diveLift > 0) ay -= DIVE_LIFT_ACCEL * this.diveLift
+
       // --- integrate with capped accel (this is the inertia)
       const maxA = TUNING.maxAccel * b.agility * (1 + gather * 0.22 + this.pulse * 0.4)
       const am = Math.hypot(ax, ay)
@@ -573,18 +796,22 @@ export class Flock {
       // --- speed shepherding toward cruise (chasing a far cursor speeds birds up)
       // surge slingshots, drafting builds on clean straights, flare kills it
       const chase = Math.min(Math.max(idist - 200, 0) / 500, 1) * 0.45
+      // DIVE: the ceiling only lifts for birds actually LOSING altitude, so the
+      // bonus is bought with height every frame it is paid out — a bottomed-out
+      // dive earns nothing. The released lift keeps the speed as it climbs.
+      const stooping = this.dive && b.vy > 0 ? DIVE_SPEED_BONUS : 0
       const cruise =
         TUNING.cruiseSpeed *
         b.speedFactor *
         (1 + chase + gather * TUNING.gatherSpeedBoost - spread * TUNING.spreadSpeedDrag) *
-        (1 + this.pulse * 0.45 + this.draft * 0.25) *
+        (1 + this.pulse * 0.45 + this.draft * 0.25 + stooping + this.diveLift * DIVE_LIFT_SPEED) *
         (1 - this.flareAmt * 0.62)
       const sp = Math.hypot(b.vx, b.vy) || 1
       const shepherd = this.flareAmt > 0.1 ? 5.2 : 2.2
       const targetSp = clamp(
         sp + (cruise - sp) * (1 - Math.exp(-shepherd * dt)),
         TUNING.minSpeed * (1 - this.flareAmt * 0.55),
-        TUNING.maxSpeed * (1 + this.pulse * 0.18),
+        TUNING.maxSpeed * (1 + this.pulse * 0.18 + stooping + this.diveLift * DIVE_LIFT_SPEED * 0.5),
       )
       b.vx = (b.vx / sp) * targetSp
       b.vy = (b.vy / sp) * targetSp

@@ -30,8 +30,22 @@ import {
 } from '../level'
 import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS } from '../config'
+import {
+  BRACE_CHORD_DELAY,
+  BRACE_COOLDOWN,
+  BRACE_EASE,
+  BRACE_MAX_TIME,
+  BRACE_WORLD_SCALE,
+  GESTURE_CENTRE_RATE,
+  GESTURE_COOLDOWN,
+  GESTURE_MIN_RADIUS,
+  GESTURE_UNWIND,
+  TAILWIND_ALIGN_MIN,
+  TAILWIND_SPREAD_MIN,
+} from '../config'
 import { display, voice, INK } from '../ui'
 import { Atmosphere, hazeScenery } from '../atmosphere'
+import { TouchControls } from '../touch'
 
 export interface DayStats {
   startCount: number
@@ -92,6 +106,22 @@ export class DayScene extends Phaser.Scene {
 
   private keySpace!: Phaser.Input.Keyboard.Key
   private keyShift!: Phaser.Input.Keyboard.Key
+  private touch!: TouchControls
+  private keyDive!: Phaser.Input.Keyboard.Key
+  private prevDive = false
+  private gestureCx = 0
+  private gestureCy = 0
+  private gestureAngle = 0
+  private gestureWound = 0
+  private gestureArmed = false
+  private gestureCool = 0
+  private harmonyLit = false
+  private braceOn = false
+  private braceAmt = 0
+  private braceHeld = 0
+  private braceCool = 0
+  private braceConsumed = false
+  private windBankZone: WindZone | null = null
   private fogFar!: Phaser.GameObjects.TileSprite
   private leafEmitter!: Phaser.GameObjects.Particles.ParticleEmitter
   private parallax: ParallaxImg[] = []
@@ -506,8 +536,15 @@ export class DayScene extends Phaser.Scene {
     const kb = this.input.keyboard!
     this.keySpace = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
     this.keyShift = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
+    // Dive: hold the mouse button; V is the keyboard fallback (D is the overlay)
+    this.keyDive = kb.addKey(Phaser.Input.Keyboard.KeyCodes.V)
     kb.on('keydown-C', () => this.echoCall())
     kb.on('keydown-E', () => this.echoCall())
+    // touch pads mirror the keyboard grammar exactly; inert on desktop
+    this.touch = new TouchControls(this)
+    this.touch.onSurge = () => this.doSurge()
+    this.touch.onFlare = () => this.doFlare()
+    this.touch.onCall = () => this.echoCall()
     kb.on('keydown-P', () => this.togglePause())
     kb.on('keydown-M', () => {
       this.muted = !this.muted
@@ -890,6 +927,12 @@ export class DayScene extends Phaser.Scene {
     // logic clock = accumulated sim time, so cooldown windows track the sim
     // wherever it runs (real loop, slow machines, headless drivers) rather
     // than the wall clock
+    // BRACE: the world eases to ~60%; the flock keeps its own clock, and
+    // Flock.setBrace() prices the formation half (strain ticks double)
+    const rawDt = dt
+    this.updateBrace(rawDt)
+    this.braceAmt += ((this.braceOn ? 1 : 0) - this.braceAmt) * (1 - Math.exp(-BRACE_EASE * rawDt))
+    dt *= 1 - this.braceAmt * (1 - BRACE_WORLD_SCALE)
     this.simClock += dt
     const time = this.simClock
     const cam = this.cameras.main
@@ -935,10 +978,24 @@ export class DayScene extends Phaser.Scene {
       this.lastPointer.y = p.y
     }
     const world = cam.getWorldPoint(untouched ? VIEW_W * 0.45 : p.x, untouched ? VIEW_H * 0.45 : p.y)
-    const gather = !this.finishing && this.keySpace.isDown
-    const spread = !this.finishing && this.keyShift.isDown
+    const gather = !this.finishing && !this.braceOn && (this.keySpace.isDown || this.touch.gather)
+    const spread = !this.finishing && !this.braceOn && (this.keyShift.isDown || this.touch.spread)
     if (gather) this.gatherHeld += dt
     if (spread) this.spreadHeld += dt
+
+    // ---- DIVE: hold to stoop, release to slingshot (the flock owns the impulse)
+    const diving = !this.finishing && !this.failing && (p.isDown || this.keyDive.isDown)
+    if (diving !== this.prevDive) {
+      this.flock.setDive(diving)
+      if (diving) this.audio.formSnap('gather')
+      else if (this.flock.diveLift > 0.05) {
+        this.audio.surgeWhoosh(0.6 + this.flock.diveLift * 0.5)
+        this.formFlourish(true)
+      }
+      this.prevDive = diving
+    }
+    if (diving) this.showPrompt('dive', 'hold — dive, release to slingshot', () => !this.flock.dive)
+    this.detectVortexGesture(dt, untouched ? VIEW_W * 0.45 : p.x, untouched ? VIEW_H * 0.45 : p.y)
 
     // formation snap: every press/release is a felt, heard transient —
     // and a short tap is an ABILITY (Surge / Flare)
@@ -947,13 +1004,14 @@ export class DayScene extends Phaser.Scene {
       this.audio.formSnap('gather')
       this.formFlourish(true)
     }
-    if (!gather && this.prevGather && time - this.spaceDownT < 0.22) this.doSurge()
+    if (!gather && this.prevGather && !this.braceConsumed && time - this.spaceDownT < 0.22) this.doSurge()
     if (spread && !this.prevSpread) {
       this.shiftDownT = time
       this.audio.formSnap('spread')
       this.formFlourish(false)
     }
-    if (!spread && this.prevSpread && time - this.shiftDownT < 0.22) this.doFlare()
+    if (!spread && this.prevSpread && !this.braceConsumed && time - this.shiftDownT < 0.22) this.doFlare()
+    if (!this.keySpace.isDown && !this.keyShift.isDown) this.braceConsumed = false
     if (!gather && !spread && (this.prevGather || this.prevSpread)) this.audio.formSnap('release')
     this.prevGather = gather
     this.prevSpread = spread
@@ -961,6 +1019,7 @@ export class DayScene extends Phaser.Scene {
     // ability envelopes that live outside the flock sim
     this.callTimer = Math.max(0, this.callTimer - dt)
     this.callCooldown = Math.max(0, this.callCooldown - dt)
+    this.touch.setCallCooldown(this.callCooldown / 6)
     this.mobLift = Math.max(0, this.mobLift - dt)
 
     // progressive difficulty: dusk sharpens the world — sloppy flying costs
@@ -969,7 +1028,7 @@ export class DayScene extends Phaser.Scene {
     this.flock.dangerScale = this.scrollX > 20400 ? 1.3 : this.scrollX > 14400 ? 1.15 : 1
 
     this.flock.update(
-      dt,
+      rawDt,
       {
         intentX: this.finishing
           ? ROOST_X
@@ -1101,6 +1160,29 @@ export class DayScene extends Phaser.Scene {
     }
     this.audio.setStrain(this.flock.gatherStrain, this.flock.spreadStrain)
     this.audio.setFlockState(this.flock.form, Phaser.Math.Clamp(meanSpeed, 0, 1))
+    // ---- HARMONY: earned by calm neutral flight, spent on the next change
+    if (this.flock.harmonyGrace > 0 && !this.harmonyLit) {
+      this.harmonyLit = true
+      this.audio.celebrationSwell(0.35)
+      this.formFlourish(true)
+      this.showPrompt('harmony', 'the flock is calm — this one is free', () => this.flock.harmonyGrace <= 0)
+    } else if (this.flock.harmonyGrace <= 0) {
+      this.harmonyLit = false
+    }
+    // ---- FLOCK VOICE: the murmuration talks to itself
+    this.audio.setVoice(
+      Phaser.Math.Clamp(this.flock.count / START_BIRDS, 0, 1),
+      Phaser.Math.Clamp(
+        (1 - Math.max(this.flock.gatherStrain, this.flock.spreadStrain)) *
+          (1 - Math.abs(this.flock.form) * 0.4) *
+          (this.falcon.inWarning ? 0.15 : 1) *
+          (0.35 + this.flock.harmony * 0.65),
+        0,
+        1,
+      ),
+    )
+    this.audio.voiceTick(dt)
+
     // first-time strain hints, once each, fading on recovery
     if (this.flock.gatherStrain > 0.55)
       this.showPrompt('strain-g', 'too tight — release to regroup', () => this.flock.gatherStrain < 0.2)
@@ -1387,6 +1469,15 @@ export class DayScene extends Phaser.Scene {
 
   private applyWind(dt: number): void {
     const zone = this.windZoneAt(this.flock.centerX)
+    // leaving a zone you rode discharges the bank as a surge-shaped kick
+    if (this.windBankZone && zone !== this.windBankZone) {
+      const kick = this.flock.dischargeBank()
+      if (kick > 0) {
+        this.audio.surgeWhoosh(kick)
+        this.formFlourish(true)
+      }
+      this.windBankZone = null
+    }
     if (!zone) return
     const gather = Math.max(this.flock.form, 0)
     const spread = Math.max(-this.flock.form, 0)
@@ -1395,6 +1486,17 @@ export class DayScene extends Phaser.Scene {
     for (const b of this.flock.birds) {
       b.vx += zone.vx * resist * dt
       b.vy += zone.vy * resist * dt
+    }
+    // riding: spreading INTO an aligned wind banks momentum instead of merely
+    // surviving it. Updrafts are caught by spreading; horizontal zones need
+    // real heading alignment.
+    const wm = Math.hypot(zone.vx, zone.vy) || 1
+    const fm = Math.hypot(this.flock.meanVX, this.flock.meanVY) || 1
+    const align = (zone.vx * this.flock.meanVX + zone.vy * this.flock.meanVY) / (wm * fm)
+    if (spread >= TAILWIND_SPREAD_MIN && (zone.kind === 'updraft' || align >= TAILWIND_ALIGN_MIN)) {
+      this.flock.bankMomentum(Math.max(align, 0.5) * spread * dt)
+      this.windBankZone = zone
+      this.showPrompt('tailwind', 'spread — ride the wind', () => this.flock.bank <= 0)
     }
     this.leafEmitter.setParticleSpeed({ min: -60 + zone.vx, max: -25 + zone.vx * 0.6 } as never)
   }
@@ -1962,6 +2064,102 @@ export class DayScene extends Phaser.Scene {
   private paused = false
   private muted = false
   private pauseVeil: Phaser.GameObjects.Container | null = null
+
+  /** Brace = hold SPACE+SHIFT. The chord outranks both formations: while it is
+   * engaged neither is passed to the flock, and the release edges are consumed
+   * so letting go never fires Surge and Flare on the way out. */
+  private updateBrace(rawDt: number): void {
+    this.braceCool = Math.max(0, this.braceCool - rawDt)
+    const chord = !this.finishing && !this.failing && this.keySpace.isDown && this.keyShift.isDown
+    if (chord && this.braceCool <= 0) {
+      this.braceHeld += rawDt
+      const live = this.braceHeld > BRACE_CHORD_DELAY && this.braceHeld < BRACE_CHORD_DELAY + BRACE_MAX_TIME
+      if (live && !this.braceOn) {
+        this.braceOn = true
+        this.braceConsumed = true
+        this.flock.setBrace(true)
+        this.audio.braceTone(true)
+        this.showPrompt('brace', 'SPACE + SHIFT — brace', () => !this.braceOn)
+      } else if (!live && this.braceOn) {
+        this.endBrace()
+      }
+    } else {
+      this.braceHeld = 0
+      if (this.braceOn) this.endBrace()
+    }
+  }
+
+  private endBrace(): void {
+    this.braceOn = false
+    this.braceCool = BRACE_COOLDOWN
+    this.flock.setBrace(false)
+    this.audio.braceTone(false)
+  }
+
+  /** A wind of >= 2*PI in ONE direction, at a real radius, spins the column up.
+   * The centre is a rolling average of recent pointer travel, so the gesture
+   * works anywhere on screen and slow steering drift never accumulates. */
+  private detectVortexGesture(dt: number, px: number, py: number): void {
+    this.gestureCool = Math.max(0, this.gestureCool - dt)
+    const k = 1 - Math.exp(-GESTURE_CENTRE_RATE * dt)
+    this.gestureCx += (px - this.gestureCx) * k
+    this.gestureCy += (py - this.gestureCy) * k
+    const dx = px - this.gestureCx
+    const dy = py - this.gestureCy
+    if (Math.hypot(dx, dy) < GESTURE_MIN_RADIUS) {
+      this.gestureArmed = false
+      this.gestureWound = 0
+      return
+    }
+    const a = Math.atan2(dy, dx)
+    if (!this.gestureArmed) {
+      this.gestureArmed = true
+      this.gestureAngle = a
+      return
+    }
+    let da = a - this.gestureAngle
+    while (da > Math.PI) da -= Math.PI * 2
+    while (da < -Math.PI) da += Math.PI * 2
+    this.gestureAngle = a
+    // one continuous direction only: a reversal restarts the wind
+    if (this.gestureWound !== 0 && da !== 0 && Math.sign(da) !== Math.sign(this.gestureWound)) {
+      this.gestureWound = 0
+    }
+    this.gestureWound = (this.gestureWound + da) * Math.exp(-GESTURE_UNWIND * dt)
+    if (Math.abs(this.gestureWound) >= Math.PI * 2 && this.gestureCool <= 0 && !this.finishing && !this.failing) {
+      this.doVortex(this.gestureWound < 0 ? -1 : 1)
+      this.gestureWound = 0
+      this.gestureArmed = false
+      this.gestureCool = GESTURE_COOLDOWN
+    }
+  }
+
+  /** Vortex Whirl: the flock winds into a rotating column that hoovers. */
+  private doVortex(dir: number): void {
+    this.flock.enterVortex(dir, 1)
+    this.audio.surgeWhoosh(0.55)
+    this.audio.formSnap('gather')
+    const ring = this.add
+      .image(this.flock.centerX, this.flock.centerY, 'softdot')
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(0xffd9a0)
+      .setAlpha(0.5)
+      .setDisplaySize(160, 160)
+      .setDepth(6)
+    this.tweens.add({
+      targets: ring,
+      displayWidth: 620,
+      displayHeight: 620,
+      alpha: 0,
+      angle: dir * 420,
+      duration: 1300,
+      ease: 'Sine.easeOut',
+      onComplete: () => ring.destroy(),
+    })
+    // the column hoovers: reuse the Echo Call recovery reach while it spins
+    this.callTimer = Math.max(this.callTimer, 1.6)
+    this.showPrompt('vortex', 'circle the cursor — whirl', () => this.flock.vortex <= 0)
+  }
 
   private togglePause(): void {
     this.setPaused(!this.paused)

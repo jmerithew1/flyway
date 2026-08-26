@@ -8,6 +8,16 @@
  * procedural layer is replaced at runtime with zero code changes.
  * Layers: pad, bells, wings (the wing bed itself).
  */
+import {
+  BRACE_DETUNE,
+  BRACE_TONE_MULT,
+  VOICE_CALM_SHARE,
+  VOICE_DENSITY_FLOOR,
+  VOICE_GAP_MAX,
+  VOICE_GAP_MIN,
+  VOICE_PEAK,
+} from './config'
+
 const STEM_LAYERS = ['pad', 'bells', 'wings'] as const
 
 // ---- act key-color: each act nudges the whole palette up a few semitones.
@@ -239,8 +249,7 @@ export class GameAudio {
     const idx = Math.max(0, Math.min(BELL_TABLES.length - 1, Math.round(act) - 1))
     if (idx !== this.actIdx) {
       this.actIdx = idx
-      const cents = ACT_SEMIS[idx] * 100
-      for (const v of this.padVoices) v.osc.detune.setTargetAtTime(v.baseDetune + cents, t, 3.0)
+      this.applyPadDetune(3.0)
       this.drone?.frequency.setTargetAtTime(DRONE_FREQS[idx], t, 3.0)
     }
 
@@ -333,10 +342,14 @@ export class GameAudio {
     const spread = Math.max(-form, 0)
     // gather: brighter, tighter, faster rush. spread: lower, airier, wider (via Q)
     // strain: wingbeats speed up and tense (freq/Q up); over-spread thins the bed
-    const freq = 380 + gather * 420 - spread * 140 + speed * 160 + this.gStrain * 260
+    // brace: the whole bed darkens and slows — this method owns noiseFilter, so
+    // braceTone() only flips the flag and the shaping happens here
+    const brace = this.braced ? BRACE_TONE_MULT : 1
+    const freq = (380 + gather * 420 - spread * 140 + speed * 160 + this.gStrain * 260) * brace
     const q = 0.5 + gather * 1.6 + spread * 0.3 + this.gStrain * 1.4
-    this.noiseFilter.frequency.setTargetAtTime(freq, t, 0.4)
-    this.noiseFilter.Q.setTargetAtTime(q, t, 0.4)
+    const tau = this.braced ? 0.16 : 0.4
+    this.noiseFilter.frequency.setTargetAtTime(freq, t, tau)
+    this.noiseFilter.Q.setTargetAtTime(q, t, tau)
     this.noiseGain.gain.setTargetAtTime(0.35 + gather * 0.25 + speed * 0.15 - this.sStrain * 0.12, t, 0.5)
   }
 
@@ -347,6 +360,90 @@ export class GameAudio {
     const a = Math.max(0, Math.min(1, amount01))
     this.noiseFilter.Q.setTargetAtTime(0.6 + a * 2.2, t, 0.6)
     this.noiseGain.gain.setTargetAtTime(0.5 + a * 0.35, t, 0.6)
+  }
+
+  // ---- Phase 8: brace tone + flock voice ------------------------------------
+
+  private braced = false
+  private braceDetune = 0
+
+  /** Pad + drone detune, recomputed from act colour and brace bend together so
+   * neither can clobber the other. */
+  private applyPadDetune(tau: number): void {
+    if (!this.ctx) return
+    const t = this.ctx.currentTime
+    const cents = ACT_SEMIS[this.actIdx] * 100 + this.braceDetune
+    for (const v of this.padVoices) v.osc.detune.setTargetAtTime(v.baseDetune + cents, t, tau)
+    this.drone?.detune.setTargetAtTime(this.braceDetune, t, tau)
+  }
+
+  /**
+   * Brace: while the world eases down, the score thickens with it — the wing
+   * bed darkens (BRACE_TONE_MULT on the bandpass, applied in setFlockState) and
+   * the pad/drone bend BRACE_DETUNE cents flat. Subtle by design: this plays
+   * under a 0.7s window and must never announce itself as an effect.
+   */
+  braceTone(on: boolean): void {
+    if (this.braced === on) return
+    this.braced = on
+    this.braceDetune = on ? BRACE_DETUNE : 0
+    if (!this.ctx) return
+    this.applyPadDetune(on ? 0.12 : 0.35)
+  }
+
+  private voiceCount = 0
+  private voiceCalm = 0
+  private voiceTimer = 0
+
+  /** Flock Voice inputs. count01: flock size as a fraction of full strength.
+   * calm01: how settled the flock is (1 = neutral, unstrained, unhurried). */
+  setVoice(count01: number, calm01: number): void {
+    this.voiceCount = Math.max(0, Math.min(1, count01))
+    this.voiceCalm = Math.max(0, Math.min(1, calm01))
+  }
+
+  /**
+   * Sparse chirp chorus — call every frame with dt. A big calm flock chatters;
+   * a small or panicked one falls nearly silent. Everything is randomized (gap,
+   * cluster size, pitch via pv(), stagger, sweep direction) so it never loops
+   * audibly, and every chirp sits under the bell motif in level. No ctx: no-op.
+   */
+  voiceTick(dt: number): void {
+    if (!this.ctx) return
+    this.voiceTimer -= dt
+    if (this.voiceTimer > 0) return
+    const density = this.voiceCount * (1 - VOICE_CALM_SHARE + VOICE_CALM_SHARE * this.voiceCalm)
+    // the gap is re-rolled even when the flock is too thin to sing, so silence
+    // never turns into a per-frame density test
+    this.voiceTimer = (VOICE_GAP_MAX + (VOICE_GAP_MIN - VOICE_GAP_MAX) * density) * (0.55 + Math.random() * 0.95)
+    if (density < VOICE_DENSITY_FLOOR) return
+    const ctx = this.ctx
+    const t0 = ctx.currentTime
+    // 1-3 birds answer each other; louder flocks answer in bigger groups
+    const voices = 1 + ((Math.random() * (1 + density * 2)) | 0)
+    for (let i = 0; i < voices; i++) {
+      const t = t0 + Math.random() * 0.14 + i * (0.055 + Math.random() * 0.07)
+      const up = Math.random() < 0.68
+      const f0 = this.pv(1750 + Math.random() * 900, 0.06)
+      const f1 = up ? f0 * (1.2 + Math.random() * 0.35) : f0 * (0.72 + Math.random() * 0.16)
+      const dur = 0.045 + Math.random() * 0.05
+      const o = ctx.createOscillator()
+      o.type = 'sine'
+      o.frequency.setValueAtTime(f0, t)
+      o.frequency.exponentialRampToValueAtTime(Math.max(f1, 60), t + dur)
+      const bp = ctx.createBiquadFilter()
+      bp.type = 'bandpass'
+      bp.frequency.value = f0
+      bp.Q.value = 1.4
+      const g = ctx.createGain()
+      const peak = VOICE_PEAK * (0.5 + 0.5 * density) * (0.6 + Math.random() * 0.7)
+      g.gain.setValueAtTime(0.0001, t)
+      g.gain.exponentialRampToValueAtTime(peak, t + dur * 0.3)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.05)
+      o.connect(bp).connect(g).connect(this.master)
+      o.start(t)
+      o.stop(t + dur + 0.08)
+    }
   }
 
   /** Master mute — the whole graph ducks, nothing is torn down. */

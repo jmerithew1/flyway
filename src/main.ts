@@ -6,6 +6,14 @@ import { TitleScene } from './scenes/TitleScene'
 import { ResultsScene } from './scenes/ResultsScene'
 import { FlywayMapScene } from './scenes/FlywayMapScene'
 
+/** Fade out the branded boot veil in index.html and take it out of the DOM. */
+function dismissBootVeil(): void {
+  const veil = document.getElementById('boot-veil')
+  if (!veil) return
+  veil.classList.add('gone')
+  window.setTimeout(() => veil.remove(), 700)
+}
+
 class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot')
@@ -18,6 +26,9 @@ class BootScene extends Phaser.Scene {
   create(): void {
     createCoreTextures(this)
     resolveFalconTexture(this)
+    // art is decoded and the first real scene is one line away: hand the
+    // screen over from the wordmark veil to the game
+    dismissBootVeil()
     const params = new URLSearchParams(window.location.search)
     this.scene.start(
       params.has('sandbox') ? 'Sandbox' : params.has('day') ? 'Day' : params.has('map') ? 'FlywayMap' : 'Title',
@@ -44,6 +55,8 @@ Promise.all([
   const game = new Phaser.Game(config)
   // debug handle for the headless verification harness
   ;(window as unknown as Record<string, unknown>).__game = game
+  // failsafe: never leave the player staring at a veil if a load stalls
+  window.setTimeout(dismissBootVeil, 8000)
 })
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -55,5 +68,8 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
+  // three simultaneous pointers: a GATHER thumb, a SPREAD thumb, and the
+  // finger on the sky that does the steering (Phaser tracks one by default)
+  input: { activePointers: 3 },
   scene: [BootScene, TitleScene, SandboxScene, DayScene, ResultsScene, FlywayMapScene],
 }

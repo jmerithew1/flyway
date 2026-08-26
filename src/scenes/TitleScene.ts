@@ -3,11 +3,13 @@ import { ART } from '../artManifest'
 import { W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { GAME_TITLE, TAGLINE, TITLE_HINT } from '../config'
 import { birdFrameKey } from '../textures'
+import { isTouch } from '../touch'
 import { display, voice, INK } from '../ui'
 
 /** Minimal elegant title screen on the painted plate, with drifting birds. */
 export class TitleScene extends Phaser.Scene {
   private drifting: { img: Phaser.GameObjects.Image; vx: number; vy: number; ph: number }[] = []
+  private rotateCard?: Phaser.GameObjects.Container
 
   constructor() {
     super('Title')
@@ -63,12 +65,20 @@ export class TitleScene extends Phaser.Scene {
     }
     const tag = this.add.text(cx, 396, TAGLINE, voice(24, '#eddfd8')).setOrigin(0.5).setAlpha(0)
 
-    const controls = [
-      ['Mouse', 'Steer'],
-      ['SPACE', 'hold Gather · tap Surge'],
-      ['SHIFT', 'hold Spread · tap Flare'],
-      ['C', 'Call the lost home'],
-    ]
+    // the same grammar, named for the hand that's playing it
+    const controls = isTouch
+      ? [
+          ['Drag', 'Steer'],
+          ['GATHER', 'hold Gather · tap Surge'],
+          ['SPREAD', 'hold Spread · tap Flare'],
+          ['CALL', 'Bring the lost home'],
+        ]
+      : [
+          ['Mouse', 'Steer'],
+          ['SPACE', 'hold Gather · tap Surge'],
+          ['SHIFT', 'hold Spread · tap Flare'],
+          ['C', 'Call the lost home'],
+        ]
     const ctrlObjs: Phaser.GameObjects.Text[] = []
     controls.forEach(([k, v], i) => {
       const y = 484 + i * 34
@@ -79,12 +89,15 @@ export class TitleScene extends Phaser.Scene {
     hint.setShadow(0, 1, '#3a2f4a', 4)
 
     const begin = this.add
-      .text(cx, 700, 'BEGIN FLIGHT', serif(24, '#f7f0ea', 6))
+      .text(cx, 700, isTouch ? 'TAP TO BEGIN FLIGHT' : 'BEGIN FLIGHT', serif(24, '#f7f0ea', 6))
       .setOrigin(0.5)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true })
-    begin.on('pointerover', () => begin.setColor('#ffe6bf'))
-    begin.on('pointerout', () => begin.setColor('#f7f0ea'))
+    if (!isTouch) {
+      // hover is cosmetic only — and on touch it would stick gold after a tap
+      begin.on('pointerover', () => begin.setColor('#ffe6bf'))
+      begin.on('pointerout', () => begin.setColor('#f7f0ea'))
+    }
 
     const start = () => this.scene.start('Day')
     begin.on('pointerdown', start)
@@ -97,6 +110,38 @@ export class TitleScene extends Phaser.Scene {
     this.tweens.add({ targets: hint, alpha: 0.9, duration: 800, delay: 1250 })
     this.tweens.add({ targets: begin, alpha: 1, duration: 800, delay: 1500 })
     this.tweens.add({ targets: begin, scale: 1.045, duration: 1300, delay: 2300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+    this.buildRotateCard()
+  }
+
+  /**
+   * Portrait rotate card. A phone held upright shows the flyway as a keyhole,
+   * so ask for the wide view before the player starts rather than after.
+   * Touch devices only — a tall desktop window is a window, not a phone.
+   */
+  private buildRotateCard(): void {
+    if (!isTouch) return
+    const scrim = this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x14102a, 0.93).setOrigin(0)
+    const line = this.add
+      .text(VIEW_W / 2, VIEW_H / 2 - 14, 'turn your phone to fly', voice(38, INK.warm))
+      .setOrigin(0.5)
+    const sub = this.add
+      .text(VIEW_W / 2, VIEW_H / 2 + 46, 'THE FLOCK NEEDS THE WIDE SKY', display(16, INK.dim, 8, 300))
+      .setOrigin(0.5)
+    this.rotateCard = this.add.container(0, 0, [scrim, line, sub]).setDepth(200).setScrollFactor(0)
+    this.tweens.add({ targets: line, alpha: 0.55, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+
+    this.syncRotateCard()
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.syncRotateCard, this)
+    this.scale.on(Phaser.Scale.Events.ORIENTATION_CHANGE, this.syncRotateCard, this)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.syncRotateCard, this)
+      this.scale.off(Phaser.Scale.Events.ORIENTATION_CHANGE, this.syncRotateCard, this)
+    })
+  }
+
+  private syncRotateCard(): void {
+    this.rotateCard?.setVisible(window.innerHeight > window.innerWidth)
   }
 
   update(timeMs: number, deltaMs: number): void {

@@ -201,6 +201,7 @@ export const WIND_ZONES: WindZone[] = [
   { x0: 21850, x1: 22180, vx: -140, vy: -18, kind: 'gust' },
   { x0: 13500, x1: 14400, vx: -30, vy: -46, kind: 'updraft' },
   { x0: 20400, x1: 21600, vx: -46, vy: 34, kind: 'down' },
+  { x0: 25600, x1: 26400, vx: 120, vy: -12, kind: 'cross' }, // TAILWIND home: spread and ride it in
 ]
 
 export const STRAYS: StrayDef[] = [
