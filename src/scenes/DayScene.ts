@@ -490,6 +490,15 @@ export class DayScene extends Phaser.Scene {
     this.keyShift = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
     kb.on('keydown-C', () => this.echoCall())
     kb.on('keydown-E', () => this.echoCall())
+    kb.on('keydown-P', () => this.togglePause())
+    kb.on('keydown-M', () => {
+      this.muted = !this.muted
+      this.audio.setMuted(this.muted)
+      this.showChromeToast(this.muted ? 'sound off' : 'sound on')
+    })
+    kb.on('keydown-R', () => this.scene.restart())
+    // a tab that loses focus pauses rather than running the flock into stone
+    this.game.events.on(Phaser.Core.Events.BLUR, () => this.setPaused(true))
     kb.on('keydown-D', () => {
       this.debugVisible = !this.debugVisible
       this.debugText.setVisible(this.debugVisible)
@@ -586,7 +595,9 @@ export class DayScene extends Phaser.Scene {
     for (const t of introBits) t.setAlpha(0)
     this.tweens.add({ targets: introBits, alpha: 0.95, duration: 550, hold: 1300, yoyo: true, onComplete: () => introBits.forEach((t) => t.destroy()) })
 
-    this.time.delayedCall(1400, () =>
+    this.beginDeparture()
+
+    this.time.delayedCall(2600, () =>
       this.showPrompt('steer', 'move the mouse — steer the flock', () => this.mouseTravel > 900),
     )
 
@@ -850,6 +861,7 @@ export class DayScene extends Phaser.Scene {
   private simClock = 0
 
   update(timeMs: number, deltaMs: number): void {
+    if (this.paused) return
     let dt = Math.min(deltaMs / 1000, 1 / 20)
     // hit-stop: a 40-80ms time-dip that gives the big three impacts a punch
     if (this.hitStop > 0) {
@@ -1881,7 +1893,96 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
+  private paused = false
+  private muted = false
+  private pauseVeil: Phaser.GameObjects.Container | null = null
+
+  private togglePause(): void {
+    this.setPaused(!this.paused)
+  }
+
+  private setPaused(on: boolean): void {
+    if (on === this.paused || this.failing) return
+    this.paused = on
+    if (on) {
+      const veil = this.add.container(0, 0).setScrollFactor(0).setDepth(60)
+      veil.add(this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x0f0c22, 0.62).setOrigin(0))
+      veil.add(this.add.text(VIEW_W / 2, VIEW_H / 2 - 24, 'PAUSED', display(30, INK.bright, 12, 300)).setOrigin(0.5))
+      veil.add(
+        this.add
+          .text(VIEW_W / 2, VIEW_H / 2 + 26, 'P to fly on · M mute · R restart the day', voice(18, INK.soft))
+          .setOrigin(0.5),
+      )
+      this.pauseVeil = veil
+    } else {
+      this.pauseVeil?.destroy()
+      this.pauseVeil = null
+    }
+  }
+
+  /** Small corner acknowledgement for chrome actions (mute, etc). */
+  private showChromeToast(text: string): void {
+    const t = this.add
+      .text(VIEW_W / 2, VIEW_H - 60, text, display(15, INK.soft, 4, 300))
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(60)
+      .setAlpha(0)
+    this.tweens.add({ targets: t, alpha: 0.9, duration: 220, yoyo: true, hold: 900, onComplete: () => t.destroy() })
+  }
+
   private perched: Phaser.GameObjects.Image[] = []
+  private departureBirds: Phaser.GameObjects.Image[] = []
+
+  /** Dawn bookend: the flock is asleep in a roadside roost and lifts off in
+   * ones and twos as the day begins. Control is live throughout — the player
+   * is already steering the forming flock, so there is no dead cinematic. */
+  private beginDeparture(): void {
+    if (!this.textures.exists('perched_a')) return
+    const treeArt = ART[this.textures.exists('roost_tree_hero') ? 'roost_tree_hero' : 'roost_tree']
+    const treeKey = this.textures.exists('roost_tree_hero') ? 'roost_tree_hero' : 'roost_tree'
+    const th = 430
+    const tree = this.add
+      .image(150, 952, treeKey)
+      .setOrigin(0.5, 1)
+      .setDisplaySize((treeArt.w / treeArt.h) * th, th)
+      .setDepth(2)
+      .setAlpha(0.95)
+    this.add
+      .image(150, 918, 'softdot')
+      .setTint(0x6a5c86)
+      .setDisplaySize((treeArt.w / treeArt.h) * th * 1.1, 130)
+      .setAlpha(0.32)
+      .setDepth(2.4)
+    void tree
+    // sleepers on the branches, waking in sequence
+    for (let i = 0; i < 14; i++) {
+      const key = ['perched_a', 'perched_b', 'perched_c', 'perched_sleep'][i % 4]
+      const art = ART[key]
+      const h = 22 + Math.random() * 7
+      const img = this.add
+        .image(150 + rand(-120, 120), 640 + Math.random() * 150, key)
+        .setDisplaySize((art.w / art.h) * h, h)
+        .setFlipX(Math.random() < 0.5)
+        .setAlpha(0.95)
+        .setDepth(4)
+      this.departureBirds.push(img)
+      // each lifts off, becomes a flight sprite, and is gone into the flock
+      this.time.delayedCall(700 + i * 105, () => {
+        if (!img.active) return
+        this.audio.formSnap('gather')
+        this.tweens.add({
+          targets: img,
+          y: img.y - 150 - Math.random() * 120,
+          x: img.x + 220 + Math.random() * 180,
+          alpha: 0,
+          duration: 900,
+          ease: 'Sine.easeIn',
+          onComplete: () => img.destroy(),
+        })
+      })
+    }
+  }
 
   /** The day's closing bookend: the camera eases in on the roost while the
    * flock settles into its branches, bird by bird. */

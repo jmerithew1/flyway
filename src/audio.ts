@@ -340,6 +340,12 @@ export class GameAudio {
     this.noiseGain.gain.setTargetAtTime(0.35 + gather * 0.25 + speed * 0.15 - this.sStrain * 0.12, t, 0.5)
   }
 
+  /** Master mute — the whole graph ducks, nothing is torn down. */
+  setMuted(on: boolean): void {
+    if (!this.ctx) return
+    this.master.gain.setTargetAtTime(on ? 0 : 0.22, this.ctx.currentTime, 0.05)
+  }
+
   /** ±ratio random pitch so repeated one-shots never sound stamped. */
   private pv(base: number, ratio = 0.08): number {
     return base * (1 + (Math.random() * 2 - 1) * ratio)
