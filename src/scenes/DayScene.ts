@@ -14,6 +14,7 @@ import {
   FEATURES,
   STRAYS,
   PROMPTS,
+  PROMPT_TEXT,
   LANDMARKS,
   WIND_ZONES,
   MOTE_ARCS,
@@ -46,7 +47,7 @@ import {
 } from '../config'
 import { display, voice, INK } from '../ui'
 import { Atmosphere, hazeScenery } from '../atmosphere'
-import { TouchControls, decorScale } from '../touch'
+import { TouchControls, decorScale, isTouch } from '../touch'
 
 export interface DayStats {
   startCount: number
@@ -445,7 +446,7 @@ export class DayScene extends Phaser.Scene {
         return
       }
       if (taken > 0) {
-        this.showPrompt('call', 'press C — call them back', () => this.scatter.recoveredThisFrame > 0)
+        this.showPrompt('call', '', () => this.scatter.recoveredThisFrame > 0)
         // sharp feather burst where the talons crossed the flock
         const burst = this.add.particles(this.flock.centerX, this.flock.centerY - 60, 'feather', {
           speed: { min: 120, max: 380 },
@@ -464,6 +465,7 @@ export class DayScene extends Phaser.Scene {
         this.time.delayedCall(1600, () => burst.destroy())
         this.hitStop = 0.06
         this.camKick = 2.6
+        this.lossCause('the falcon struck — gather or find cover', this.flock.centerX, this.flock.centerY, this.simClock)
       } else if (gathered) {
         // defensive success: a satisfying near-miss flourish
         this.perfectFlowFeedback()
@@ -473,7 +475,7 @@ export class DayScene extends Phaser.Scene {
       this.time.delayedCall(240, () => this.cameras.main.zoomTo(1, 320, 'Sine.easeInOut', true))
     }
 
-    this.flock = new Flock(this, 120, 420, 430)
+    this.flock = new Flock(this, 120, 300, 640)
     this.flock.intentX = 600
     this.flock.intentY = 430
     this.scatter = new ScatterSystem(this)
@@ -654,12 +656,12 @@ export class DayScene extends Phaser.Scene {
 
     this.placeRouteLights()
     this.placeGhostFlyways()
-    this.beginDeparture()
 
     this.time.delayedCall(2600, () =>
-      this.showPrompt('steer', 'move the mouse — steer the flock', () => this.mouseTravel > 900),
+      this.showPrompt('steer', '', () => this.mouseTravel > 900),
     )
 
+    this.beginDeparture()
     ;(window as unknown as Record<string, unknown>).__day = this
     ;(window as unknown as Record<string, unknown>).__flock = this.flock
   }
@@ -783,6 +785,7 @@ export class DayScene extends Phaser.Scene {
   // ------------------------------------------------------------------ prompts
 
   private promptQueue: { key: string; text: string; done: () => boolean }[] = []
+  private falconWarned = false
   private promptAge = 0
   private spaceDownT = -10
   private shiftDownT = -10
@@ -875,7 +878,15 @@ export class DayScene extends Phaser.Scene {
 
   /** One-time prompts queue instead of being dropped when the slot is busy,
    * and every prompt times out — nothing can hog the screen. */
+  /** Resolve prompt copy for the player's actual hardware. */
+  private say(key: string, fallback: string): string {
+    const e = PROMPT_TEXT[key]
+    if (!e) return fallback
+    return isTouch ? e.touch : e.key
+  }
+
   private showPrompt(key: string, text: string, done: () => boolean): void {
+    text = this.say(key, text)
     if (this.shownPrompts.has(key)) return
     this.shownPrompts.add(key)
     if (this.prompt) {
@@ -885,7 +896,18 @@ export class DayScene extends Phaser.Scene {
     this.beginPrompt({ key, text, done })
   }
 
+  /** Danger copy: clears whatever teaching line is on screen and shows now. */
+  private alertPrompt(text: string): void {
+    this.promptQueue.length = 0
+    this.tweens.killTweensOf(this.promptText)
+    this.prompt = { key: 'alert', done: () => !this.falcon.inWarning, fading: false }
+    this.promptAge = 0
+    this.promptText.setText(text).setAlpha(0).setColor('#ffd0b8')
+    this.tweens.add({ targets: this.promptText, alpha: 1, duration: 200 })
+  }
+
   private beginPrompt(p: { key: string; text: string; done: () => boolean }): void {
+    this.promptText.setColor('#f7ecdf')
     this.prompt = { key: p.key, done: p.done, fading: false }
     this.promptAge = 0
     this.promptText.setText(p.text).setAlpha(0)
@@ -997,7 +1019,7 @@ export class DayScene extends Phaser.Scene {
       }
       this.prevDive = diving
     }
-    if (diving) this.showPrompt('dive', 'hold — dive, release to slingshot', () => !this.flock.dive)
+    if (diving) this.showPrompt('dive', '', () => !this.flock.dive)
     this.detectVortexGesture(dt, untouched ? VIEW_W * 0.45 : p.x, untouched ? VIEW_H * 0.45 : p.y)
 
     // formation snap: every press/release is a felt, heard transient —
@@ -1048,9 +1070,13 @@ export class DayScene extends Phaser.Scene {
     )
 
     this.falcon.update(dt, this.flock, this.scrollX, VIEW_W, this.visibleObstacles())
-    if (this.falcon.inWarning && this.falcon.firstEncounter) {
-      this.showPrompt('falcon', 'Gather!', () => !this.falcon.inWarning)
-      this.falcon.firstEncounter = false
+    // The one warning that can cost the run: it preempts the queue, and it
+    // fires at every encounter, not once per session (audit: critical).
+    if (this.falcon.inWarning && !this.falconWarned) {
+      this.falconWarned = true
+      this.alertPrompt(isTouch ? 'hold GATHER — the falcon dives' : 'hold SPACE — the falcon dives')
+    } else if (!this.falcon.inWarning) {
+      this.falconWarned = false
     }
     this.applyWind(dt)
 
@@ -1122,6 +1148,14 @@ export class DayScene extends Phaser.Scene {
       this.roostHorizon.setDisplaySize(grow, grow * 0.72)
     }
     this.warmth.setAlpha(prog * 0.16)
+    // act plates, sunbeams, wisps — the layer that gives each act its light.
+    // (This call was silently dropped once; the audit caught six acts
+    // measuring identical sky colour because of it.)
+    const { inBeam } = this.atmo.update(dt, this.scrollX, this.flock)
+    if (inBeam > 0) this.flock.relieveStrain(dt * 3.2 * inBeam)
+    if (this.atmo.actChanged) {
+      this.leafEmitter.setParticleTint(this.atmo.particleTint(this.scrollX) as never)
+    }
     this.updateRoostSwirl(dt, time)
     this.updateAmbientFlocks(dt)
 
@@ -1129,16 +1163,16 @@ export class DayScene extends Phaser.Scene {
       if (pr.x < 0) continue
       if (this.scrollX > pr.x) {
         if (pr.key === 'gather')
-          this.showPrompt('gather', pr.text, () => this.gatherHeld > 0.3 && this.flock.centerX > 1020)
+          this.showPrompt('gather', '', () => this.gatherHeld > 0.3 && this.flock.centerX > 1020)
         else if (pr.key === 'spread')
-          this.showPrompt('spread', pr.text, () => this.stats.found > 0 || this.spreadHeld > 1.6)
-        else if (pr.key === 'surge') this.showPrompt('surge', pr.text, () => this.flock.pulse > 0.3)
-        else if (pr.key === 'flare') this.showPrompt('flare', pr.text, () => this.flock.flareAmt > 0.3)
+          this.showPrompt('spread', '', () => this.stats.found > 0 || this.spreadHeld > 1.6)
+        else if (pr.key === 'surge') this.showPrompt('surge', '', () => this.flock.pulse > 0.3)
+        else if (pr.key === 'flare') this.showPrompt('flare', '', () => this.flock.flareAmt > 0.3)
       }
     }
     // teach Neutral once, right after the spread lesson lands
     if (this.shownPrompts.has('spread') && !this.prompt && !this.shownPrompts.has('regroup') && this.scrollX > 1900) {
-      this.showPrompt('regroup', 'release — regroup', () => Math.abs(this.flock.form) < 0.15 && this.flock.gatherStrain < 0.1)
+      this.showPrompt('regroup', '', () => Math.abs(this.flock.form) < 0.15 && this.flock.gatherStrain < 0.1)
     }
     const zoneAhead = this.windZoneAt(this.flock.centerX + 500)
     if (zoneAhead) {
@@ -1519,6 +1553,7 @@ export class DayScene extends Phaser.Scene {
         this.stats.collisionEvents++
         this.audio.collisionThump()
         this.breakScoreStreak()
+        this.lossCause('struck the stone', bird.x, bird.y, time)
         this.featherPuff(bird.x, bird.y, 4, this.flock.meanVX * 0.35, -20)
         if (!this.scatter.spawn(bird.x, bird.y, bird.x - this.flock.centerX, bird.y - this.flock.centerY)) this.stats.lost++
         this.flock.removeBird(bird)
@@ -1533,6 +1568,25 @@ export class DayScene extends Phaser.Scene {
         bird.vy = (dy / d) * sp * 0.8
       }
     }
+  }
+
+  /** Say WHY birds were lost, at the place it happened. Rate-limited so a
+   * bad passage explains itself once instead of shouting every frame. */
+  private lastCauseT = -10
+  private lossCause(text: string, x: number, y: number, time: number): void {
+    if (time - this.lastCauseT < 2.4) return
+    this.lastCauseT = time
+    const sx = Phaser.Math.Clamp(x - this.scrollX, 170, VIEW_W - 170)
+    const sy = Phaser.Math.Clamp(y + 44, 110, VIEW_H - 120)
+    const t = this.add
+      .text(sx, sy, text, display(15, '#e6b3a4', 3, 400))
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(21)
+      .setAlpha(0)
+    t.setShadow(0, 2, '#2a2036', 6)
+    this.tweens.add({ targets: t, alpha: 0.95, y: sy - 16, duration: 320 })
+    this.tweens.add({ targets: t, alpha: 0, duration: 600, delay: 1200, onComplete: () => t.destroy() })
   }
 
   /** Award points and float the reason where the player was looking. */
@@ -1694,6 +1748,7 @@ export class DayScene extends Phaser.Scene {
       this.flingTimes.push(time)
       const dx = bird.x - this.flock.centerX
       const dy = bird.y - this.flock.centerY
+      this.lossCause('blown wide — gather in close terrain', bird.x, bird.y, time)
       this.featherPuff(bird.x, bird.y, 3, dx * 0.6, -30)
       if (!this.scatter.spawn(bird.x, bird.y, dx || 1, dy - 0.4)) this.stats.lost++
       this.flock.removeBird(bird)
@@ -1763,6 +1818,7 @@ export class DayScene extends Phaser.Scene {
         this.lossTimes.push(time)
         this.stats.collisionEvents++
         this.audio.collisionThump()
+        this.lossCause('the curtain held — surge or gather through', bird.x, bird.y, time)
         this.featherPuff(bird.x, bird.y, 4, -50, -20)
         if (!this.scatter.spawn(bird.x, bird.y, -1, -0.3)) this.stats.lost++
         this.flock.removeBird(bird)
@@ -1935,6 +1991,7 @@ export class DayScene extends Phaser.Scene {
     this.promptText.setAlpha(0)
     this.landmarkText.setAlpha(0)
     this.prompt = null
+    this.promptQueue.length = 0
     this.tweens.add({ targets: this.duskOverlay, alpha: 0.55, duration: 1400 })
     this.tweens.add({ targets: this.fadeRect, alpha: 0.85, duration: 1700, delay: 500 })
     this.time.delayedCall(1500, () => {
@@ -1951,7 +2008,7 @@ export class DayScene extends Phaser.Scene {
         mk(360, 'THE FLOCK SCATTERED', 34, '#f2e4d5', 8),
         mk(414, 'Too few birds remained together.', 17, '#b9a8be'),
         mk(478, `Returning to ${name}`, 20, '#dccce0', 2),
-        mk(522, `${this.checkpoint.count} BIRDS`, 24, '#f2e8f5', 3),
+        mk(522, `${Math.max(this.checkpoint.count, 60)} BIRDS`, 24, '#f2e8f5', 3),
       ]
       this.tweens.add({ targets: this.failTexts, alpha: 0.95, duration: 700 })
     })
@@ -1997,6 +2054,9 @@ export class DayScene extends Phaser.Scene {
     this.scoreText.setText(String(this.scoreShown))
     this.callCooldown = 0
     this.callTimer = 0
+    this.promptQueue.length = 0
+    this.prompt = null
+    this.promptText.setAlpha(0)
     for (const z of this.openingZones) if (z.x > cp.x) z.state = 'idle'
     // reset flow gates and motes ahead of the checkpoint
     for (const [f, g] of this.flowGates) if (f.x > cp.x) { g.state = 'idle'; g.clean = true }
@@ -2083,7 +2143,7 @@ export class DayScene extends Phaser.Scene {
         this.braceConsumed = true
         this.flock.setBrace(true)
         this.audio.braceTone(true)
-        this.showPrompt('brace', 'SPACE + SHIFT — brace', () => !this.braceOn)
+        this.showPrompt('brace', '', () => !this.braceOn)
       } else if (!live && this.braceOn) {
         this.endBrace()
       }
@@ -2162,7 +2222,7 @@ export class DayScene extends Phaser.Scene {
     })
     // the column hoovers: reuse the Echo Call recovery reach while it spins
     this.callTimer = Math.max(this.callTimer, 1.6)
-    this.showPrompt('vortex', 'circle the cursor — whirl', () => this.flock.vortex <= 0)
+    this.showPrompt('vortex', '', () => this.flock.vortex <= 0)
   }
 
   private togglePause(): void {
@@ -2343,6 +2403,16 @@ export class DayScene extends Phaser.Scene {
 
   private beginDeparture(): void {
     if (!this.textures.exists('perched_a')) return
+    // The flock wakes ON the roost: hold it there, low and slow, and let it
+    // stream out as the birds lift. Control is live the whole time.
+    for (const b of this.flock.birds) {
+      b.x = 210 + rand(-90, 90)
+      b.y = 620 + rand(-70, 70)
+      b.vx = rand(40, 90)
+      b.vy = rand(-20, 20)
+    }
+    this.flock.intentX = 720
+    this.flock.intentY = 470
     const treeArt = ART[this.textures.exists('roost_tree_hero') ? 'roost_tree_hero' : 'roost_tree']
     const treeKey = this.textures.exists('roost_tree_hero') ? 'roost_tree_hero' : 'roost_tree'
     const th = 430
@@ -2538,6 +2608,7 @@ export class DayScene extends Phaser.Scene {
       this.finishing = true
       this.promptText.setAlpha(0)
       this.prompt = null
+      this.promptQueue.length = 0
       this.showPrompt('home', 'home', () => this.finishTimer > 3)
       this.audio.chime(392, 0.3)
       this.audio.warmth(1)

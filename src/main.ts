@@ -65,7 +65,11 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 960,
   backgroundColor: '#3f3760',
   scale: {
-    mode: Phaser.Scale.FIT,
+    // FIT letterboxed 26% of a landscape phone away (audit: mobile-pillarbox).
+    // ENVELOP fills the viewport and lets the extra width show more world,
+    // which is exactly right for a side-scroller; desktop is unchanged
+    // because its aspect already matches.
+    mode: Phaser.Scale.ENVELOP,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   // three simultaneous pointers: a GATHER thumb, a SPREAD thumb, and the

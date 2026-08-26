@@ -184,7 +184,7 @@ export class Atmosphere {
       .rectangle(0, 0, VIEW_W, VIEW_H, 0xffffff)
       .setOrigin(0)
       .setScrollFactor(0)
-      .setBlendMode(Phaser.BlendModes.OVERLAY)
+      .setBlendMode(Phaser.BlendModes.MULTIPLY)
       .setDepth(PLATE_DEPTH)
       .setAlpha(0)
   }

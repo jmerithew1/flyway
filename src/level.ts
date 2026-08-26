@@ -44,12 +44,6 @@ export interface StrayDef {
   count: number
 }
 
-export interface PromptDef {
-  key: string
-  x: number
-  text: string
-}
-
 export const SCROLL_SPEED = 178
 export const PRESSURE_SPEED = 214
 export const PRESSURE_START = 12000
@@ -243,12 +237,32 @@ export const MOTE_ARCS: MoteArc[] = [
   { x: 25800, y: 400, count: 12, spanX: 1100, spanY: 80 },
 ]
 
+export interface PromptDef {
+  key: string
+  x: number
+  text: string
+}
+
+/** Prompt copy per input device — a phone must never be told to press SPACE. */
+export const PROMPT_TEXT: Record<string, { key: string; touch: string }> = {
+  steer: { key: 'move the mouse — steer the flock', touch: 'drag the sky — steer the flock' },
+  gather: { key: 'hold SPACE — gather', touch: 'hold GATHER — tighten the flock' },
+  spread: { key: 'hold SHIFT — spread', touch: 'hold SPREAD — widen the flock' },
+  surge: { key: 'tap SPACE — surge', touch: 'tap GATHER — surge' },
+  flare: { key: 'tap SHIFT — flare, and wait', touch: 'tap SPREAD — flare, and wait' },
+  call: { key: 'press C — call them back', touch: 'tap CALL — call them back' },
+  regroup: { key: 'release — regroup', touch: 'release both — regroup' },
+  dive: { key: 'hold the mouse button — dive', touch: 'hold DIVE — stoop for speed' },
+  brace: { key: 'SPACE + SHIFT — brace', touch: 'hold BOTH pads — brace' },
+  vortex: { key: 'circle the cursor — whirl', touch: 'circle your finger — whirl' },
+}
+
 export const PROMPTS: PromptDef[] = [
-  { key: 'steer', x: -1, text: 'move the mouse — steer the flock' },
-  { key: 'gather', x: 520, text: 'hold SPACE — gather' },
-  { key: 'spread', x: 1250, text: 'hold SHIFT — spread' },
-  { key: 'surge', x: 2650, text: 'tap SPACE — surge' },
-  { key: 'flare', x: 9150, text: 'tap SHIFT — flare, and wait' },
+  { key: 'steer', x: -1, text: '' },
+  { key: 'gather', x: 520, text: '' },
+  { key: 'spread', x: 1250, text: '' },
+  { key: 'surge', x: 2650, text: '' },
+  { key: 'flare', x: 9150, text: '' },
 ]
 
 /**
@@ -371,17 +385,17 @@ export interface ActPlate {
 /** Acts align to the level's existing section comments and its landmarks. */
 export const ACT_PLATES: ActPlate[] = [
   // pale open dawn — cool lavender air, the world not yet warm
-  { x0: 0, x1: 4600, tint: 0xbfc8e6, tintAlpha: 0.08, fogAlpha: 0.16, particleTint: [0x4a4468, 0x5a5480], name: 'Dawn Approach' },
+  { x0: 0, x1: 4600, tint: 0x9fb4ee, tintAlpha: 0.2, fogAlpha: 0.16, particleTint: [0x4a4468, 0x5a5480], name: 'Dawn Approach' },
   // warm stone — the sun finds the ruins; peach on every western face
-  { x0: 4600, x1: 9600, tint: 0xe8b487, tintAlpha: 0.1, fogAlpha: 0.11, particleTint: [0x5c4a52, 0x6e5a4e], name: 'The Sun Gate' },
+  { x0: 4600, x1: 9600, tint: 0xffab63, tintAlpha: 0.24, fogAlpha: 0.11, particleTint: [0x5c4a52, 0x6e5a4e], name: 'The Sun Gate' },
   // green-violet overgrown — muted sage under violet shade
-  { x0: 9600, x1: 12000, tint: 0xa6c2a8, tintAlpha: 0.09, fogAlpha: 0.13, particleTint: [0x3f5a48, 0x4d6b52], name: 'The Overgrown' },
+  { x0: 9600, x1: 12000, tint: 0x74c48c, tintAlpha: 0.22, fogAlpha: 0.13, particleTint: [0x3f5a48, 0x4d6b52], name: 'The Overgrown' },
   // bleached windy heights — colour scoured out, haze thick
-  { x0: 12000, x1: 14400, tint: 0xdfe3ee, tintAlpha: 0.11, fogAlpha: 0.24, particleTint: [0x8f93a8, 0xa8a5b8], name: 'Wind Heights' },
+  { x0: 12000, x1: 14400, tint: 0xeef2ff, tintAlpha: 0.26, fogAlpha: 0.24, particleTint: [0x8f93a8, 0xa8a5b8], name: 'Wind Heights' },
   // cool dark gauntlet ramp — the long slide into violet dusk
-  { x0: 14400, x1: 23200, tint: 0x4a4570, tintAlpha: 0.14, fogAlpha: 0.12, particleTint: [0x2a2440, 0x37304f], name: 'The Gauntlet' },
+  { x0: 14400, x1: 23200, tint: 0x2f2a63, tintAlpha: 0.3, fogAlpha: 0.12, particleTint: [0x2a2440, 0x37304f], name: 'The Gauntlet' },
   // golden final flow — homecoming light, feeding the existing dusk ramp
-  { x0: 23200, x1: SLICE_END, tint: 0xffc98a, tintAlpha: 0.13, fogAlpha: 0.08, particleTint: [0xc9a06a, 0xb08a5e], name: 'Homeward Light' },
+  { x0: 23200, x1: SLICE_END, tint: 0xffc98a, tintAlpha: 0.28, fogAlpha: 0.08, particleTint: [0xc9a06a, 0xb08a5e], name: 'Homeward Light' },
 ]
 
 // ===========================================================================

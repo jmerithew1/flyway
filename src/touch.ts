@@ -44,13 +44,17 @@ export const isTouch: boolean =
 const TAP_MS = 220
 
 const PAD_TEX = 'touchpad-soft'
-const FILL = 0x4b3f78 // violet lifted off the #14102a navy so it reads on both
-const IDLE_ALPHA = 0.22
-const HELD_ALPHA = 0.42
+// Audit finding (mobile-pads-invisible): a dark violet disc at 0.22 alpha
+// vanished against the sunset AND shrank to ~21px after Scale.FIT. Pads are
+// now near-white, ringed, and sized against the SHORT edge of the canvas so
+// they stay thumb-sized on any phone.
+const FILL = 0xfdf2e4
+const IDLE_ALPHA = 0.4
+const HELD_ALPHA = 0.72
 const FACE_ALPHA = 0.82 // label / glyph at rest; +0.18 while held
 
 /** Layout in the game's fixed 1536×960 logical space (Scale.FIT does the rest). */
-const PAD_R = 52 // ~104px across, per the plan
+const PAD_R = 96 // logical px; ~78 device px at a 844x390 phone fit
 const CALL_R = 34
 const MARGIN_X = 172
 const MARGIN_Y = 150
@@ -94,6 +98,7 @@ class Pad {
   held = false
   private downMs = 0
   private faceAlpha = FACE_ALPHA
+  private ring!: Phaser.GameObjects.Graphics
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -115,7 +120,7 @@ class Pad {
 
     if ('label' in face) {
       this.face = scene.add
-        .text(cx, cy, face.label, display(Math.round(r * 0.27), INK.warm, 3, 400))
+        .text(cx, cy, face.label, display(Math.round(r * 0.24), '#fff4e2', 3, 500))
         .setOrigin(0.5)
         .setAlpha(FACE_ALPHA)
         .setScrollFactor(0)
@@ -129,6 +134,14 @@ class Pad {
         .setScrollFactor(0)
         .setDepth(depth + 0.1)
     }
+
+    // a crisp ring: the difference between "a glow" and "a button"
+    const ring = scene.add.graphics().setScrollFactor(0).setDepth(depth + 0.05)
+    ring.lineStyle(3, 0xfff4e2, 0.55)
+    ring.strokeCircle(cx, cy, r * 0.92)
+    ring.lineStyle(1.5, 0x3a2f55, 0.5)
+    ring.strokeCircle(cx, cy, r * 0.92 + 2.5)
+    this.ring = ring
 
     this.zone = scene.add
       .zone(cx, cy, this.hitR * 2, this.hitR * 2)
@@ -176,6 +189,7 @@ class Pad {
     this.zone.destroy()
     this.face.destroy()
     this.disc.destroy()
+    this.ring.destroy()
   }
 }
 
