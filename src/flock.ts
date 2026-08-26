@@ -242,6 +242,7 @@ export class Flock {
   }
 
   private stepAccum = 0
+  private nearObstacles: Obstacle[] = []
 
   // ---- ability state (tap verbs layered on the hold verbs) -----------------
   /** Surge: 0..1 whipcrack acceleration pulse, decays over ~0.5s. */
@@ -539,6 +540,31 @@ export class Flock {
     this.rebuildGrid()
     this.updateMeanState()
 
+    // ---- broad phase: the visible set spans the whole screen, but the flock
+    // occupies a fraction of it. Culling once per step turns an O(birds x
+    // screen) test into O(birds x neighbourhood) — the single hottest loop.
+    let minX = Infinity
+    let maxX = -Infinity
+    let minY = Infinity
+    let maxY = -Infinity
+    for (const b of this.birds) {
+      if (b.x < minX) minX = b.x
+      if (b.x > maxX) maxX = b.x
+      if (b.y < minY) minY = b.y
+      if (b.y > maxY) maxY = b.y
+    }
+    const pad = 260 // lookahead reach + comfort margin
+    this.nearObstacles.length = 0
+    for (const o of obstacles) {
+      if (o.broken) continue
+      const hw = o.shape === 'circle' ? o.r : o.hw
+      const hh = o.shape === 'circle' ? o.r : o.hh
+      if (o.x + hw < minX - pad || o.x - hw > maxX + pad) continue
+      if (o.y + hh < minY - pad || o.y - hh > maxY + pad) continue
+      this.nearObstacles.push(o)
+    }
+    const near = this.nearObstacles
+
     // flock heading for anisotropic gather (elongates along motion = ribbons/spears)
     const meanSpeed = Math.hypot(this.meanVX, this.meanVY) || 1
     const hx = this.meanVX / meanSpeed
@@ -721,8 +747,8 @@ export class Flock {
       ax += (-b.vy / bs) * jitter
       ay += (b.vx / bs) * jitter
 
-      // --- obstacle avoidance
-      for (const o of obstacles) {
+      // --- obstacle avoidance (broad-phase culled set)
+      for (const o of near) {
         const res = avoidSteer(o, b.x, b.y, b.vx, b.vy, b.sidePref, this.centerY)
         if (!res) continue
         // brittle curtains barely repel — a committed flock flies into them;
