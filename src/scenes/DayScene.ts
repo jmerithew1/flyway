@@ -799,6 +799,11 @@ export class DayScene extends Phaser.Scene {
     this.callCooldown = Math.max(0, this.callCooldown - dt)
     this.mobLift = Math.max(0, this.mobLift - dt)
 
+    // progressive difficulty: dusk sharpens the world — sloppy flying costs
+    // more per act (Rapid Morph +15%, Gauntlet +30%), on top of the faster
+    // scroll and denser terrain
+    this.flock.dangerScale = this.scrollX > 20400 ? 1.3 : this.scrollX > 14400 ? 1.15 : 1
+
     this.flock.update(
       dt,
       {

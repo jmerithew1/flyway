@@ -3,6 +3,32 @@
 Bring the flock home before nightfall. (Formerly MURMURATION; previous
 candidate TENSION archived under `archive/tension/`.)
 
+## Production polish pass (2026-08-25, in progress — plan: iridescent-honking-fox)
+- **Collider truth**: silhouette-minus-openings colliders (legs/piers solid,
+  arch mouths/windows genuinely open, 90px min passages, hand-authored routes
+  for 8 gate pieces); organic hangs are soft brush (slow, never kill).
+- **Difficulty locked**: danger-time flings (lingering near stone ungathered
+  blows birds into the recoverable pool; Gather shields; clean threads free),
+  full-price contact everywhere, decaying mercy. Verified: AFK dies at x7338
+  (Act 2); formation-aware autopilot 0 resets / 77+ birds home.
+- **Feedback layer**: near-miss whoosh+dust, brittle tremble+creak, formation
+  snaps, clean-pass golden blooms at real openings, hit-stop + micro-kick,
+  feather drama (per-loss puffs / falcon bursts / failure eruption cloud),
+  pitch-randomized one-shots, radial glows (no more square sprites).
+- **Core abilities**: Surge (tap SPACE), Flare (tap SHIFT), Drafting (clean
+  straights build speed + halve gather strain), Falcon Mobbing (late-window
+  gather with a big healthy flock drives it off — 0 taken), Echo Call (C/E,
+  2.5s reach boost, 6s hoarse cooldown). Prompt queue + timeouts.
+- **Final art integrated**: 48 pieces (4-pose falcon sequence, bell tower /
+  storm spire / gauntlet gate heroes, seed pods + loose seeds, 2 curtain
+  variants, storm wisps, god ray, perched birds, HOME/FLOCK/FLOW rating
+  icons, wordmark, title painting, 6 roost markers). Ruins grounded
+  (GROUND 948 + world-speed garden). Sources: assets_raw/final_artwork.
+- **Pending**: recurring-obstacle content wave, sunbeams/mood plates/music
+  escalation, score+streak layer, living title/embed chrome, ability wave 2,
+  set-piece beats, migration map, award-jury audit loop. Feather FX sheet
+  awaiting owner regen (opaque background); Suno stems awaited.
+
 ## Complete game loop (FLYWAY pass, 2026-08-24)
 Title screen → Day intro → playable tutorial (steer/gather/spread taught by
 level, prompts complete on success) → full Day with: hidden formation strain

@@ -224,6 +224,8 @@ export class Flock {
   flareAmt = 0
   /** Drafting: 0..1, builds on straight clean flight, spills on sharp turns. */
   draft = 0
+  /** Late-game intensity: scales danger accrual as dusk closes in (set per act). */
+  dangerScale = 1
   private prevHeading = 0
   private turnRateSmooth = 0
 
@@ -511,7 +513,7 @@ export class Flock {
         // bleeds from its edges. Holding Gather commits the flock and shields
         // it completely — formation choice matters everywhere, every second.
         if (o.kind === 'solid' && res.urgency > 0.4 && gather < 0.3) {
-          b.danger += dt * (res.urgency - 0.4) * 2.4
+          b.danger += dt * (res.urgency - 0.4) * 2.4 * this.dangerScale
           if (b.danger > 1) {
             b.danger = 0
             this.flungBirds.push(b)

@@ -35,7 +35,7 @@ export interface WindZone {
   x1: number
   vx: number // push, px/s^2-ish (applied like the old crosswind)
   vy: number
-  kind: 'cross' | 'updraft' | 'down'
+  kind: 'cross' | 'updraft' | 'down' | 'gust'
 }
 
 export interface StrayDef {
@@ -142,8 +142,9 @@ export const FEATURES: PieceFeature[] = [
   top(10750, 'wisteria_dense', 420, { brittle: true, motion: { kind: 'pendulum', amp: 90, period: 3.4 } }), // swinging brittle curtain
   gnd(10750, 'wall_circle_bite', 360),
   gnd(11300, 'organic_arch', 500), // vine arch
-  top(11300, 'ceiling_pods', 300, { sway: true }),
+  top(11300, 'seed_pod_cluster_a', 340, { sway: true }), // seed grove: brush through, pods rain seeds
   gnd(11800, 'lattice_gate', 480, { flow: 'spread', motion: { kind: 'bob', amp: 50, period: 4.4 } }), // drifting lattice
+  top(11800, 'seed_pod_cluster_b', 330, { sway: true }),
 
   // ===== WIND HEIGHTS (12000-14400): pressure + wind ========================
   gnd(12300, 'colonnade_arch', 480),
@@ -156,9 +157,11 @@ export const FEATURES: PieceFeature[] = [
   // ===== RAPID MORPH (14400-17400) ==========================================
   gnd(14700, 'gothic_arch', 500, { flipX: true }),
   gnd(15300, 'wall_multi_window', 560, { flow: 'spread' }),
+  top(15300, 'ceiling_stub_a', 250), // drop-window: the sky is shut — flare and thread the bays
   gnd(15900, 'arch_fragment', 460),
   top(15900, 'root_tangle', 280, { flipX: true }),
   gnd(16500, 'triple_column', 480, { flipX: true }),
+  top(16500, 'ceiling_stub_c', 260, { motion: { kind: 'bob', amp: 52, period: 3.6 } }), // breathing gap: the ceiling sinks toward the columns
   top(17000, 'thorn_arc', 320, { sway: true }),
   gnd(17000, 'wall_arch_window', 420),
 
@@ -166,10 +169,12 @@ export const FEATURES: PieceFeature[] = [
   top(17700, 'wisteria_arch', 340),
   gnd(17700, 'aqueduct_slope', 420), // slope + organic above: 3 lanes
   gnd(18300, 'column_ring', 580, { flipX: true }),
+  top(18300, 'curtain_ivy_lace', 380, { brittle: true }), // burst the lace — light waits behind
   gnd(18900, 'oval_window_wall', 440),
   mid(19500, 380, 'branch_cluster', 300, { sway: true }),
   gnd(19500, 'wall_double_arch', 340),
   gnd(20100, 'bent_arch', 500),
+  top(20100, 'curtain_beaded', 360, { brittle: true, motion: { kind: 'pendulum', amp: 40, period: 4.6 } }),
 
   // ===== GAUNTLET (20400-23200) =============================================
   gnd(20700, 'column_pair', 520),
@@ -192,12 +197,17 @@ export const FEATURES: PieceFeature[] = [
 
 export const WIND_ZONES: WindZone[] = [
   { x0: 12000, x1: 13300, vx: -52, vy: 0, kind: 'cross' },
+  { x0: 15800, x1: 16180, vx: -150, vy: 0, kind: 'gust' }, // gust wall: surge or gather to punch through
+  { x0: 21850, x1: 22180, vx: -140, vy: -18, kind: 'gust' },
   { x0: 13500, x1: 14400, vx: -30, vy: -46, kind: 'updraft' },
   { x0: 20400, x1: 21600, vx: -46, vy: 34, kind: 'down' },
 ]
 
 export const STRAYS: StrayDef[] = [
   { x: 1700, y: 230, count: 6 },
+  { x: 10230, y: 790, count: 6 }, // alcove: tucked under the drifting ring
+  { x: 15340, y: 120, count: 6 }, // alcove: above the shut sky
+  { x: 20740, y: 135, count: 7 }, // alcove: high past the column pair
   { x: 2860, y: 170, count: 10 }, // above the early ruin
   { x: 5260, y: 140, count: 12 }, // over the double-arch wall
   { x: 5950, y: 200, count: 6 },
@@ -220,9 +230,16 @@ export interface MoteArc {
 }
 export const MOTE_ARCS: MoteArc[] = [
   { x: 4850, y: 330, count: 9, spanX: 460, spanY: 260 },
+  // the drafting straight: a long level lane of light — hold the line, sweep it all
+  { x: 7000, y: 430, count: 12, spanX: 1300, spanY: 60 },
   { x: 9950, y: 520, count: 8, spanX: 420, spanY: 300 },
   { x: 15650, y: 380, count: 9, spanX: 480, spanY: 280 },
+  // rewards tucked behind the two late brittle curtains — bursting pays
+  { x: 17150, y: 420, count: 6, spanX: 260, spanY: 200 },
+  { x: 19320, y: 460, count: 6, spanX: 260, spanY: 200 },
   { x: 24700, y: 360, count: 10, spanX: 520, spanY: 300 },
+  // tailwind finale lane: full speed into the homecoming
+  { x: 25800, y: 400, count: 12, spanX: 1100, spanY: 80 },
 ]
 
 export const PROMPTS: PromptDef[] = [
