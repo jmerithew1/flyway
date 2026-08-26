@@ -153,4 +153,5 @@ export const ART: Record<string, ArtPiece> = {
   'marker_final_roost': { key: 'marker_final_roost', file: 'assets/processed/final/marker_final_roost.png', w: 460, h: 484, family: 'deco', colliders: [], openings: [] },
   'wordmark': { key: 'wordmark', file: 'assets/processed/final/wordmark.png', w: 2096, h: 660, family: 'deco', colliders: [], openings: [] },
   'title_bg': { key: 'title_bg', file: 'assets/processed/final/title_bg.png', w: 1672, h: 941, family: 'deco', colliders: [], openings: [] },
+  'roost_tree_hero': { key: 'roost_tree_hero', file: 'assets/processed/ending/roost_tree_hero.png', w: 504, h: 340, family: 'deco', colliders: [], openings: [] },
 }

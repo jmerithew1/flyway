@@ -557,6 +557,41 @@ export class DayScene extends Phaser.Scene {
         .setFlipX(!!f.flipX)
         .setDepth(3)
         .setAlpha(f.alpha ?? 1)
+      // ---- dusk grade: the sheets were painted lit-from-above at noon
+      // strength, which is what made stone read as pasted-on cards. Every
+      // placed piece gets a warm multiply toward the sunset palette, keyed
+      // to height so airborne pieces sit further back in the haze, plus a
+      // little per-placement variance so the family never looks stamped.
+      const airborne = f.mount === 'top' || f.mount === 'mid'
+      const t = Phaser.Math.Clamp((SKY_BOTTOM - y) / (SKY_BOTTOM - SKY_TOP), 0, 1)
+      const warm = airborne ? 0xe6c6d6 : 0xf3ded8
+      const sky = 0xcfb6d8
+      const grade = Phaser.Display.Color.Interpolate.ColorWithColor(
+        Phaser.Display.Color.ValueToColor(warm),
+        Phaser.Display.Color.ValueToColor(sky),
+        100,
+        Math.round((airborne ? 55 : 26) * t),
+      )
+      const jitter = 1 - Math.random() * 0.05
+      img.setTint(
+        Phaser.Display.Color.GetColor(
+          Math.round(grade.r * jitter),
+          Math.round(grade.g * jitter),
+          Math.round(grade.b * jitter),
+        ),
+      )
+      if (airborne) img.setAlpha((f.alpha ?? 1) * (1 - 0.06 * t))
+      // ground haze: every grounded base sinks into the garden mist instead
+      // of ending on a hard silhouette line
+      if (!airborne) {
+        const disp = pieceDisplay(f)
+        this.add
+          .image(f.x, y + (disp.h / 2) * 0.88, 'softdot')
+          .setTint(0x6a5c86)
+          .setDisplaySize(disp.w * 1.15, 96)
+          .setAlpha(0.3)
+          .setDepth(3.4)
+      }
       if (f.sway) {
         img.setAngle(-2)
         this.tweens.add({
@@ -599,7 +634,21 @@ export class DayScene extends Phaser.Scene {
   private drawRoost(): void {
     // soft distant swirl behind the tree, then the tree itself
     this.add.image(ROOST_X - 60, ROOST_Y - 190, 'flock_swirl').setDisplaySize(420, 420).setAlpha(0.5).setDepth(1.6)
-    this.add.image(ROOST_X, 892, 'roost_tree').setOrigin(0.5, 1).setDisplaySize(860, 600).setDepth(2)
+    const roostKey = this.textures.exists('roost_tree_hero') ? 'roost_tree_hero' : 'roost_tree'
+    const roostArt = ART[roostKey]
+    const roostH = 620
+    this.add
+      .image(ROOST_X, 900, roostKey)
+      .setOrigin(0.5, 1)
+      .setDisplaySize((roostArt.w / roostArt.h) * roostH, roostH)
+      .setDepth(2)
+    // the roost stands in its own mist, like every other grounded piece
+    this.add
+      .image(ROOST_X, 872, 'softdot')
+      .setTint(0x6a5c86)
+      .setDisplaySize((roostArt.w / roostArt.h) * roostH * 1.1, 150)
+      .setAlpha(0.34)
+      .setDepth(2.4)
     for (let i = 0; i < 30; i++) {
       const sprite = this.add.image(ROOST_X, ROOST_Y, 'bird-mid').setScale(0.16).setDepth(2)
       this.roostSwirl.push({

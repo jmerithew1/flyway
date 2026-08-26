@@ -123,16 +123,16 @@ export const FEATURES: PieceFeature[] = [
   // ===== EARLY-MID (4600-7100): variety =====================================
   gnd(5100, 'double_arch_wall', 420), // divide or commit
   top(5100, 'leaf_strand', 300),
-  gnd(5700, 'tall_shard', 560), // steering column
+  gnd(5700, 'column_ring', 560), // steering column, painted detail
   gnd(6150, 'column_broken', 520, { flipX: true }),
   top(6150, 'ceiling_pods', 280, { sway: true }),
   gnd(6650, 'tall_gate', 620), // tall narrow gate — vertical compression
 
   // ===== MID RUINS (7100-9600): architecture peaks ==========================
   gnd(7500, 'pointed_arch', 540),
-  mid(8050, 300, 'rose_window_big', 380), // solid tracery — fly around, strays under
+  gnd(8050, 'rose_window_big', 430), // solid tracery — fly around, strays under
   gnd(8450, 'keyhole_arch', 520),
-  gnd(8950, 'triple_column', 460), // triple split
+  gnd(8950, 'column_pair', 460), // triple split, large-native
   top(8950, 'leaf_strand', 240, { flipX: true }),
   gnd(9450, 'wall_two_window', 500), // window threading
   top(9450, 'wisteria_curtain', 300, { brittle: true, motion: { kind: 'pendulum', amp: 46, period: 4.2 } }), // brittle shortcut above, visibly loose
@@ -141,9 +141,9 @@ export const FEATURES: PieceFeature[] = [
   mid(10200, 380, 'thorn_ring', 360, { motion: { kind: 'bob', amp: 34, period: 4.2 } }), // drifting ring — clear lane beneath
   top(10750, 'wisteria_dense', 420, { brittle: true, motion: { kind: 'pendulum', amp: 90, period: 3.4 } }), // swinging brittle curtain
   gnd(10750, 'wall_circle_bite', 360),
-  gnd(11300, 'organic_arch', 500), // vine arch
+  gnd(11300, 'organic_arch', 380), // vine arch
   top(11300, 'seed_pod_cluster_a', 340, { sway: true }), // seed grove: brush through, pods rain seeds
-  gnd(11800, 'lattice_gate', 480, { flow: 'spread', motion: { kind: 'bob', amp: 50, period: 4.4 } }), // drifting lattice
+  gnd(11800, 'lattice_gate', 400, { flow: 'spread', motion: { kind: 'bob', amp: 50, period: 4.4 } }), // drifting lattice
   top(11800, 'seed_pod_cluster_b', 330, { sway: true }),
 
   // ===== WIND HEIGHTS (12000-14400): pressure + wind ========================
@@ -152,16 +152,16 @@ export const FEATURES: PieceFeature[] = [
   gnd(12900, 'obelisk_b', 580), // split in crosswind
   mid(13500, 340, 'web_net', 360, { brittle: true, sway: true }), // brittle net high
   gnd(13500, 'wall_four_arch', 380), // arch row low
-  gnd(14100, 'twin_arch', 440),
+  gnd(14100, 'gate_double', 440),
 
   // ===== RAPID MORPH (14400-17400) ==========================================
   gnd(14700, 'gothic_arch', 500, { flipX: true }),
   gnd(15300, 'wall_multi_window', 560, { flow: 'spread' }),
-  top(15300, 'ceiling_stub_a', 250), // drop-window: the sky is shut — flare and thread the bays
-  gnd(15900, 'arch_fragment', 460),
+  top(15300, 'ceiling_pods', 250, { flipX: true }), // drop-window: the sky is shut — flare and thread the bays
+  gnd(15900, 'keyhole_arch', 460, { flipX: true }), // large-native: no upscale blur
   top(15900, 'root_tangle', 280, { flipX: true }),
-  gnd(16500, 'triple_column', 480, { flipX: true }),
-  top(16500, 'ceiling_stub_c', 260, { motion: { kind: 'bob', amp: 52, period: 3.6 } }), // breathing gap: the ceiling sinks toward the columns
+  gnd(16500, 'triple_arcade', 480, { flipX: true }),
+  top(16500, 'seed_pod_cluster_b', 260, { motion: { kind: 'bob', amp: 52, period: 3.6 } }), // breathing gap: the canopy sinks toward the columns
   top(17000, 'thorn_arc', 320, { sway: true }),
   gnd(17000, 'wall_arch_window', 420),
 
@@ -180,7 +180,7 @@ export const FEATURES: PieceFeature[] = [
   gnd(20700, 'column_pair', 520),
   top(20700, 'ceiling_pods', 260, { sway: true, flipX: true }),
   gnd(21300, 'gate_double', 460), // double gate split
-  mid(21900, 320, 'wheel_diagonal', 360), // diagonal wheel high
+  mid(21900, 320, 'wheel_diagonal', 235), // diagonal wheel high
   gnd(21900, 'wall_arch_inset', 380, { flipX: true }),
   gnd(22500, 'tall_gate', 580, { flipX: true }),
   top(22500, 'ceiling_pods', 300, { sway: true }), // canopy cover for the falcon zone
