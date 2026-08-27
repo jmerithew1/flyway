@@ -161,6 +161,7 @@ export class DayScene extends Phaser.Scene {
   private hudMarker!: Phaser.GameObjects.Image
   /** the roost at the far end, warming as it nears (K1b-6, in miniature) */
   private hudRoostBead!: Phaser.GameObjects.Image
+  private hudDayPct!: Phaser.GameObjects.Text
   /** bloom at the head of the daylight meter */
   private hudDayBead!: Phaser.GameObjects.Image
   private hudDayLabel!: Phaser.GameObjects.Text
@@ -208,7 +209,9 @@ export class DayScene extends Phaser.Scene {
     obs: { o: Obstacle; baseY: number }[]
     phase: number
   }[] = []
-  private motes: { x: number; y: number; img: Phaser.GameObjects.Image }[] = []
+  /** `worth` scales how much daylight the mote returns: the ones that cost
+   * a detour pay for it. */
+  private motes: { x: number; y: number; img: Phaser.GameObjects.Image; worth: number }[] = []
   private flowStreak = 0
   private mouseTravel = 0
   private lastPointer = { x: 0, y: 0 }
@@ -426,7 +429,7 @@ export class DayScene extends Phaser.Scene {
     // than as a halo behind a silhouette, which would only look backlit.
     // Deliberately not warm gold: that colour already means "collect this".
     this.brittleGlows = []
-    for (const [f, sprite] of this.featureSprites) {
+    if (!this.cardsShown.has('brittle')) for (const [f, sprite] of this.featureSprites) {
       if (!f.brittle) continue
       const glow = this.add
         .image(sprite.x, sprite.y, sprite.texture.key)
@@ -484,39 +487,27 @@ export class DayScene extends Phaser.Scene {
         const mx = arc.x - arc.spanX / 2 + arc.spanX * t
         const my =
           arc.y + Math.sin(t * Math.PI) * -arc.spanY * 0.5 + arc.spanY * 0.18 + (Math.random() - 0.5) * 46
-        // Warm gold added onto a warm sky is warm light on warm light: an
-        // audit measured Weber contrast of +0.005 on the finale lane and
-        // NEGATIVE on one arc - the motes were darker than the sky behind
-        // them. A judge saying they never understood what collecting light
-        // was for was being generous; there was nothing legible to collect.
+        // ONE sprite per mote: the dark contact ring is baked into the
+        // texture, which halves the object count for the most numerous thing
+        // on screen.
         //
-        // Two changes fix it without abandoning the warm read: a dark contact
-        // halo underneath so the mote always sits on its own shadow, and a
-        // near-white core, since white ADDS visibly over any sky while gold
-        // only adds over cool ones.
-        const size = 26 + Math.random() * 18
-        this.add
-          .image(mx, my, 'softdot')
-          .setTint(0x241a33)
-          .setDisplaySize(size * 2.0, size * 2.0)
-          .setAlpha(0.34)
-          .setDepth(2.48)
+        // And they are NOT uniform. A field of identical evenly-spaced dots is
+        // a ruler, not a reward: every mote is worth grabbing and none is worth
+        // deciding about. Each arc now runs a mix - most are easy pickings on
+        // the line, some sit out at the edges where you must spread or detour
+        // to reach them, and those pay more. That is where the choice lives.
+        const roll = Math.random()
+        const tier = roll < 0.6 ? 0 : roll < 0.88 ? 1 : 2
+        // tier 2 sits well off the arc's line, so it costs a real detour
+        const stray = tier === 2 ? (Math.random() < 0.5 ? -1 : 1) * (170 + Math.random() * 150) : 0
+        const my2 = Phaser.Math.Clamp(my + stray, 150, 830)
+        const size = (tier === 0 ? 42 : tier === 1 ? 56 : 74) + Math.random() * 12
         const img = this.add
-          .image(mx, my, 'softdot')
-          .setTint(0xfff6e2)
+          .image(mx, my2, 'mote')
           .setDisplaySize(size, size)
-          .setAlpha(0.95 + Math.random() * 0.05)
-          .setBlendMode(Phaser.BlendModes.ADD)
+          .setAlpha(0.9 + Math.random() * 0.1)
           .setDepth(2.5)
-        this.tweens.add({
-          targets: img,
-          alpha: 0.6 + Math.random() * 0.12,
-          duration: 800 + Math.random() * 900,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        })
-        this.motes.push({ x: mx, y: my, img })
+        this.motes.push({ x: mx, y: my2, img, worth: tier === 2 ? 2.2 : tier === 1 ? 1.35 : 1 })
       }
     }
 
@@ -1201,6 +1192,10 @@ export class DayScene extends Phaser.Scene {
     // BRACE: the world eases to ~60%; the flock keeps its own clock, and
     // Flock.setBrace() prices the formation half (strain ticks double)
     const rawDt = dt
+    // FIRST-ENCOUNTER CARD: the world eases rather than hard-freezing, so the
+    // flock keeps flying and the moment stays alive while you read.
+    this.cardEase += ((this.card ? 1 : 0) - this.cardEase) * (1 - Math.exp(-7 * rawDt))
+    dt *= 1 - this.cardEase * 0.82
     this.updateBrace(rawDt)
     this.braceAmt += ((this.braceOn ? 1 : 0) - this.braceAmt) * (1 - Math.exp(-BRACE_EASE * rawDt))
     dt *= 1 - this.braceAmt * (1 - BRACE_WORLD_SCALE)
@@ -1397,6 +1392,7 @@ export class DayScene extends Phaser.Scene {
     this.updateFlowGates()
     this.updateMotes()
     this.updateNightfall(dt)
+    this.updateCards(dt)
     // environmental progress storytelling: roost clarifies, light warms,
     // distant flocks appear late — never a progress bar
     const prog = Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1)
@@ -1788,7 +1784,7 @@ export class DayScene extends Phaser.Scene {
           // which is what makes collecting worth the detour (the invariant the
           // whole nightfall mechanic rests on)
           this.flock.relieveStrain(0.5)
-          this.night.feed()
+          this.night.feed(m.worth)
           const spark = this.add
             .image(m.x, m.y, 'softdot').setTint(0xffd9a0)
             .setDisplaySize(40, 40)
@@ -1982,6 +1978,7 @@ export class DayScene extends Phaser.Scene {
     // each label points AT its own rail: DAYLIGHT sits off the left end of the
     // meter, the destination off the right end of the journey
     this.hudDayLabel.setOrigin(1, 0.5).setPosition(rx - 14, ry + 12)
+    this.hudDayPct.setOrigin(1, 0.5).setPosition(rx - 14, ry - 8)
     this.hudPlaceLabel.setOrigin(0, 0.5).setPosition(rx + rw + 16, ry)
 
     // the mastery readout clears the touch pause pad (r=42 at safe.y+74)
@@ -2045,6 +2042,11 @@ export class DayScene extends Phaser.Scene {
       .setTintFill(0xfff3e2)
       .setScrollFactor(0)
       .setDepth(20.2)
+    this.hudDayPct = this.add
+      .text(0, 0, '', display(15, '#ffe6bf', 2, 500))
+      .setScrollFactor(0)
+      .setDepth(20)
+      .setAlpha(0.95)
     this.hudDayLabel = this.add
       .text(0, 0, 'DAYLIGHT', display(12, '#c8bad4', 5, 300))
       .setAlpha(0.6)
@@ -2068,6 +2070,17 @@ export class DayScene extends Phaser.Scene {
     this.hudArcShown += (Phaser.Math.Clamp(n / START_BIRDS, 0, 1) - this.hudArcShown) * k
     this.hudDayShown += (this.night.daylight - this.hudDayShown) * k
     this.hudProgShown += (Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1) - this.hudProgShown) * k
+
+    // The owner could not tell how much light they had or how much they needed.
+    // A number says the first; colour and a warning word say the second - it
+    // goes amber under a third and calls for light under a fifth, which is the
+    // point at which the dark starts genuinely gaining.
+    const day01 = this.night.daylight
+    const pct = Math.round(day01 * 100)
+    const low = day01 < 0.2
+    this.hudDayPct.setText(low ? `${pct}%  FIND LIGHT` : `${pct}%`)
+    this.hudDayPct.setColor(low ? '#ff9a7a' : day01 < 0.34 ? '#ffc98a' : '#ffe6bf')
+    this.hudDayPct.setAlpha(low ? 0.75 + 0.25 * Math.sin(this.simClock * 7) : 0.95)
 
     // J6 — the urgent band. The owner asked for "~25 birds", but the flock
     // scatters back to its landmark at FAIL_BIRDS (35), so a read that only
@@ -3195,6 +3208,119 @@ export class DayScene extends Phaser.Scene {
   }
 
   private paused = false
+
+  // ---- first-encounter cards -------------------------------------------
+  /** the card currently showing, if any */
+  private card: Phaser.GameObjects.Container | null = null
+  private cardEase = 0
+  private cardsShown = new Set<string>()
+  private cardCooldown = 0
+
+  /**
+   * Teach one thing, once, at the moment it first matters.
+   *
+   * The world eases to ~18% speed instead of freezing - the flock keeps
+   * flying, so the moment stays alive while you read - and ANY input dismisses
+   * it. It never returns. This is the introduction the game was missing: moves
+   * arrive one at a time as the world asks for them, rather than all at once
+   * on a title card nobody reads.
+   */
+  private showCard(id: string, title: string, body: string): void {
+    if (this.cardsShown.has(id) || this.card || this.cardCooldown > 0) return
+    if (this.finishing || this.failing) return
+    this.cardsShown.add(id)
+    const safe = safeArea(this)
+    const cx = safe.x + safe.w / 2
+    const cy = safe.y + safe.h * 0.34
+    const w = Math.min(720, safe.w - 80)
+
+    const plate = this.add.graphics()
+    plate.fillStyle(0x140d24, 0.93)
+    plate.fillRoundedRect(-w / 2, -86, w, 172, 20)
+    plate.lineStyle(2, 0xf0cf9a, 0.75)
+    plate.strokeRoundedRect(-w / 2, -86, w, 172, 20)
+
+    const t1 = this.add.text(0, -44, title, display(24, '#ffe6bf', 8, 400)).setOrigin(0.5)
+    const t2 = this.add.text(0, 6, body, voice(21, '#f2e8f5')).setOrigin(0.5)
+    t2.setWordWrapWidth(w - 76)
+    const t3 = this.add.text(0, 62, isTouch ? 'tap to continue' : 'press any key to continue', display(13, INK.soft, 4, 300)).setOrigin(0.5)
+
+    const c = this.add.container(cx, cy, [plate, t1, t2, t3])
+      .setScrollFactor(0).setDepth(60).setAlpha(0)
+    c.setScale(0.94)
+    this.card = c
+    this.tweens.add({ targets: c, alpha: 1, scale: 1, duration: 240, ease: 'Back.easeOut' })
+    this.audio.landmarkTone?.(title)
+
+    const dismiss = (): void => {
+      if (this.card !== c) return
+      this.card = null
+      this.cardCooldown = 2.5
+      this.input.off('pointerdown', dismiss)
+      this.input.keyboard?.off('keydown', dismiss)
+      this.tweens.add({ targets: c, alpha: 0, scale: 0.96, duration: 200, onComplete: () => c.destroy() })
+    }
+    // a beat of grace so the click that caused the encounter does not eat it
+    this.time.delayedCall(360, () => {
+      if (this.card !== c) return
+      this.input.once('pointerdown', dismiss)
+      this.input.keyboard?.once('keydown', dismiss)
+    })
+    // never trap the player
+    this.time.delayedCall(9000, dismiss)
+  }
+
+  /** Fire each lesson the first time the world actually asks for it. */
+  private updateCards(dt: number): void {
+    this.cardCooldown = Math.max(0, this.cardCooldown - dt)
+    if (this.card || this.cardCooldown > 0) return
+    const fx = this.flock.centerX
+
+    // each gate must be SKIPPED once its card has been seen - otherwise the
+    // first one keeps matching and returning, and nothing after it ever fires
+    if (!this.cardsShown.has('steer') && fx > 520) {
+      this.showCard('steer', 'THE FLOCK FOLLOWS YOU',
+        isTouch ? 'Drag the sky and they follow. Bring them home before nightfall.'
+                : 'Move the mouse and they follow. Bring them home before nightfall.')
+      return
+    }
+    // light, just before the first arc
+    if (!this.cardsShown.has('light')) for (const m of this.motes) {
+      if (m.img.visible && m.x - fx > 0 && m.x - fx < 900) {
+        this.showCard('light', 'GATHER THE LIGHT',
+          isTouch ? 'Light holds back the dark. Hold SPREAD to widen the flock and sweep more of it in.'
+                  : 'Light holds back the dark. Hold SHIFT to spread wide and sweep more of it in.')
+        return
+      }
+    }
+    // the dark, once it is actually visible behind you
+    if (!this.cardsShown.has('dark') && this.night.encroach > 0.12) {
+      this.showCard('dark', 'THE DARK IS COMING',
+        isTouch ? 'It takes birds that fall behind. Hold GATHER to keep them tight, and CALL to bring back the lost.'
+                : 'It takes birds that fall behind. Hold SPACE to keep them tight, and press C to call back the lost.')
+      return
+    }
+    // a breakable, when one is close enough to matter
+    if (!this.cardsShown.has('brittle')) for (const [f, sprite] of this.featureSprites) {
+      if (!f.brittle) continue
+      const d = f.x - fx
+      if (d > 0 && d < 950 && Math.abs(sprite.y - this.flock.centerY) < 340) {
+        this.showCard('brittle', 'SOME THINGS BREAK',
+          isTouch ? 'Cold light running through it means it will shatter. Tap GATHER to SURGE through.'
+                  : 'Cold light running through it means it will shatter. Tap SPACE to SURGE through.')
+        return
+      }
+    }
+    // a cage of birds waiting to be freed
+    if (!this.cardsShown.has('cage')) for (const s of this.strays) {
+      const d = s.def.x - fx
+      if (!s.group.depleted && d > 0 && d < 900) {
+        this.showCard('cage', 'BIRDS ARE HELD HERE',
+          'Free them and they join the flock. Fly close, or SURGE into the cage to break it open.')
+        return
+      }
+    }
+  }
   private muted = false
   private pauseVeil: Phaser.GameObjects.Container | null = null
 

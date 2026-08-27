@@ -13,6 +13,7 @@ export function createCoreTextures(scene: Phaser.Scene): void {
   makeStreakTexture(scene)
   makeAlarmRing(scene)
   makeCageTexture(scene)
+  makeMoteTexture(scene)
   makeFogRoll(scene)
   makeShardTexture(scene)
 }
@@ -193,6 +194,55 @@ function makeCageTexture(scene: Phaser.Scene): void {
   ctx.fillStyle = grd
   ctx.beginPath()
   ctx.ellipse(cx, midY, rx, (bot - top) / 2, 0, 0, Math.PI * 2)
+  ctx.fill()
+  canvas.refresh()
+}
+
+/**
+ * A mote of light, with its dark contact ring baked in.
+ *
+ * This used to be TWO sprites per mote - a dark halo and a bright core - which
+ * doubled the object count and the draw calls for the most numerous thing on
+ * screen. Baking the ring into one texture halves both.
+ */
+function makeMoteTexture(scene: Phaser.Scene): void {
+  if (scene.textures.exists('mote')) return
+  const size = 128
+  const canvas = scene.textures.createCanvas('mote', size, size)
+  if (!canvas) return
+  const ctx = canvas.context
+  const c = size / 2
+  // dark contact ring: the mote always sits on its own shadow, so it reads
+  // against a warm sky as well as a cool one
+  // A faint dark seat, pushed right out to the rim so it never competes with
+  // the core. The first version peaked INSIDE the glow and the motes rendered
+  // as dark rings - the opposite of light.
+  const dark = ctx.createRadialGradient(c, c, size * 0.30, c, c, c)
+  dark.addColorStop(0, 'rgba(22,14,36,0)')
+  dark.addColorStop(0.62, 'rgba(22,14,36,0.34)')
+  dark.addColorStop(1, 'rgba(22,14,36,0)')
+  ctx.fillStyle = dark
+  ctx.beginPath()
+  ctx.arc(c, c, c, 0, Math.PI * 2)
+  ctx.fill()
+  // a big, unmistakably BRIGHT core - this is the thing the whole game is
+  // about, so it should be the brightest object on screen
+  const core = ctx.createRadialGradient(c, c, 0, c, c, size * 0.46)
+  core.addColorStop(0, 'rgba(255,255,252,1)')
+  core.addColorStop(0.22, 'rgba(255,248,226,0.98)')
+  core.addColorStop(0.55, 'rgba(255,226,168,0.55)')
+  core.addColorStop(1, 'rgba(255,214,150,0)')
+  ctx.fillStyle = core
+  ctx.beginPath()
+  ctx.arc(c, c, size * 0.46, 0, Math.PI * 2)
+  ctx.fill()
+  // a hard little star at the centre so it catches the eye in motion
+  const star = ctx.createRadialGradient(c, c, 0, c, c, size * 0.1)
+  star.addColorStop(0, 'rgba(255,255,255,1)')
+  star.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = star
+  ctx.beginPath()
+  ctx.arc(c, c, size * 0.1, 0, Math.PI * 2)
   ctx.fill()
   canvas.refresh()
 }

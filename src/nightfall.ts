@@ -47,7 +47,7 @@ const LEAD_EMPTY = -520
 /** How fast the fog edge eases toward its target (px/sec of correction). */
 const EDGE_LERP = 2.1
 /** How many soft blobs build the fog body. */
-const BLOBS = 54
+const BLOBS = 13
 
 export class Nightfall {
   /** 1 = broad day, 0 = the dark is on you. */
@@ -60,11 +60,11 @@ export class Nightfall {
   takenThisFrame: Bird[] = []
 
   private scene: Phaser.Scene
-  private deep!: Phaser.GameObjects.Rectangle
   private blobs: Phaser.GameObjects.Image[] = []
   private blobSpec: { dx: number; y: number; r: number; phase: number; speed: number; rise: number; depth: number }[] = []
   private rim!: Phaser.GameObjects.Image
   private edgeFade!: Phaser.GameObjects.Image
+  private interior!: Phaser.GameObjects.Image
   private tendrils: Phaser.GameObjects.Image[] = []
   private tendrilT: number[] = []
   private tendrilY: number[] = []
@@ -80,14 +80,6 @@ export class Nightfall {
     //
     // Deep behind the edge one flat plate guarantees true opacity; it sits far
     // enough back that the blob field always covers its edge.
-    this.deep = scene.add
-      .rectangle(0, 0, viewW * 2, viewH * 1.4, 0x0a0714)
-      .setOrigin(1, 0.5)
-      .setPosition(0, viewH / 2)
-      .setScrollFactor(0)
-      .setAlpha(0)
-      .setDepth(11)
-
     for (let i = 0; i < BLOBS; i++) {
       // painted fog: walls carry their own reaching tendrils, puffs build mass
       const key = i % 3 === 0 ? FOG_ART.puff : FOG_ART.walls[i % FOG_ART.walls.length]
@@ -102,15 +94,28 @@ export class Nightfall {
       const d = i / (BLOBS - 1)
       this.blobSpec.push({
         // clustered behind the edge, densest deep, sparse and reaching at the front
-        dx: 430 - Math.pow(d, 0.8) * 1500 - Math.random() * 160,
+        dx: 420 - Math.pow(d, 0.9) * 760 - Math.random() * 120,
         y: Math.random() * viewH,
-        r: 300 + Math.random() * 300 + d * 260,
+        r: 340 + Math.random() * 240 + d * 200,
         phase: Math.random() * Math.PI * 2,
-        speed: 0.25 + Math.random() * 0.5,
-        rise: 12 + Math.random() * 34,
+        speed: 0.5 + Math.random() * 0.85,
+        rise: 34 + Math.random() * 60,
         depth: d,
       })
     }
+
+    // the interior: one wide soft gradient, dark at the left, dissolving to
+    // nothing at its right. A single cheap draw, and it can never show a
+    // straight edge the way a rectangle does.
+    this.interior = scene.add
+      .image(0, viewH / 2, 'vfade')
+      .setDisplaySize(viewH * 2.2, viewH * 1.35)
+      .setRotation(-Math.PI / 2)
+      .setTint(0x0b0716)
+      .setOrigin(0.5, 0.5)
+      .setScrollFactor(0)
+      .setAlpha(0)
+      .setDepth(10.99)
 
     // the boundary itself: a dark gradient that hides the tile's hard edge and
     // makes the fog dissolve into lit air instead of stopping at a ruled line
@@ -154,9 +159,9 @@ export class Nightfall {
     this.intensity = k
   }
 
-  /** One mote's worth of daylight. */
-  feed(): void {
-    this.daylight = Math.min(1, this.daylight + MOTE_GAIN)
+  /** One mote's worth of daylight. `worth` > 1 for the ones that cost a detour. */
+  feed(worth = 1): void {
+    this.daylight = Math.min(1, this.daylight + MOTE_GAIN * worth)
   }
 
   reset(flockX: number): void {
@@ -202,13 +207,6 @@ export class Nightfall {
     const vis = this.encroach > 0.001
     const t = this.scene.time.now * 0.001
 
-    this.deep.setVisible(vis)
-    if (vis) {
-      // right edge kept far behind the front so the blobs always hide it
-      this.deep.x = screenEdge - 760
-      this.deep.setAlpha(Math.min(0.96, this.encroach * 1.6))
-    }
-
     for (let i = 0; i < this.blobs.length; i++) {
       const img = this.blobs[i]
       const sp = this.blobSpec[i]
@@ -217,15 +215,22 @@ export class Nightfall {
       // it BREATHES: every blob swells and shrinks and rides a slow updraft on
       // its own phase, so the mass never repeats and never sits still
       const breathe = Math.sin(t * sp.speed + sp.phase)
-      const r = sp.r * (0.82 + breathe * 0.22)
+      const r = sp.r * (0.86 + breathe * 0.26)
       const y = sp.y + Math.sin(t * sp.speed * 0.7 + sp.phase * 1.7) * sp.rise
-      const x = screenEdge + sp.dx + Math.cos(t * sp.speed * 0.55 + sp.phase) * 46
+      const x = screenEdge + sp.dx + Math.cos(t * sp.speed * 0.6 + sp.phase) * 88
       img.setPosition(x, y)
       img.setDisplaySize(r * 2.3, r * 1.15)
       // leading wisps stay thin, the body behind is dense
       // leading wisps stay sheer so the lethal edge is still readable
-      const body = sp.depth < 0.24 ? 0.16 + sp.depth * 0.5 : 0.42 + sp.depth * 0.9
+      const body = sp.depth < 0.2 ? 0.3 + sp.depth * 0.8 : 0.72 + sp.depth * 1.1
       img.setAlpha(Math.min(0.95, this.encroach * 1.5 * body * (0.75 + breathe * 0.25)))
+    }
+
+    this.interior.setVisible(vis)
+    if (vis) {
+      // its soft right edge sits just behind the painted front
+      this.interior.x = screenEdge - this.interior.displayHeight * 0.5 - 40
+      this.interior.setAlpha(Math.min(0.96, this.encroach * 1.5))
     }
 
     this.edgeFade.setVisible(vis)
@@ -272,8 +277,8 @@ export class Nightfall {
 
   destroy(): void {
     for (const bl of this.blobs) bl.destroy()
-    this.deep.destroy()
     this.edgeFade.destroy()
+    this.interior.destroy()
     for (const t of this.tendrils) t.destroy()
     this.rim.destroy()
   }

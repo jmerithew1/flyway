@@ -239,22 +239,22 @@ export const MOTE_ARCS: MoteArc[] = [
   // - so once daylight is a resource the fog closed during them with nothing
   // the player could do about it. That is a scripted loss, not difficulty.
   // These fill the gaps so every stretch offers a line worth flying.
-  { x: 2150, y: 470, count: 8, spanX: 420, spanY: 260 }, // first light: teaches collecting before it matters
-  { x: 12250, y: 500, count: 9, spanX: 460, spanY: 280 },
-  { x: 13850, y: 430, count: 8, spanX: 420, spanY: 300 },
-  { x: 21350, y: 480, count: 9, spanX: 460, spanY: 280 },
-  { x: 22850, y: 440, count: 8, spanX: 430, spanY: 300 },
-  { x: 4850, y: 330, count: 9, spanX: 460, spanY: 260 },
+  { x: 2150, y: 470, count: 13, spanX: 420, spanY: 260 }, // first light: teaches collecting before it matters
+  { x: 12250, y: 500, count: 14, spanX: 460, spanY: 280 },
+  { x: 13850, y: 430, count: 13, spanX: 420, spanY: 300 },
+  { x: 21350, y: 480, count: 14, spanX: 460, spanY: 280 },
+  { x: 22850, y: 440, count: 13, spanX: 430, spanY: 300 },
+  { x: 4850, y: 330, count: 14, spanX: 460, spanY: 260 },
   // the drafting straight: a long level lane of light — hold the line, sweep it all
-  { x: 7000, y: 430, count: 12, spanX: 1300, spanY: 60 },
-  { x: 9950, y: 520, count: 8, spanX: 420, spanY: 300 },
-  { x: 15650, y: 380, count: 9, spanX: 480, spanY: 280 },
+  { x: 7000, y: 430, count: 17, spanX: 1300, spanY: 60 },
+  { x: 9950, y: 520, count: 13, spanX: 420, spanY: 300 },
+  { x: 15650, y: 380, count: 14, spanX: 480, spanY: 280 },
   // rewards tucked behind the two late brittle curtains — bursting pays
-  { x: 17150, y: 420, count: 6, spanX: 260, spanY: 200 },
-  { x: 19320, y: 460, count: 6, spanX: 260, spanY: 200 },
-  { x: 24700, y: 360, count: 10, spanX: 520, spanY: 300 },
+  { x: 17150, y: 420, count: 11, spanX: 260, spanY: 200 },
+  { x: 19320, y: 460, count: 11, spanX: 260, spanY: 200 },
+  { x: 24700, y: 360, count: 15, spanX: 520, spanY: 300 },
   // tailwind finale lane: full speed into the homecoming
-  { x: 25800, y: 400, count: 12, spanX: 1100, spanY: 80 },
+  { x: 25800, y: 400, count: 17, spanX: 1100, spanY: 80 },
 ]
 
 export interface PromptDef {
