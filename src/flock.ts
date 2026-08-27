@@ -1002,11 +1002,20 @@ export class Flock {
       // the problem that Gather solves, and watch gathering snuff it out.
       if (b.danger > 0.12) {
         const d01 = Math.min(1, b.danger)
-        // keep the bird DARK (silhouette intact) and put the alarm behind it
-        if (s.isTinted) s.clearTint()
-        s.setAlpha(1)
+        // A steady glow reads as decoration. A BLINK reads as an alarm - and
+        // it quickens as the bird runs out of time, so the flock visibly
+        // starts strobing when you are about to lose birds.
+        const rate = 7 + d01 * 22
+        const on = Math.sin(this.time * rate + b.flapPhase * 3) > 0
+        if (on && d01 > 0.3) {
+          s.setTint(0xfff2df)
+          s.setAlpha(1)
+        } else {
+          if (s.isTinted) s.clearTint()
+          s.setAlpha(on || d01 < 0.3 ? 1 : 0.45)
+        }
         s.x += Math.sin(this.time * 42 + b.flapPhase) * d01 * 2.6
-        if (d01 > 0.45) this.riskCandidates.push({ b, d01 })
+        if (d01 > 0.55) this.riskCandidates.push({ b, d01 })
       } else if (this.pulse > 0.3) {
         // SURGE: the leading edge catches the light — a warm spear-tip
         const ahead = (b.x - this.centerX) * Math.cos(b.renderAngle) + (b.y - this.centerY) * Math.sin(b.renderAngle)

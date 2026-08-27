@@ -14,6 +14,7 @@ interface ScatterBird {
   vx: number
   vy: number
   life: number
+  maxLife: number
   spin: number
   recoverable: boolean
   phase: number
@@ -62,9 +63,10 @@ export class ScatterSystem {
     }
     this.birds.push({
       sprite,
-      vx: (awayX / m) * (220 + Math.random() * 160) + (Math.random() - 0.5) * 120,
-      vy: (awayY / m) * (220 + Math.random() * 160) + (Math.random() - 0.5) * 120 - 60,
-      life: recoverable ? 3.4 : 1.6 + Math.random() * 0.8,
+      vx: (awayX / m) * (recoverable ? 220 : 120) + (Math.random() - 0.5) * (recoverable ? 120 : 70),
+      vy: (awayY / m) * (recoverable ? 220 : 120) + (Math.random() - 0.5) * 90 - 60,
+      life: recoverable ? 3.4 : 2.1 + Math.random() * 0.5,
+      maxLife: recoverable ? 3.4 : 2.35,
       spin: (Math.random() - 0.5) * 14,
       recoverable,
       halo,
@@ -122,12 +124,40 @@ export class ScatterSystem {
           }
         }
       } else {
-        // tumble away and fade
-        b.vy += 150 * dt
-        b.sprite.x += b.vx * dt
-        b.sprite.y += b.vy * dt
-        b.sprite.rotation += b.spin * dt
-        b.sprite.alpha = Math.min(1, b.life / 1.2)
+        // A BIRD IS LOST. This used to be a quiet tumble off-screen, which is
+        // exactly why players never registered it. Now it reads: a white
+        // flash, then it drops - lateral motion bleeds away fast so the fall
+        // is vertical and unmistakable, wings folded, spinning down.
+        // A BIRD IS LOST, in two beats you cannot miss.
+        //
+        // Beat one (~0.38s): it stalls out of the flock and STROBES, faster
+        // and faster, like something losing its grip. Beat two: the strobe
+        // stops dead and it drops straight down. A quiet tumble off-screen is
+        // what players kept failing to notice at all.
+        const age = 1 - b.life / b.maxLife
+        const STALL = 0.38
+        if (age < STALL) {
+          const k = age / STALL // 0..1 through the stall
+          const rate = 16 + k * 46 // the panic accelerates
+          const on = Math.sin(k * k * rate * 6) > 0
+          b.sprite.setTint(on ? 0xffffff : 0x2a2038)
+          b.sprite.setAlpha(on ? 1 : 0.5)
+          b.sprite.setScale(0.3 + (on ? 0.1 : 0))
+          // it hangs, barely holding on
+          b.vx *= Math.exp(-6 * dt)
+          b.vy *= Math.exp(-6 * dt)
+          b.sprite.x += b.vx * dt
+          b.sprite.y += b.vy * dt + Math.sin(time * 30 + b.phase) * 26 * dt
+        } else {
+          b.sprite.setTint(0x241c33)
+          b.sprite.setAlpha(Math.min(1, b.life / 0.9))
+          b.sprite.setScale(0.3)
+          b.vx *= Math.exp(-4.5 * dt) // the flock's momentum lets go of it
+          b.vy += 1150 * dt // and it drops
+          b.sprite.x += b.vx * dt
+          b.sprite.y += b.vy * dt
+          b.sprite.rotation += b.spin * dt
+        }
       }
     }
     this.recoverableCount = this.birds.filter((b) => b.recoverable).length

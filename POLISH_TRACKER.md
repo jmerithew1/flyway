@@ -15,8 +15,10 @@ Legend: ✅ done & verified · 🟡 landed, needs a look · ⏳ not started
 | A1 | Tell breakable from unbreakable at a glance | 🟡 | Cold charge runs *through* the material (its own texture, additive) + dark flakes shed + strains under charge. Needs a look in situ. |
 | A2 | Home screen must explain **all** moves | 🟡 | Was 3 lines naming only steer/gather/spread. Now 4 lines naming surge, flare, call and dive too. Needs a look. |
 | A3 | Teaching prompt clipped off the left edge | ✅ | Was clamped to a fixed 210px margin while centre-origin; now clamped by the string's own half-width. |
-| A4 | "about to be lost" phrasing makes no sense | ⏳ | Replace with a dramatic loss read: bird blinks, then falls straight down. |
+| A4 | "about to be lost" phrasing makes no sense | ✅ | Copy dropped. At-risk birds BLINK (rate accelerates with danger) instead of glowing. |
+| A4b | Lost birds: strobe faster, then fall | ✅ | Two beats: ~0.38s stall strobing 16→62Hz, then the strobe stops dead and it drops at 1150px/s². `shots/loss_drama.png` |
 | A5 | Explain *why* gather/call matter, up front | ⏳ | Brief pause + overlay early in the flight, rather than nagging mid-air. |
+| A8 | **Staged tutorial** — don't introduce everything at once; each move pops up mid-play, at the moment it matters, then takes effect | ⏳ | Audit all ~16 one-time prompts for pacing and trigger placement. Title card stays full reference; in-flight teaching is one thing at a time. |
 | A6 | "Collecting the light" — purpose is unclear | ⏳ | Needs a stated reason and a visible payoff. |
 | A7 | Birds render inside/behind ruins — looks flyable when it isn't | ⏳ | Occlusion/depth against solid stone; the arch angle reads passable but the collider refuses. |
 
@@ -44,8 +46,8 @@ Legend: ✅ done & verified · 🟡 landed, needs a look · ⏳ not started
 | # | Request | State | Verification |
 |---|---------|-------|--------------|
 | D1 | Hawk needs more oomph — looks weird and awkward | ⏳ | Facing + sprite fragments + scale fixed; the *set piece* still needs weight. |
-| D2 | At-risk markers ("weird circles") need fixing | ⏳ | Currently pale rings; tied to A4's loss drama. |
-| D3 | Loss should be dramatic | ⏳ | Blink, then fall straight down. |
+| D2 | At-risk markers ("weird circles") — blink/flash, not glow | ✅ | Rings now reserved for the worst 6 in real danger; the birds themselves strobe. |
+| D3 | Loss should be dramatic | ✅ | See A4b. |
 
 ## E. Verified fixed earlier this session
 
