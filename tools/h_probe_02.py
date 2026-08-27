@@ -13,7 +13,8 @@ async def main():
         ctx = await b.new_context(viewport={'width':1280,'height':800}, device_scale_factor=1)
         page = await ctx.new_page()
         await page.goto(BASE + "/?day", wait_until="networkidle")
-        await page.wait_for_timeout(6000)
+        await page.wait_for_function("() => !!window.__day && !!window.__day.movers", timeout=60000)
+        await page.wait_for_timeout(3000)
 
         # what movers exist, and their real amplitude measured over 6 seconds
         out['movers_decl'] = await page.evaluate("""() => {

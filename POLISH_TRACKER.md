@@ -89,6 +89,45 @@ can BOTH exist — light is the fuel you spend, twigs are the treasure you carry
 home and see built into the roost at arrival. Recommend shipping light-as-fuel
 first, since it changes how the whole level plays.
 
+### K1a. The geometry: light ahead, dark behind, and it takes stragglers
+
+Owner: "is there light behind you or in front? Is darkness chasing you as you
+collect light or don't?" Committed answer:
+
+**Light is AHEAD.** The roost glows on the horizon and grows across the whole
+flight. Goal and resource are the same thing, so the screen always says *keep
+going, the light is that way*.
+
+**Darkness rises from BEHIND and inward from the screen edges** as daylight
+drains. Collecting motes pushes it back.
+
+**The dark does NOT kill on contact — it takes stragglers.**
+
+This last point is the load-bearing one, and it exists to resolve a
+contradiction that would otherwise quietly ruin the mechanic: motes pull you
+off-line and cost time to gather, but a pursuing wall of death punishes exactly
+that. The game would be saying "detour for light" and "never slow down" at
+once. Players feel that as the game fighting itself even when they cannot name
+it.
+
+Taking stragglers instead fixes it, and pays three ways:
+- **It reuses the currency the game already runs on.** You lose birds, not a
+  run. No new binary fail state bolted onto a game about gradual attrition.
+- **It gives every ability a job against one threat.** Gather keeps the flock
+  tight so nobody trails. Echo Call retrieves the ones already caught. Surge
+  outruns a bad patch. Spreading wide to sweep a mote arc becomes a risk you
+  are knowingly choosing.
+- **It scales difficulty honestly.** A tight, well-flown flock loses nobody; a
+  ragged one bleeds from the back. Skill expression, not a timer.
+
+It also earns a drama beat we do not have: the bird strobes, the dark reaches
+it, and it is gone — far better than a number ticking down.
+
+Tuning guards: the dark must advance slowly enough that a competent flock never
+feels chased, and the *first* time it takes a bird must be survivable and
+unmistakable. Verify two-sided, as with the difficulty lock: an unskilled run
+bleeds to it, a competent one never feels starved.
+
 ### K1b. What darkness unlocks — the glow language
 
 Owner: light-as-fuel "allows us to add a lot of glowing features... or if it
