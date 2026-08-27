@@ -47,7 +47,8 @@ Legend: ✅ done & verified · 🟡 landed, needs a look · ⏳ not started
 |---|---------|-------|--------------|
 | G1 | More moving obstacles | ⏳ | Currently a handful of pendulum movers. |
 | G2 | Variations: moving *openings*, not just moving walls | ⏳ | Gaps that travel or open/close on a beat. |
-| G3 | Mario-esque pacing pressure — keep up or die and restart at the save | ⏳ | Rhythm gates the player must match; checkpoint restore already exists. |
+| G3 | Mario-esque pacing pressure — keep up or die and restart at the save | ⏳ | Now carried by the wall of night (K1a) rather than an invented rule. |
+| G4 | **Moving things that can CATCH birds** | ⏳ | Active snatchers, not just walls to avoid: sweeping vine tendrils that swing across a gap, rotating briar wheels (the fire-bar analog), grasping roots that rise from below, swinging web nets (`web_net` art already exists). A caught bird should be recoverable by Echo Call, which gives the retrieve verb constant work. |
 
 ## K. LIGHT AS FUEL — the idea that ties the game together
 
@@ -89,44 +90,44 @@ can BOTH exist — light is the fuel you spend, twigs are the treasure you carry
 home and see built into the roost at arrival. Recommend shipping light-as-fuel
 first, since it changes how the whole level plays.
 
-### K1a. The geometry: light ahead, dark behind, and it takes stragglers
+### K1a. The geometry: light ahead, an advancing wall of night behind
 
-Owner: "is there light behind you or in front? Is darkness chasing you as you
-collect light or don't?" Committed answer:
+**Owner corrected an earlier call of mine, and the correction is right.** I had
+argued a pursuing wall contradicts collecting, since motes cost time to gather
+and a wall punishes lost time. Owner: collecting light *pushes the wall back* —
+so gathering is not in tension with the chase, gathering is how you FIGHT it.
+That holds. The contradiction only exists if a detour is time-negative, and it
+is not if the light picked up buys back more than the detour spent.
 
-**Light is AHEAD.** The roost glows on the horizon and grows across the whole
-flight. Goal and resource are the same thing, so the screen always says *keep
-going, the light is that way*.
+Their version is also simply better: a visible advancing wall has a LOCATION,
+so the player can watch themselves winning or losing against it. A shrinking
+radius is abstract by comparison.
 
-**Darkness rises from BEHIND and inward from the screen edges** as daylight
-drains. Collecting motes pushes it back.
+**The committed design:**
 
-**The dark does NOT kill on contact — it takes stragglers.**
+- **Light is AHEAD.** The roost glows on the horizon and grows all flight.
+  Goal and resource are the same thing.
+- **A wall of night advances from BEHIND**, always visible, always readable as
+  gaining or receding. You know at a glance how much room you have.
+- **Collecting motes pushes it back** — visibly and satisfyingly, so light is
+  the weapon against it rather than a side objective.
+- **When it reaches the flock it EATS BIRDS from the trailing edge.** Not an
+  instant loss. It expresses itself in the currency the game already runs on,
+  and it keeps gather (stay tight), echo (retrieve the taken) and surge
+  (outrun a bad patch) all pointed at one threat.
+- **Intensity grows.** The wall advances faster each act, so the final stretch
+  is a genuine race and the difficulty curve rides the mechanic itself.
 
-This last point is the load-bearing one, and it exists to resolve a
-contradiction that would otherwise quietly ruin the mechanic: motes pull you
-off-line and cost time to gather, but a pursuing wall of death punishes exactly
-that. The game would be saying "detour for light" and "never slow down" at
-once. Players feel that as the game fighting itself even when they cannot name
-it.
+**THE BALANCE INVARIANT — the one number that makes or breaks this:**
+a mote arc must return MORE wall-pushback than the detour to reach it costs.
+If it does not, collecting is a trap, players learn to ignore light, and the
+whole mechanic dies. Tune to this and verify it with a probe: compare wall
+distance for a flight that takes every arc against one that flies straight.
 
-Taking stragglers instead fixes it, and pays three ways:
-- **It reuses the currency the game already runs on.** You lose birds, not a
-  run. No new binary fail state bolted onto a game about gradual attrition.
-- **It gives every ability a job against one threat.** Gather keeps the flock
-  tight so nobody trails. Echo Call retrieves the ones already caught. Surge
-  outruns a bad patch. Spreading wide to sweep a mote arc becomes a risk you
-  are knowingly choosing.
-- **It scales difficulty honestly.** A tight, well-flown flock loses nobody; a
-  ragged one bleeds from the back. Skill expression, not a timer.
-
-It also earns a drama beat we do not have: the bird strobes, the dark reaches
-it, and it is gone — far better than a number ticking down.
-
-Tuning guards: the dark must advance slowly enough that a competent flock never
-feels chased, and the *first* time it takes a bird must be survivable and
-unmistakable. Verify two-sided, as with the difficulty lock: an unskilled run
-bleeds to it, a competent one never feels starved.
+Tuning guards: the wall must never feel unfair on a competent line, the first
+time it takes a bird must be survivable and unmistakable, and it must be
+visible long before it is dangerous. Verify two-sided as with the difficulty
+lock — an unskilled run bleeds to it, a competent one always has room.
 
 ### K1c. How the darkness actually works
 
