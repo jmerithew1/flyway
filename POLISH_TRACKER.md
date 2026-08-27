@@ -89,6 +89,36 @@ can BOTH exist — light is the fuel you spend, twigs are the treasure you carry
 home and see built into the roost at arrival. Recommend shipping light-as-fuel
 first, since it changes how the whole level plays.
 
+### K1b. What darkness unlocks — the glow language
+
+Owner: light-as-fuel "allows us to add a lot of glowing features... or if it
+looks like it should glow can glow more now."
+
+Correct, and there is a hard technical reason it matters: **glow only reads
+against darkness.** Additive blending adds light to what is already there, so
+on the current bright dusk sky our glows wash out — measured this session, the
+cage tinted warm gold (0xffb35e) rendered nearly white, and the breakable
+charge had to fight a pale background to be seen at all. Every glow in the
+game is currently working at a fraction of its strength.
+
+As daylight drains, all of it comes alive for free. And glow stops being
+decoration and becomes the game's one meaning: **glowing = light = life = the
+thing you need.**
+
+| # | Element | What darkness buys it | State |
+|---|---------|----------------------|-------|
+| K1b-1 | Motes | Become the visual heartbeat — the brightest thing on screen, and the thing you need. Reads as fuel without a word of explanation | ⏳ |
+| K1b-2 | Sunbeams / god rays | Currently pale washes on a pale sky. In gloom they are shafts, and threading one becomes a real image | ⏳ |
+| K1b-3 | Flock rim-light | Birds passing near a light source catch it. Makes light PHYSICAL rather than a counter, and it is cheap: additive tint scaled by proximity | ⏳ |
+| K1b-4 | The cage | It holds living birds; it should be warm against the cold. Its glow finally lands instead of blowing to white | ⏳ |
+| K1b-5 | Landmarks / checkpoints | Glow up as you approach, so the horizon pulls you forward and a checkpoint reads as a beacon (I6) | ⏳ |
+| K1b-6 | **The roost** | The destination becomes literally the light you are flying toward — a warm glow on the horizon that grows the whole game. This is the strongest single image the mechanic offers | ⏳ |
+| K1b-7 | Breakable charge | The cold ice-white signature separates from warm gold far more cleanly in gloom, so the two meanings stop competing | ⏳ |
+
+Consequence for art direction: the six act palettes (E3) should be re-checked
+once light drains, since several were tuned bright. Dusk is no longer only the
+last act — it is a state the player moves in and out of.
+
 ### K2. Light as the game's identity (marketing)
 
 Owner: the light mechanic should drive the marketing — cover art, start page,
