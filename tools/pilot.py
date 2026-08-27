@@ -140,7 +140,7 @@ def main():
             '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
         pg = b.new_page(viewport={'width': 1536, 'height': 960})
 
-        for look, margin in [(0.95, 92), (1.15, 110)]:
+        for look, margin in [(0.62, 60), (0.72, 70)]:
             boot(pg)
             pg.evaluate("(c) => { window.__AVOID.lookahead = c.l; window.__AVOID.margin = c.m; }",
                         {'l': look, 'm': margin})

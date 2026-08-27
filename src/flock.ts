@@ -984,7 +984,7 @@ export class Flock {
         // bleeds from its edges. Holding Gather commits the flock and shields
         // it completely — formation choice matters everywhere, every second.
         if (o.kind === 'solid' && res.urgency > 0.4 && gather < 0.3) {
-          b.danger += dt * (res.urgency - 0.4) * 1.35 * this.dangerScale
+          b.danger += dt * (res.urgency - 0.4) * 2.2 * this.dangerScale
           if (b.danger > 1) {
             b.danger = 0
             this.flungBirds.push(b)

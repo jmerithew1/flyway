@@ -136,11 +136,14 @@ export const FEATURES: PieceFeature[] = [
   gnd(8950, 'column_pair', 460), // triple split, large-native
   top(8950, 'leaf_strand', 240, { flipX: true }),
   gnd(9450, 'wall_two_window', 500), // window threading
-  top(9450, 'wisteria_curtain', 300, { brittle: true, motion: { kind: 'pendulum', amp: 46, period: 4.2 } }), // brittle shortcut above, visibly loose
+  // brittle curtains all sat at `top` above the flight lane, stacked over
+  // solid stone - unreachable, so Surge had nothing to burst. Now at
+  // flight altitude in clear air.
+  mid(9760, 455, 'wisteria_curtain', 300, { brittle: true, motion: { kind: 'pendulum', amp: 46, period: 4.2 } }), // brittle shortcut above, visibly loose
 
   // ===== OVERGROWN RUINS (9600-12000): the organic turn =====================
   mid(10200, 380, 'thorn_ring', 360, { motion: { kind: 'bob', amp: 34, period: 4.2 } }), // drifting ring — clear lane beneath
-  top(10750, 'wisteria_dense', 420, { brittle: true, motion: { kind: 'pendulum', amp: 90, period: 3.4 } }), // swinging brittle curtain
+  mid(11060, 470, 'wisteria_dense', 420, { brittle: true, motion: { kind: 'pendulum', amp: 90, period: 3.4 } }), // swinging brittle curtain
   gnd(10750, 'wall_circle_bite', 360),
   gnd(11300, 'organic_arch', 380), // vine arch
   top(11300, 'seed_pod_cluster_a', 340, { sway: true }), // seed grove: brush through, pods rain seeds
@@ -170,12 +173,12 @@ export const FEATURES: PieceFeature[] = [
   top(17700, 'wisteria_arch', 340),
   gnd(17700, 'aqueduct_slope', 420), // slope + organic above: 3 lanes
   gnd(18300, 'column_ring', 580, { flipX: true }),
-  top(18300, 'curtain_ivy_lace', 380, { brittle: true }), // burst the lace — light waits behind
+  mid(18620, 460, 'curtain_ivy_lace', 380, { brittle: true }), // burst the lace — light waits behind
   gnd(18900, 'oval_window_wall', 440),
   mid(19500, 380, 'branch_cluster', 300, { sway: true }),
   gnd(19500, 'wall_double_arch', 340),
   gnd(20100, 'bent_arch', 500),
-  top(20100, 'curtain_beaded', 360, { brittle: true, motion: { kind: 'pendulum', amp: 40, period: 4.6 } }),
+  mid(20420, 470, 'curtain_beaded', 360, { brittle: true, motion: { kind: 'pendulum', amp: 40, period: 4.6 } }),
 
   // ===== GAUNTLET (20400-23200) =============================================
   gnd(20700, 'column_pair', 520),
@@ -185,7 +188,7 @@ export const FEATURES: PieceFeature[] = [
   gnd(21900, 'wall_arch_inset', 380, { flipX: true }),
   gnd(22500, 'tall_gate', 580, { flipX: true }),
   top(22500, 'ceiling_pods', 300, { sway: true }), // canopy cover for the falcon zone
-  top(23000, 'wisteria_curtain', 360, { brittle: true }),
+  mid(23320, 455, 'wisteria_curtain', 360, { brittle: true }),
   gnd(23000, 'triple_window_wall', 420),
 
   // ===== FINAL FLOW (23200-25400) ===========================================

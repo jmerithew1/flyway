@@ -2939,11 +2939,20 @@ export class DayScene extends Phaser.Scene {
   }
 
   /** Birds hopelessly left behind peel away visibly rather than grinding on walls. */
+  /**
+   * Safety net for birds that are hopelessly stuck, and nothing more.
+   *
+   * This predates the nightfall fog, which now OWNS "birds that trail get
+   * taken" - with a visible strobe and fall. At 760px/3s the two competed, and
+   * this one won silently: a trace found ~60 of 134 losses had no collision
+   * and no fog take behind them, and headwind zones push many more birds into
+   * that window. It only catches the truly abandoned now.
+   */
   private cullStragglers(dt: number): void {
     for (const b of this.flock.birds) {
-      if (this.flock.centerX - b.x > 760) {
+      if (this.flock.centerX - b.x > 1500) {
         const t = (this.stuckTime.get(b) ?? 0) + dt
-        if (t > 3) {
+        if (t > 6) {
           this.stuckTime.delete(b)
           if (!this.scatter.spawn(b.x, b.y, -0.6, -1)) this.stats.lost++
           this.flock.removeBird(b)
