@@ -128,6 +128,53 @@ feels chased, and the *first* time it takes a bird must be survivable and
 unmistakable. Verify two-sided, as with the difficulty lock: an unskilled run
 bleeds to it, a competent one never feels starved.
 
+### K1c. How the darkness actually works
+
+Owner: "is it the whole screen or how's it work?"
+
+Not a uniform dim, and not a wall. **A shrinking pool of light around the
+flock.** Daylight is a 0..1 level that drains as you fly; as it falls the lit
+radius contracts and dark closes in from the screen edges, strongest from
+behind since that is where night comes from. Motes expand the pool back out.
+
+Why this shape: the player can SEE the boundary and see which of their birds
+are near it. "The light I am flying in is shrinking and my stragglers are at
+the edge of it" is a thought a player can have without being told. A uniform
+screen dim gives no spatial information and nothing to act on.
+
+Implementation sketch: a radial mask centred slightly ahead of the flock,
+radius driven by the daylight level, offset back-weighted so the trailing edge
+goes dark first. Birds outside the lit radius accrue the same danger clock
+already used for stone, so the loss path and its drama are shared.
+
+### K1d. One verb per ability — fixing the overlap
+
+Owner: "how does echo work exactly? It seems too similar to gather." and
+"surge seems like it's a boost? I still don't get spread either."
+
+Both fair, and the second is a design failure rather than a communication one:
+SPREAD has no clear purpose in the current build. The light mechanic gives
+every move exactly one job.
+
+| Move | Verb | What it is for | Cost |
+|------|------|----------------|------|
+| **Hold GATHER** | SURVIVE | Tight flock: nobody trails into the dark, shielded from stone | Collects almost no light; slower |
+| **Hold SPREAD** | HARVEST | Wide flock sweeps a huge area of motes — **this is how you gather light** | Birds trail, exposed to the dark and the falcon |
+| **Tap SURGE** | BREAK THROUGH | Burst a brittle curtain, smash a cage, cross a dark patch | Strain; ragged if spammed |
+| **Tap FLARE** | STOP | Hold at a mote cluster, kill momentum before a wall | Strain |
+| **ECHO CALL** | RETRIEVE | Acts ONLY on birds no longer in the flock — scattered, caged, taken by the dark | Cooldown |
+
+The gather/spread pair becomes the game's central dial — survive vs harvest —
+and it is a decision the player faces constantly instead of a formation toggle
+with no stakes. It also teaches itself the first time motes drift past out of
+reach of a tight flock.
+
+**Echo vs Gather, made visually distinct:** Gather CONTRACTS the flock you
+have. Echo REACHES OUT — sonar rings sweep outward, every lost bird they touch
+lights up as a detected ping, then those birds streak home on trails of light.
+Same goal, opposite gesture, completely different image. Answers C3's ask for
+ripples, detection and a dramatic return.
+
 ### K1b. What darkness unlocks — the glow language
 
 Owner: light-as-fuel "allows us to add a lot of glowing features... or if it
