@@ -12,23 +12,13 @@ export function createCoreTextures(scene: Phaser.Scene): void {
   makeVerticalFade(scene)
   makeStreakTexture(scene)
   makeAlarmRing(scene)
+  makeCageTexture(scene)
 }
 
 /** Load every curated piece from the manifest as a plain image. */
 export function loadArt(scene: Phaser.Scene): void {
   for (const piece of Object.values(ART)) {
     scene.load.image(piece.key, piece.file)
-  }
-  // falcon: replaceable art slot — drop a real falcon at assets/processed/falcon.png
-  // (existence is pre-checked in main.ts so a missing file never logs errors)
-  // only queue the optional slot when the HEAD pre-check actually found it,
-  // AND swallow a late failure so no session logs a load error for a file
-  // that is legitimately absent (the 4-pose sheet is the real falcon now)
-  if ((window as unknown as Record<string, unknown>).__hasFalconArt) {
-    scene.load.once('loaderror', (f: { key?: string }) => {
-      if (f?.key === 'falcon-art') scene.load.off('loaderror')
-    })
-    scene.load.image('falcon-art', 'assets/processed/falcon.png')
   }
 }
 
@@ -106,6 +96,62 @@ function makeAlarmRing(scene: Phaser.Scene): void {
   ctx.fillStyle = grd
   ctx.beginPath()
   ctx.arc(c, c, c, 0, Math.PI * 2)
+  ctx.fill()
+  canvas.refresh()
+}
+
+/**
+ * A hanging birdcage: dome, bars, and a base ring.
+ *
+ * Strays used to be marked by a soft radial blob, which is shapeless and says
+ * nothing — you cannot tell a blob means "birds in here, come free them". A
+ * cage says it instantly, and in a game about a flock it is the one enclosure
+ * that needs no explanation.
+ */
+function makeCageTexture(scene: Phaser.Scene): void {
+  if (scene.textures.exists('cage')) return
+  const size = 160
+  const canvas = scene.textures.createCanvas('cage', size, size)
+  if (!canvas) return
+  const ctx = canvas.context
+  const cx = size / 2
+  const top = size * 0.16
+  const bot = size * 0.86
+  const rx = size * 0.32
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+  ctx.lineWidth = 3
+  ctx.lineCap = 'round'
+
+  // the hook it hangs from
+  ctx.beginPath()
+  ctx.arc(cx, top - size * 0.06, size * 0.045, Math.PI * 0.15, Math.PI * 1.5)
+  ctx.stroke()
+
+  // meridian bars, bowing out to the cage's waist
+  const midY = (top + bot) / 2
+  for (let i = 0; i < 7; i++) {
+    const f = (i / 6) * 2 - 1 // -1..1 across the cage
+    const x = cx + f * rx
+    ctx.beginPath()
+    ctx.moveTo(cx + f * rx * 0.12, top)
+    ctx.quadraticCurveTo(x * 1.0 + cx * 0, midY, cx + f * rx * 0.86, bot)
+    ctx.stroke()
+  }
+
+  // horizontal hoops
+  for (const [y, k] of [[top + (bot - top) * 0.18, 0.62], [midY, 1], [bot, 0.86]] as [number, number][]) {
+    ctx.beginPath()
+    ctx.ellipse(cx, y, rx * k, size * 0.038, 0, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
+  // a soft inner light so the bird inside reads as held, not caged in shadow
+  const grd = ctx.createRadialGradient(cx, midY, 0, cx, midY, rx)
+  grd.addColorStop(0, 'rgba(255,255,255,0.30)')
+  grd.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = grd
+  ctx.beginPath()
+  ctx.ellipse(cx, midY, rx, (bot - top) / 2, 0, 0, Math.PI * 2)
   ctx.fill()
   canvas.refresh()
 }

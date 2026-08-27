@@ -248,6 +248,64 @@ export class Flock {
   // ---- ability state (tap verbs layered on the hold verbs) -----------------
   /** Surge: 0..1 whipcrack acceleration pulse, decays over ~0.5s. */
   pulse = 0
+
+  /**
+   * SHAPE SIGNALS — for one beat, the murmuration BECOMES the move.
+   *
+   * A tint or a flash is generic feedback that any game could use. A flock of
+   * a hundred birds snapping into an arrowhead is unmistakable, needs no
+   * legend, and is the thing this game can do that nothing else can. Each
+   * ability throws its own silhouette, so you read what happened from the
+   * flock itself rather than from a colour change you might miss.
+   */
+  shapeKind: 'arrow' | 'fan' | 'ring' | null = null
+  private shapeT = 0
+  private shapeDur = 0.72
+
+  /** Throw a shape. It rams in over ~0.13s, holds, then releases back to boids. */
+  formShape(kind: 'arrow' | 'fan' | 'ring', dur = 0.72): void {
+    this.shapeKind = kind
+    this.shapeT = 0
+    this.shapeDur = dur
+  }
+
+  /** 0..1 envelope: hard attack so the snap lands, soft release so it melts. */
+  private shapeEnvelope(): number {
+    if (!this.shapeKind) return 0
+    const p = this.shapeT / this.shapeDur
+    if (p >= 1) return 0
+    return p < 0.18 ? p / 0.18 : 1 - (p - 0.18) / 0.82
+  }
+
+  /** Where bird `i` of `n` belongs in the current shape, in flock-local space
+   * (x along the heading, y across it). */
+  private shapeSlot(i: number, n: number): [number, number] {
+    const spread = 30 + Math.sqrt(n) * 11
+    // deterministic per-slot jitter keeps the form organic, never stencilled
+    const j = Math.sin(i * 12.9898) * 0.5
+    switch (this.shapeKind) {
+      case 'arrow': {
+        // two swept edges meeting at a point that leads the flock
+        const t = (i / Math.max(1, n - 1)) * 2 - 1 // -1..1
+        const a = Math.abs(t)
+        return [spread * (1.25 - a * 2.1) + j * 6, t * spread * 0.62 + j * 5]
+      }
+      case 'fan': {
+        // a wide braking crescent, wings out
+        const t = (i / Math.max(1, n - 1)) * 2 - 1
+        const ang = t * 1.15
+        return [-Math.cos(ang) * spread * 0.5 - spread * 0.15 + j * 7, Math.sin(ang) * spread * 1.25 + j * 7]
+      }
+      case 'ring': {
+        // the call going out: an open circle, everyone facing the world
+        const ang = (i / Math.max(1, n)) * Math.PI * 2
+        const r = spread * 0.95
+        return [Math.cos(ang) * r + j * 6, Math.sin(ang) * r + j * 6]
+      }
+      default:
+        return [0, 0]
+    }
+  }
   /** Flare: 0..1 air-brake bloom, decays over ~0.4s. */
   flareAmt = 0
   /** Drafting: 0..1, builds on straight clean flight, spills on sharp turns. */
@@ -445,6 +503,10 @@ export class Flock {
 
     // ability envelopes decay (all of them, inside the fixed step)
     this.pulse = Math.max(0, this.pulse - dt / 0.5)
+    if (this.shapeKind) {
+      this.shapeT += dt
+      if (this.shapeT >= this.shapeDur) this.shapeKind = null
+    }
     this.flareAmt = Math.max(0, this.flareAmt - dt / 0.4)
     this.diveLift = Math.max(0, this.diveLift - dt / DIVE_LIFT_DECAY)
     this.vortex = Math.max(0, this.vortex - dt / VORTEX_DECAY)
@@ -830,6 +892,29 @@ export class Flock {
         ax = (ax / am) * maxA
         ay = (ay / am) * maxA
       }
+      // SHAPE SIGNAL: applied AFTER the accel clamp, because this is an
+      // authored move rather than steering — the boid rules would sand the
+      // silhouette off before it ever became legible.
+      const env = this.shapeEnvelope()
+      if (env > 0.01) {
+        const [sx, sy] = this.shapeSlot(i, this.birds.length)
+        // lay the slot out along the flock's heading, so the arrow points
+        // where the flock is actually going
+        const tx = this.centerX + sx * hx - sy * hy
+        const ty = this.centerY + sx * hy + sy * hx
+        // A force alone loses to separation and the shape never becomes
+        // legible (measured: the arrow read as an ordinary blob). For the
+        // ~0.7s a signal is held, birds are drawn kinematically onto their
+        // slot as well, so the silhouette actually arrives while velocity
+        // continuity keeps it from looking teleported.
+        const pull = 40 * env
+        b.vx += (tx - b.x) * pull * dt
+        b.vy += (ty - b.y) * pull * dt
+        const snap = Math.min(0.55, env * env * 0.5)
+        b.x += (tx - b.x) * snap
+        b.y += (ty - b.y) * snap
+      }
+
       b.vx += ax * dt
       b.vy += ay * dt
 
@@ -849,7 +934,8 @@ export class Flock {
       const sp = Math.hypot(b.vx, b.vy) || 1
       // during a surge the shepherd only accelerates — otherwise it spends the
       // whole pulse dragging the impulse back down to cruise
-      const shepherd = this.flareAmt > 0.1 ? 5.2 : this.pulse > 0.12 && sp > cruise ? 0.35 : 2.2
+      const shepherd =
+        env > 0.35 ? 0.5 : this.flareAmt > 0.1 ? 5.2 : this.pulse > 0.12 && sp > cruise ? 0.35 : 2.2
       const targetSp = clamp(
         sp + (cruise - sp) * (1 - Math.exp(-shepherd * dt)),
         TUNING.minSpeed * (1 - this.flareAmt * 0.55),

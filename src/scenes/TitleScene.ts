@@ -114,12 +114,22 @@ export class TitleScene extends Phaser.Scene {
     // ---- the controls, compact and secondary: three lines a judge can scan,
     // because the rest is taught by the level as it is needed
     const controls = isTouch
-      ? ['drag the sky — steer', 'GATHER / SPREAD — hold to shape, tap for a move', 'more is taught as you fly']
-      : ['mouse — steer the flock', 'SPACE gather · SHIFT spread — hold to shape, tap for a move', 'more is taught as you fly']
+      ? [
+          'drag the sky — steer the flock',
+          'hold GATHER tighten · tap it to SURGE forward',
+          'hold SPREAD widen · tap it to FLARE and brake',
+          'CALL brings scattered birds back · DIVE trades height for speed',
+        ]
+      : [
+          'move the mouse — steer the flock',
+          'hold SPACE tighten · tap SPACE to SURGE forward',
+          'hold SHIFT widen · tap SHIFT to FLARE and brake',
+          'C calls scattered birds back · hold the mouse button to DIVE',
+        ]
     const ctrlObjs: Phaser.GameObjects.Text[] = []
     controls.forEach((line, i) => {
       const t = this.add
-        .text(cx, 826 + i * 30, line, serif(i === 2 ? 17 : 18, i === 2 ? '#e2d8ee' : '#f9f4fd', 2))
+        .text(cx, 812 + i * 29, line, serif(i === 0 ? 19 : 17, i === 0 ? '#f9f4fd' : '#ece4f4', 2))
         .setOrigin(0.5)
         .setAlpha(0)
       t.setShadow(0, 2, '#100a1e', 8)

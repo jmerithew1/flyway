@@ -42,16 +42,7 @@ const fontsReady = document.fonts
   ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))])
   : Promise.resolve()
 
-Promise.all([
-  fetch('assets/processed/falcon.png', { method: 'HEAD' })
-    .then((r) => {
-      ;(window as unknown as Record<string, unknown>).__hasFalconArt = r.ok
-    })
-    .catch(() => {
-      ;(window as unknown as Record<string, unknown>).__hasFalconArt = false
-    }),
-  fontsReady,
-]).finally(() => {
+Promise.all([fontsReady]).finally(() => {
   const game = new Phaser.Game(config)
   // debug handle for the headless verification harness
   ;(window as unknown as Record<string, unknown>).__game = game

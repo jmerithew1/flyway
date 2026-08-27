@@ -33,22 +33,29 @@ export class StrayGroup {
     this.y = y
     this.tint = tint
     this.remaining = count
-    // warm glow marker: signals "optional birds here" from a distance
+    // A soft blob is shapeless and means nothing at a glance. A CAGE says
+    // "birds are held here, come free them" with no explanation needed - and
+    // in a game about a flock it is the one enclosure that reads instantly.
     this.glow = scene.add
-      .image(x, y, 'softdot').setTint(0xffc98f)
-      .setDisplaySize(88, 88)
-      .setAlpha(0.5)
+      .image(x, y, 'cage').setTint(0xffb35e)
+      .setDisplaySize(132, 132)
+      .setAlpha(0.72)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(1.5)
-    scene.tweens.add({ targets: this.glow, alpha: 0.32, scale: this.glow.scale * 1.15, duration: 1600, yoyo: true, repeat: -1 })
+    // it hangs and sways, the way a cage would
+    scene.tweens.add({ targets: this.glow, alpha: 0.5, duration: 1600, yoyo: true, repeat: -1 })
+    scene.tweens.add({
+      targets: this.glow, rotation: 0.05, duration: 2400,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    })
     for (let i = 0; i < count; i++) {
       const sprite = scene.add.image(x, y, 'bird-mid')
-      sprite.setScale(0.24)
+      sprite.setScale(0.2)
       sprite.setAlpha(0.85)
       this.birds.push({
         sprite,
         angle: Math.random() * Math.PI * 2,
-        radius: 18 + Math.random() * 42,
+        radius: 9 + Math.random() * 22,
         speed: 1.2 + Math.random() * 1.4,
         phase: Math.random() * Math.PI * 2,
         joining: false,
@@ -102,9 +109,10 @@ export class StrayGroup {
         // the orbit leans toward the approaching murmuration before joining
         b.angle += b.speed * dt * 0.6
         const noticing = Math.hypot(dx, dy) < attractRadius * 1.6
-        const leanX = noticing ? dx * 0.12 : 0
-        const leanY = noticing ? dy * 0.12 : 0
-        const wob = Math.sin(time * 1.3 + b.phase) * 8
+        // they press toward the flock they can see, but the bars hold them
+        const leanX = noticing ? Math.max(-14, Math.min(14, dx * 0.12)) : 0
+        const leanY = noticing ? Math.max(-14, Math.min(14, dy * 0.12)) : 0
+        const wob = Math.sin(time * 1.3 + b.phase) * 4
         const px = this.x + leanX + Math.cos(b.angle) * (b.radius + wob)
         const py = this.y + leanY + Math.sin(b.angle * 0.9 + b.phase) * (b.radius * 0.55) + wob * 0.4
         b.sprite.rotation = Math.atan2(py - b.sprite.y, px - b.sprite.x)
@@ -115,9 +123,78 @@ export class StrayGroup {
     }
     this.remaining = this.birds.length
     if (this.remaining === 0 && this.glow) {
+      // FREEING THE CAGE. It used to just fade out, which threw away the whole
+      // payoff: the cage bursts white, breaks open, and tumbles out of the sky
+      // while a shockwave rings off it. You are meant to feel you broke it.
       const g = this.glow
       this.glow = null
-      this.scene.tweens.add({ targets: g, alpha: 0, duration: 700, onComplete: () => g.destroy() })
+      g.setBlendMode(Phaser.BlendModes.ADD).setTint(0xffffff)
+
+      // the burst
+      this.scene.tweens.add({
+        targets: g,
+        displayWidth: g.displayWidth * 1.5,
+        displayHeight: g.displayHeight * 1.5,
+        alpha: 1,
+        duration: 110,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          // then it gives way and falls, spinning
+          g.setTint(0xffd9a0)
+          this.scene.tweens.add({
+            targets: g,
+            y: g.y + 260,
+            rotation: g.rotation + (Math.random() < 0.5 ? -1 : 1) * 2.1,
+            displayWidth: g.displayWidth * 0.7,
+            displayHeight: g.displayHeight * 0.7,
+            alpha: 0,
+            duration: 1150,
+            ease: 'Quad.easeIn',
+            onComplete: () => g.destroy(),
+          })
+        },
+      })
+
+      // the shockwave off the break
+      const ring = this.scene.add
+        .image(g.x, g.y, 'alarmring')
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setTint(0xffe9c4)
+        .setDisplaySize(90, 90)
+        .setDepth(1.6)
+        .setAlpha(0.9)
+      this.scene.tweens.add({
+        targets: ring,
+        displayWidth: 420,
+        displayHeight: 420,
+        alpha: 0,
+        duration: 620,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy(),
+      })
+
+      // and the bars themselves scatter
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2 + Math.random()
+        const bar = this.scene.add
+          .image(g.x, g.y, 'streak')
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setTint(0xffd9a0)
+          .setDisplaySize(26 + Math.random() * 16, 3)
+          .setRotation(a)
+          .setDepth(1.6)
+          .setAlpha(0.95)
+        this.scene.tweens.add({
+          targets: bar,
+          x: g.x + Math.cos(a) * (110 + Math.random() * 90),
+          y: g.y + Math.sin(a) * (70 + Math.random() * 60) + 120,
+          rotation: a + (Math.random() - 0.5) * 3,
+          alpha: 0,
+          duration: 760 + Math.random() * 380,
+          ease: 'Quad.easeIn',
+          onComplete: () => bar.destroy(),
+        })
+      }
     }
     return joined
   }
@@ -126,9 +203,9 @@ export class StrayGroup {
     // re-populate after a checkpoint restart
     if (!this.glow) {
       this.glow = this.scene.add
-        .image(this.x, this.y, 'softdot').setTint(0xffc98f)
-        .setDisplaySize(88, 88)
-        .setAlpha(0.5)
+        .image(this.x, this.y, 'cage').setTint(0xffb35e)
+        .setDisplaySize(132, 132)
+        .setAlpha(0.72)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(1.5)
     }
@@ -137,12 +214,12 @@ export class StrayGroup {
     this.joinTimer = 0
     for (let i = 0; i < count; i++) {
       const sprite = this.scene.add.image(this.x, this.y, 'bird-mid')
-      sprite.setScale(0.24)
+      sprite.setScale(0.2)
       sprite.setAlpha(0.85)
       this.birds.push({
         sprite,
         angle: Math.random() * Math.PI * 2,
-        radius: 18 + Math.random() * 42,
+        radius: 9 + Math.random() * 22,
         speed: 1.2 + Math.random() * 1.4,
         phase: Math.random() * Math.PI * 2,
         joining: false,

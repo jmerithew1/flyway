@@ -67,7 +67,7 @@ export class GameAudio {
     this.master = ctx.createGain()
     this.master.gain.value = 0.0
     this.master.connect(ctx.destination)
-    this.tween(this.master.gain, 0.3, 2.5)
+    this.tween(this.master.gain, 0.42, 1.4)
 
     // pink-ish noise buffer, looped, through a bandpass "wing rush" filter
     const bufSize = ctx.sampleRate * 2
@@ -216,10 +216,10 @@ export class GameAudio {
     h.frequency.value = f * 2.01
     const g = this.ctx.createGain()
     g.gain.setValueAtTime(0, t)
-    g.gain.linearRampToValueAtTime(0.045 + progress01 * 0.02, t + 0.02)
+    g.gain.linearRampToValueAtTime(0.1 + progress01 * 0.04, t + 0.02)
     g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4)
     const hg = this.ctx.createGain()
-    hg.gain.setValueAtTime(0.012, t)
+    hg.gain.setValueAtTime(0.028, t)
     hg.gain.exponentialRampToValueAtTime(0.0001, t + 1.1)
     const dest = this.layerGains.get('bells') ?? this.master
     o.connect(g).connect(dest)
@@ -258,9 +258,12 @@ export class GameAudio {
     const padHealth = 0.45 + health * 0.55
     const bellHealth = 0.3 + health * 0.7
     // grief lands quickly (τ≈0.9s); recovery re-blooms over ~4s (τ≈1.4s)
-    const padWant = (0.03 + p * 0.05) * padHealth
-    const bellsWant = (0.2 + Math.min(1, p * 1.6) * 0.95) * bellHealth
-    const wingsWant = 1 - p * 0.15 // bed recedes a touch as the music fills in
+    // The music used to sit 20-30 dB under the wing bed, which made a game
+    // with a full adaptive score read as having no music at all. The bed is
+    // atmosphere; the pad and bells are the score, and they lead now.
+    const padWant = (0.26 + p * 0.2) * padHealth
+    const bellsWant = (0.7 + Math.min(1, p * 1.6) * 0.5) * bellHealth
+    const wingsWant = 0.62 - p * 0.12 // bed recedes as the music fills in
     const tau = (want: number, have: number) => (want > have ? 1.4 : 0.9)
     const pad = this.layerGains.get('pad')
     const bells = this.layerGains.get('bells')
@@ -449,7 +452,7 @@ export class GameAudio {
   /** Master mute — the whole graph ducks, nothing is torn down. */
   setMuted(on: boolean): void {
     if (!this.ctx) return
-    this.master.gain.setTargetAtTime(on ? 0 : 0.3, this.ctx.currentTime, 0.05)
+    this.master.gain.setTargetAtTime(on ? 0 : 0.42, this.ctx.currentTime, 0.05)
   }
 
   /** ±ratio random pitch so repeated one-shots never sound stamped. */
@@ -599,7 +602,7 @@ export class GameAudio {
     if (!this.ctx) return
     const ctx = this.ctx
     const t = ctx.currentTime
-    this.master.gain.setTargetAtTime(0.3, t, 2.0)
+    this.master.gain.setTargetAtTime(0.42, t, 2.0)
     // slow major-add9 pad blooming under everything
     const notes = [196, 246.9, 293.7, 392, 440]
     notes.forEach((f, i) => {
@@ -664,7 +667,7 @@ export class GameAudio {
     if (!this.ctx) return
     const t = this.ctx.currentTime
     this.master.gain.setTargetAtTime(0.1, t, 0.15)
-    this.master.gain.setTargetAtTime(0.22, t + 1.2, 0.9)
+    this.master.gain.setTargetAtTime(0.34, t + 1.2, 0.9)
   }
 
   private airRush(amp: number, dur: number): void {
@@ -701,7 +704,7 @@ export class GameAudio {
   /** Gameplay resumes: bed swells back. */
   failureRecover(): void {
     if (!this.ctx) return
-    this.master.gain.setTargetAtTime(0.22, this.ctx.currentTime, 1.4)
+    this.master.gain.setTargetAtTime(0.34, this.ctx.currentTime, 1.4)
   }
 
   /** Musical bloom when birds join — bigger groups, bigger chord. */
@@ -779,7 +782,7 @@ export class GameAudio {
   warmth(amount01: number): void {
     if (!this.ctx) return
     const t = this.ctx.currentTime
-    this.master.gain.setTargetAtTime(0.22 + amount01 * 0.06, t, 1.2)
+    this.master.gain.setTargetAtTime(0.34 + amount01 * 0.08, t, 1.2)
   }
 
   private tween(param: AudioParam, to: number, seconds: number): void {

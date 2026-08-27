@@ -154,6 +154,13 @@ export class DayScene extends Phaser.Scene {
   private shownPrompts = new Set<string>()
   private lastHit = new Map<Bird, number>()
   private brittleCharge = new Map<Obstacle, number>()
+  /** the cold charge running through a breakable piece, and its host */
+  private brittleGlows: {
+    f: PieceFeature
+    sprite: Phaser.GameObjects.Image
+    glow: Phaser.GameObjects.Image
+    phase: number
+  }[] = []
   private stuckTime = new Map<Bird, number>()
   private lossTimes: number[] = []
   private flowGates = new Map<PieceFeature, { state: 'idle' | 'active' | 'done' | 'failed'; clean: boolean; entryCount: number }>()
@@ -367,10 +374,54 @@ export class DayScene extends Phaser.Scene {
         })
       }
     }
-    // brittle pieces shimmer faintly at rest — the "this one is different" tell
+    // ---- THE BREAKABLE LANGUAGE -------------------------------------------
+    // One rule, learnable in a single encounter: a piece with COLD LIGHT
+    // RUNNING THROUGH IT is one you can burst. Stone is opaque and inert.
+    //
+    // The light is the piece's own texture drawn over itself additively, so it
+    // appears IN the material - along the beads, through the lace - rather
+    // than as a halo behind a silhouette, which would only look backlit.
+    // Deliberately not warm gold: that colour already means "collect this".
+    this.brittleGlows = []
     for (const [f, sprite] of this.featureSprites) {
-      if (f.brittle && !f.motion) {
-        this.tweens.add({ targets: sprite, alpha: (f.alpha ?? 1) * 0.82, duration: 1300 + Math.random() * 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      if (!f.brittle) continue
+      const glow = this.add
+        .image(sprite.x, sprite.y, sprite.texture.key)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setTint(0xdcefff)
+        .setOrigin(sprite.originX, sprite.originY)
+        .setDisplaySize(sprite.displayWidth, sprite.displayHeight)
+        .setFlipX(sprite.flipX)
+        .setRotation(sprite.rotation)
+        .setDepth(sprite.depth + 0.005)
+        .setAlpha(0.3)
+      this.brittleGlows.push({ f, sprite, glow, phase: Math.random() * Math.PI * 2 })
+      // and they crumble: DARK flakes fall off loose matter. Stone sheds
+      // nothing, and nothing here resembles a mote you were meant to collect.
+      for (let i = 0; i < 3; i++) {
+        const flake = this.add
+          .image(sprite.x, sprite.y, 'leaf')
+          .setTint(0x2b2440)
+          .setDisplaySize(7, 9)
+          .setDepth(sprite.depth + 0.01)
+          .setAlpha(0)
+        this.tweens.add({
+          targets: flake,
+          y: `+=${110 + Math.random() * 80}`,
+          rotation: (Math.random() - 0.5) * 5,
+          alpha: { from: 0.5, to: 0 },
+          duration: 2400 + Math.random() * 1200,
+          delay: Math.random() * 2800,
+          repeat: -1,
+          ease: 'Sine.easeIn',
+          onRepeat: () => {
+            const src = this.featureSprites.get(f)
+            if (src) {
+              flake.setPosition(src.x + (Math.random() - 0.5) * src.displayWidth * 0.7, src.y)
+              flake.setRotation(0)
+            }
+          },
+        })
       }
     }
     // moving obstacles: art and colliders travel together
@@ -823,6 +874,7 @@ export class DayScene extends Phaser.Scene {
 
   /** Surge: tap SPACE — whipcrack pulse. Weak and ragged when strained. */
   private doSurge(): void {
+    this.flock.formShape('arrow')
     this.flock.surge()
     this.audio.surgeWhoosh(1 - this.flock.gatherStrain * 0.5)
     const m = Math.hypot(this.flock.meanVX, this.flock.meanVY) || 1
@@ -879,6 +931,7 @@ export class DayScene extends Phaser.Scene {
 
   /** Flare: tap SHIFT — the flock blooms wide and air-brakes. */
   private doFlare(): void {
+    this.flock.formShape('fan', 0.62)
     this.flock.flare()
     this.audio.formSnap('release')
     const m = Math.hypot(this.flock.meanVX, this.flock.meanVY) || 1
@@ -917,6 +970,7 @@ export class DayScene extends Phaser.Scene {
   /** Echo Call: tap C — the flock cries out; the scattered and the stray
    * turn toward home. Hoarse (weak) while on its diegetic cooldown. */
   private echoCall(): void {
+    this.flock.formShape('ring', 0.85)
     if (this.finishing || this.failing) return
     const strained = Math.max(this.flock.gatherStrain, this.flock.spreadStrain) > 0.6
     if (this.callCooldown > 0) {
@@ -1041,7 +1095,14 @@ export class DayScene extends Phaser.Scene {
       this.flock.centerX - this.scrollX,
       above ? this.flock.centerY - 190 : this.flock.centerY + 170,
     )
-    this.promptText.setPosition(at.x, at.y)
+    // clamp by the string's real half-width: a fixed margin let the longest
+    // teaching lines hang off the left edge of the frame
+    const safe = safeArea(this)
+    const half = this.promptText.width / 2 + 16
+    this.promptText.setPosition(
+      Phaser.Math.Clamp(at.x, safe.x + half, safe.x + safe.w - half),
+      at.y,
+    )
     if (!this.prompt.fading && (this.prompt.done() || this.promptAge > 7)) {
       this.prompt.fading = true
       this.tweens.add({
@@ -1505,6 +1566,17 @@ export class DayScene extends Phaser.Scene {
         }
       }
     }
+    // the charge rides its piece exactly (curtains swing) and brightens as you
+    // bear down on it, so a piece about to burst visibly strains first
+    for (const g of this.brittleGlows) {
+      const charge = this.featureTremble(g.f)
+      g.glow.setPosition(g.sprite.x, g.sprite.y)
+      g.glow.setRotation(g.sprite.rotation)
+      g.glow.setDisplaySize(g.sprite.displayWidth, g.sprite.displayHeight)
+      const breathe = 0.5 + 0.5 * Math.sin(time * 2.3 + g.phase)
+      g.glow.setAlpha(0.22 + breathe * 0.16 + charge * 0.55)
+    }
+
     // static brittle pieces shudder in place under charge
     for (const [f, sprite] of this.featureSprites) {
       if (!f.brittle || moverFeatures.has(f)) continue
