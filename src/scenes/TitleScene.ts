@@ -137,13 +137,23 @@ export class TitleScene extends Phaser.Scene {
     })
     const hint = ctrlObjs[2]
 
-    const start = () => this.scene.start('Day')
+    // The screen says "click, or press SPACE" — and on touch, "tap anywhere" —
+    // but this was bound to the BEGIN FLIGHT text object alone, so a click
+    // anywhere else did nothing and the game looked broken at the very first
+    // interaction anyone has with it. Any pointer down on the scene starts it.
+    let started = false
+    const start = (): void => {
+      if (started) return
+      started = true
+      this.audio.start() // must ride a real gesture, so unlock here
+      this.scene.start('Day')
+    }
     begin.on('pointerdown', start)
+    this.input.on('pointerdown', start)
     this.input.keyboard?.once('keydown-ENTER', start)
     this.input.keyboard?.once('keydown-SPACE', start)
-    // the score starts on the title, on the player's first gesture
+    // the score also wakes on a mere hover, before any commitment
     this.input.once('pointermove', () => this.audio.start())
-    this.input.once('pointerdown', () => this.audio.start())
     this.input.keyboard?.once('keydown', () => this.audio.start())
 
     this.tweens.add({ targets: title, alpha: 1, duration: 1100 })

@@ -212,6 +212,28 @@ const MAX_STEPS = 6
 const BIRD_PX = 27
 
 /**
+ * THE FLOCK'S PLANE IN THE WORLD.
+ *
+ * spawnBird never called setDepth, so every bird sat at the default depth 0 —
+ * behind the ruins (3), behind the motes (2.5), behind the god-rays (2.5).
+ * The murmuration was being drawn *underneath* the world it is supposed to be
+ * flying through: only the birds that happened to be framed inside an arch's
+ * opening were visible at all, and the rest of the flock was clipped away by
+ * stone. That is a large part of why the birds read as pasted onto a backdrop
+ * rather than moving inside it.
+ *
+ * 3.6 seats them in the gap the scene had already left for them: in front of
+ * the background architecture and its ground haze (3 / 3.4), and just in front
+ * of the arrival's decorative echo birds (3.5) so the real flock leads its own
+ * shadows — but still behind everything authored to sit over the flock. The
+ * leader glow (3.9), collect sparks and flow ripples (4), near dust (5), the
+ * foreground garden overlay (6 / 6.6), the falcon and its shadow (8-9) and the
+ * nightfall fog (11) all keep their claim, so true foreground occluders still
+ * pass in front of the birds.
+ */
+const BIRD_DEPTH = 3.6
+
+/**
  * Sprite scale derived from the actual rasterized texture width, so the art
  * stays the right size regardless of what resolution the SVG was rasterized at.
  */
@@ -267,6 +289,10 @@ export class Flock {
     const depth = rand(0.75, 1.15)
     sprite.setScale(this.scale * depth)
     sprite.setAlpha(0.82 + (depth - 0.75) * 0.45)
+    // `depth` above is the per-bird pseudo-depth driving scale and alpha — a
+    // different thing entirely from the display list. Every bird also has to
+    // be seated on the flock's render plane; see BIRD_DEPTH.
+    sprite.setDepth(BIRD_DEPTH)
     const bird: Bird = {
       x,
       y,
@@ -1125,7 +1151,22 @@ export class Flock {
    * pulsing, so they separate from both the navy flock and the warm sky. */
   private riskHalos: Phaser.GameObjects.Image[] = []
   private riskUsed = 0
-  private riskCandidates: { b: Bird; d01: number }[] = []
+  /**
+   * At-risk birds for this frame, in a POOL rather than a fresh array of fresh
+   * object literals.
+   *
+   * The old code pushed a new `{ b, d01 }` per strobing bird per frame. During
+   * a bad stretch — a wide flock dragged along stone, which is exactly when the
+   * frame is already under load — that is dozens of short-lived objects sixty
+   * times a second, and the GC pauses they buy are precisely what the player
+   * experiences as chop. The pool grows to the worst frame the run has ever
+   * seen and is then reused forever: entries are rewritten in place, never
+   * replaced, so a steady state allocates nothing at all.
+   */
+  private riskPool: { b: Bird | null; d01: number }[] = []
+  /** How many leading entries of riskPool are live this frame. Everything past
+   * this index is last frame's leftovers and must never be read. */
+  private riskCount = 0
 
   /** Never more than this many rings at once — past a dozen it stops reading
    * as "these birds" and starts reading as UI noise. */
@@ -1153,7 +1194,12 @@ export class Flock {
       h = this.scene.add
         .image(0, 0, 'alarmring')
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(2.95)
+        // Rides the flock's plane. At its old fixed 2.95 the ring sat behind
+        // the stone (3), so the alarm warning you about a ruin was hidden by
+        // that same ruin — and it sat *in front of* the birds, which is the
+        // opposite of what this pool is documented to do. Derived from
+        // BIRD_DEPTH so the two can never drift apart again.
+        .setDepth(BIRD_DEPTH - 0.05)
       this.riskHalos.push(h)
     }
     this.riskUsed++
@@ -1175,7 +1221,7 @@ export class Flock {
   }
 
   private render(dt: number): void {
-    this.riskCandidates.length = 0
+    this.riskCount = 0
     this.riskUsed = 0
     const rk = 1 - Math.exp(-9 * dt)
     for (const b of this.birds) {
@@ -1211,7 +1257,18 @@ export class Flock {
           s.setAlpha(1)
         }
         s.x += Math.sin(this.time * 42 + b.flapPhase) * d01 * 2.6
-        if (d01 > 0.4) this.riskCandidates.push({ b, d01 })
+        if (d01 > 0.4) {
+          // claim the next pooled entry, only ever minting one on a frame that
+          // has more birds in trouble than any frame before it
+          let e = this.riskPool[this.riskCount]
+          if (!e) {
+            e = { b: null, d01: 0 }
+            this.riskPool.push(e)
+          }
+          e.b = b
+          e.d01 = d01
+          this.riskCount++
+        }
       } else if (this.pulse > 0.3) {
         // SURGE: the leading edge catches the light — a warm spear-tip
         const ahead = (b.x - this.centerX) * Math.cos(b.renderAngle) + (b.y - this.centerY) * Math.sin(b.renderAngle)
@@ -1226,9 +1283,31 @@ export class Flock {
       s.scaleX = this.scale * b.depth
     }
 
-    // ring the birds in the WORST trouble, not the first few the loop reached
-    if (this.riskCandidates.length > 1) this.riskCandidates.sort((p, q) => q.d01 - p.d01)
-    for (const c of this.riskCandidates) this.markAtRisk(c.b, c.d01, dt)
+    // Ring the birds in the WORST trouble, not the first few the loop reached.
+    // Array.sort() is out now that the array outlives the frame — it would drag
+    // the pool's stale tail into the ordering — so the live prefix is sorted in
+    // place. Insertion sort, because this set is the handful of birds actually
+    // in danger rather than the whole flock, and it allocates no comparator
+    // closure per frame the way the old sort did. Strictly-less keeps it
+    // stable, so ties resolve in flock order exactly as before.
+    const n = this.riskCount
+    for (let i = 1; i < n; i++) {
+      const e = this.riskPool[i]
+      let j = i - 1
+      while (j >= 0 && this.riskPool[j].d01 < e.d01) {
+        this.riskPool[j + 1] = this.riskPool[j]
+        j--
+      }
+      this.riskPool[j + 1] = e
+    }
+    for (let i = 0; i < n; i++) {
+      const e = this.riskPool[i]
+      if (e.b) this.markAtRisk(e.b, e.d01, dt)
+    }
+    // Release the tail's bird references. A pooled entry is kept forever, so
+    // without this the pool would pin a removed bird — and its destroyed
+    // sprite — in memory long after the flock had lost it.
+    for (let i = n; i < this.riskPool.length; i++) this.riskPool[i].b = null
   }
 
   private alignScale(f: number): number {

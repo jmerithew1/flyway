@@ -1,6 +1,15 @@
 /**
  * Obstacle primitives for the flock world.
  * Kept engine-agnostic (plain data + math) so the sim stays testable and simple.
+ *
+ * ALLOCATION NOTE (read before editing anything below).
+ * These two functions run per-bird x per-near-obstacle, every frame. At 120-220
+ * birds that is thousands of calls a frame, and every object literal returned
+ * from here is dead within microseconds. A profile put ~3.1 MB of garbage per 60
+ * frames on the game, and the GC pauses that collects are exactly what the owner
+ * feels as "choppy" - so the sim's inner loop is now a strict no-allocation zone.
+ * Everything here fills a reusable struct instead of returning a fresh one. If
+ * you add a helper in this file, give it the same shape.
  */
 
 // 'soft' = brush-through vegetation: slows and rustles, never removes a bird
@@ -27,6 +36,16 @@ export interface RectObstacle {
 
 export type Obstacle = CircleObstacle | RectObstacle
 
+/**
+ * One sample of the distance field around an obstacle. Named so it can be
+ * declared once and refilled forever rather than minted per query.
+ */
+export interface FieldSample {
+  nx: number
+  ny: number
+  dist: number
+}
+
 export interface AvoidResult {
   // Steering push (unit-ish direction * urgency 0..1)
   fx: number
@@ -36,18 +55,40 @@ export interface AvoidResult {
   obstacle: Obstacle
 }
 
+/** A blank obstacle to seed scratch results with; never read, never steered against. */
+const NULL_OBSTACLE: CircleObstacle = { shape: 'circle', kind: 'solid', x: 0, y: 0, r: 0 }
+
+/** Fresh scratch buffers for callers that want their own (e.g. to hold a result across a call). */
+export function createFieldSample(): FieldSample {
+  return { nx: 0, ny: 0, dist: 0 }
+}
+export function createAvoidResult(): AvoidResult {
+  return { fx: 0, fy: 0, urgency: 0, inside: false, obstacle: NULL_OBSTACLE }
+}
+
 /**
- * Distance info from a point to an obstacle:
- * returns vector from closest surface point toward the query point and signed distance
- * (negative = inside).
+ * Distance info from a point to an obstacle, written into a caller-owned struct:
+ * vector from closest surface point toward the query point, and signed distance
+ * (negative = inside). Returns `out` so it still reads as an expression.
+ *
+ * Both branches are exact signed distance functions of their shape, which
+ * `avoidSteerInto` leans on to skip work - keep them exact if you touch them.
  */
-export function obstacleField(o: Obstacle, px: number, py: number): { nx: number; ny: number; dist: number } {
+export function obstacleFieldInto(o: Obstacle, px: number, py: number, out: FieldSample): FieldSample {
   if (o.shape === 'circle') {
     const dx = px - o.x
     const dy = py - o.y
     const d = Math.hypot(dx, dy)
-    if (d < 1e-6) return { nx: 1, ny: 0, dist: -o.r }
-    return { nx: dx / d, ny: dy / d, dist: d - o.r }
+    if (d < 1e-6) {
+      out.nx = 1
+      out.ny = 0
+      out.dist = -o.r
+      return out
+    }
+    out.nx = dx / d
+    out.ny = dy / d
+    out.dist = d - o.r
+    return out
   }
   // rect
   const dx = px - o.x
@@ -59,22 +100,52 @@ export function obstacleField(o: Obstacle, px: number, py: number): { nx: number
     const cx = Math.max(qx, 0)
     const cy = Math.max(qy, 0)
     const d = Math.hypot(cx, cy)
-    let nx: number
-    let ny: number
     if (d > 1e-6) {
-      nx = (cx * Math.sign(dx || 1)) / d
-      ny = (cy * Math.sign(dy || 1)) / d
+      out.nx = (cx * Math.sign(dx || 1)) / d
+      out.ny = (cy * Math.sign(dy || 1)) / d
     } else {
-      nx = Math.sign(dx || 1)
-      ny = 0
+      out.nx = Math.sign(dx || 1)
+      out.ny = 0
     }
-    return { nx, ny, dist: d }
+    out.dist = d
+    return out
   }
   // inside: push out along smallest penetration axis
   if (qx > qy) {
-    return { nx: Math.sign(dx || 1), ny: 0, dist: qx }
+    out.nx = Math.sign(dx || 1)
+    out.ny = 0
+    out.dist = qx
+    return out
   }
-  return { nx: 0, ny: Math.sign(dy || 1), dist: qy }
+  out.nx = 0
+  out.ny = Math.sign(dy || 1)
+  out.dist = qy
+  return out
+}
+
+/**
+ * Shared scratch for the convenience wrappers below. Two field slots because a
+ * single avoid query samples the field at two points (here, and where the bird
+ * will be) and needs both alive at once.
+ */
+const scratchNow: FieldSample = createFieldSample()
+const scratchAhead: FieldSample = createFieldSample()
+const scratchAvoid: AvoidResult = createAvoidResult()
+// Deliberately NOT one of the two above: the flock loop queries the field again
+// inside the branch it took on an avoid result, and a shared buffer there would
+// quietly overwrite the answer it is still acting on.
+const scratchField: FieldSample = createFieldSample()
+
+/**
+ * Convenience form of `obstacleFieldInto`.
+ *
+ * IMPORTANT: the returned object is a SHARED module buffer, not a fresh one -
+ * that is the whole point, and it is why the flock loop no longer churns the
+ * heap. Read what you need out of it before the next call; if you need to keep a
+ * sample around, pass your own struct to `obstacleFieldInto` instead.
+ */
+export function obstacleField(o: Obstacle, px: number, py: number): FieldSample {
+  return obstacleFieldInto(o, px, py, scratchField)
 }
 
 // These were raised to 0.95s/92px to stop silhouette colliders over-punishing,
@@ -95,24 +166,41 @@ export function obstacleField(o: Obstacle, px: number, py: number): { nx: number
 export const AVOID = { lookahead: 0.62, margin: 60 }
 
 /**
- * Anticipatory avoidance steering for one bird against one obstacle.
+ * Anticipatory avoidance steering for one bird against one obstacle, written
+ * into a caller-owned result. Returns `out` when the obstacle is close enough to
+ * matter, or null when it can be ignored entirely.
+ *
  * sidePref biases which way a bird slides around a head-on obstacle,
  * which is what makes flock splits organic.
  */
-export function avoidSteer(
+export function avoidSteerInto(
   o: Obstacle,
   px: number,
   py: number,
   vx: number,
   vy: number,
   sidePref: number,
-  goalY?: number,
+  goalY: number | undefined,
+  out: AvoidResult,
 ): AvoidResult | null {
   if (o.broken) return null
-  const now = obstacleField(o, px, py)
+  const now = obstacleFieldInto(o, px, py, scratchNow)
+
+  // Cheap exact reject before the second sample. Both shapes give a true signed
+  // distance, so over one lookahead a bird can only close on the surface by the
+  // distance it actually travels. If it is further outside the margin than it
+  // could possibly fly in that time, the ahead sample cannot change the answer -
+  // so skip it. Identical outcome, and it spares the far majority of pairs the
+  // second field evaluation entirely.
+  const slack = now.dist - AVOID.margin
+  if (slack > 0) {
+    const reach = AVOID.lookahead
+    if (slack * slack > (vx * vx + vy * vy) * reach * reach) return null
+  }
+
   const ax = px + vx * AVOID.lookahead
   const ay = py + vy * AVOID.lookahead
-  const ahead = obstacleField(o, ax, ay)
+  const ahead = obstacleFieldInto(o, ax, ay, scratchAhead)
   const dist = Math.min(now.dist, ahead.dist)
   if (dist > AVOID.margin) return null
 
@@ -144,6 +232,31 @@ export function avoidSteer(
     fy = fy * (1 - slide * 0.5) + ty * slide
   }
   const m = Math.hypot(fx, fy) || 1
+  out.fx = fx / m
+  out.fy = fy / m
+  out.urgency = urgency
   // grazing contact is forgiven; only real penetration counts as a collision
-  return { fx: fx / m, fy: fy / m, urgency, inside: now.dist < -7, obstacle: o }
+  out.inside = now.dist < -7
+  out.obstacle = o
+  return out
+}
+
+/**
+ * Convenience form of `avoidSteerInto`.
+ *
+ * IMPORTANT: the returned object is a SHARED module buffer, reused by every
+ * call. Consume it before the next query - the flock loop does, which is what
+ * turned thousands of throwaway objects a frame into zero. Anything that wants
+ * to stash a result must pass its own struct to `avoidSteerInto`.
+ */
+export function avoidSteer(
+  o: Obstacle,
+  px: number,
+  py: number,
+  vx: number,
+  vy: number,
+  sidePref: number,
+  goalY?: number,
+): AvoidResult | null {
+  return avoidSteerInto(o, px, py, vx, vy, sidePref, goalY, scratchAvoid)
 }

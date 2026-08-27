@@ -68,6 +68,16 @@ export class Nightfall {
   private tendrils: Phaser.GameObjects.Image[] = []
   private tendrilT: number[] = []
   private tendrilY: number[] = []
+  /**
+   * Which birds the tendrils are reaching for, chosen fresh each frame but
+   * held in a buffer that is allocated ONCE. Picking the five nearest-trailing
+   * birds the obvious way — filter, sort, slice — copies and sorts the whole
+   * 120-bird flock sixty times a second, and the garbage that makes is a real
+   * part of what the player feels as choppiness. The selection below finds the
+   * same five in a single pass with nothing allocated.
+   */
+  private trailBuf: (Bird | null)[] = []
+  private trailCount = 0
   private intensity = 1
 
   constructor(scene: Phaser.Scene, viewW: number, viewH: number) {
@@ -151,6 +161,7 @@ export class Nightfall {
         .setDepth(11.04)
       this.tendrils.push(t)
       this.tendrilT.push(Math.random() * 6)
+      this.trailBuf.push(null)
     }
   }
 
@@ -188,7 +199,12 @@ export class Nightfall {
     this.encroach = Phaser.Math.Clamp((screenEdge + 620) / (viewW * 0.62), 0, 1)
 
     // ---- the dark takes birds that trail into it
-    for (const b of flock.birds) {
+    // indexed rather than for-of: this walks every bird every frame, and an
+    // iterator object per frame is exactly the kind of small steady garbage
+    // that adds up to a GC pause mid-flight
+    const birds = flock.birds
+    for (let i = 0; i < birds.length; i++) {
+      const b = birds[i]
       if (b.x < this.edgeX) {
         const depth = Math.min(1, (this.edgeX - b.x) / 220)
         b.danger += dt * (0.9 + depth * 3.4)
@@ -245,14 +261,37 @@ export class Nightfall {
       this.rim.setAlpha(Math.min(0.2, 0.05 + this.encroach * 0.18))
     }
 
-    // tendrils reach out of the murk toward the nearest trailing birds
-    const trailing = flock.birds
-      .filter((b) => b.x - this.edgeX < 520)
-      .sort((a, b) => a.x - b.x)
-      .slice(0, this.tendrils.length)
+    // tendrils reach out of the murk toward the nearest trailing birds.
+    // Only the few lowest-x birds are ever wanted, so a full sort of the flock
+    // is wasted work: keep the handful of best candidates in a reused buffer,
+    // sorted by insertion, and let everything else fall out on one comparison.
+    // Same five birds, same order, nothing allocated.
+    const slots = this.tendrils.length
+    const trailing = this.trailBuf
+    const reachCut = this.edgeX + 520
+    let found = 0
+    const flockBirds = flock.birds
+    for (let i = 0; i < flockBirds.length; i++) {
+      const b = flockBirds[i]
+      // too far ahead of the edge to be worth reaching for, or already beaten
+      // by every candidate held — the common case, and it costs one compare
+      if (b.x >= reachCut) continue
+      if (found === slots && b.x >= trailing[slots - 1]!.x) continue
+      let j = found < slots ? found++ : slots - 1
+      while (j > 0 && trailing[j - 1]!.x > b.x) {
+        trailing[j] = trailing[j - 1]
+        j--
+      }
+      trailing[j] = b
+    }
+    // drop references to birds we are not using, so the buffer never keeps a
+    // dead bird alive between frames
+    for (let i = found; i < slots; i++) trailing[i] = null
+    this.trailCount = found
+
     for (let i = 0; i < this.tendrils.length; i++) {
       const t = this.tendrils[i]
-      const target = trailing[i]
+      const target = i < this.trailCount ? trailing[i] : null
       if (!vis || !target) {
         t.setAlpha(Math.max(0, t.alpha - dt * 2))
         if (t.alpha <= 0.01) t.setVisible(false)
