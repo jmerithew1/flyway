@@ -55,12 +55,27 @@ export const FOG_PIECES = [
   'fog_puff_00', 'fog_edge_00',
 ] as const
 
+/** Six painted act skies, replacing the single tinted plate. */
+export const SKY_PIECES = [
+  'sky_dawn_approach', 'sky_sun_gate', 'sky_overgrown',
+  'sky_wind_heights', 'sky_gauntlet', 'sky_homeward',
+] as const
+
+/** Three silhouette depths. The near band is the black floor the frame lacked. */
+export const PARALLAX_PIECES = ['strip_far', 'strip_mid', 'strip_near'] as const
+
 export function loadArt(scene: Phaser.Scene): void {
   for (const piece of Object.values(ART)) {
     scene.load.image(piece.key, piece.file)
   }
   for (const key of FOG_PIECES) {
     scene.load.image(key, `assets/processed/fog/${key}.png`)
+  }
+  for (const key of SKY_PIECES) {
+    scene.load.image(key, `assets/processed/sky2x/${key}.png`)
+  }
+  for (const key of PARALLAX_PIECES) {
+    scene.load.image(key, `assets/processed/parallax/${key}.png`)
   }
 }
 
