@@ -109,7 +109,14 @@ export const FEATURES: PieceFeature[] = [
   top(2600, 'root_tangle', 330),
   gnd(2600, 'triple_arcade', 400),
   gnd(3150, 'obelisk_a', 600), // split obelisk
-  top(3150, 'curtain_beaded', 300, { brittle: true }), // Surge teacher: a small veil to punch through
+  // The Surge lesson used to sit at x=3150 - the SAME x as the solid obelisk on
+  // line above - and mounted at the top of the frame, so the flock never met the
+  // breakable thing and slammed into stone instead. A trace measured 56
+  // collisions and 59 of 119 birds lost in that one 2000px band, more than the
+  // rest of the level combined. It now has its own clear air, at the altitude
+  // the flock actually flies, so the first lesson can be learned rather than
+  // survived.
+  mid(3620, 470, 'curtain_beaded', 300, { brittle: true }), // Surge teacher: a small veil to punch through
   gnd(3650, 'gothic_arch', 520, { flow: 'gather' }), // narrow: gather
   gnd(4150, 'wall_multi_window', 520, { flow: 'spread' }), // spread through windows
   top(4150, 'leaf_strand', 260),
