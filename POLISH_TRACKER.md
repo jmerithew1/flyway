@@ -345,6 +345,17 @@ short attention spans."
 | L5 | Session shape | One long flight | Respect short attention: the first act should be a complete, satisfying beat on its own | ⏳ |
 | L6 | Performance | ~5.4ms/frame measured | Re-verify with fog, glow and light all live — these are the expensive additions | ⏳ |
 
+## M. The bookends, and the drama the owner actually wants
+
+| # | Item | State |
+|---|------|-------|
+| M1 | **Flock wipe = an eruption of feathers FLOODING the screen** — not a tasteful puff. The most dramatic single frame in the game | ⏳ |
+| M2 | **The arrival is a MOMENT** — the world pauses, the camera takes it, and the flock streams down to the roost like a shot from a film. Right now it hands you a results panel | ⏳ |
+| M3 | **The ending is CONDITIONAL.** Owner: "if the fog almost got you, you don't get the successful win moment - they swirl above the covered tree." Arrive clean and the roost is golden and the flock settles; arrive hunted, with the dark on your heels, and the roost is under fog, the birds circle above it unable to settle, and the music withholds its resolution. The ending should tell you how you did before a single number appears | ⏳ |
+| M4 | **Manoeuvring should feel seamless** — the owner does not like how movement feels around some obstacles. Threading a gap should feel like flight, not like fighting the steering | ⏳ |
+| M5 | **Skill ceiling**: a player who collects everything well should finish with MOST of the flock, while the run still feels challenging. Generous to mastery, unforgiving to sloppiness | ⏳ |
+| M6 | More unique dramatic effects throughout, in the same register as M1 | ⏳ |
+
 ## D. Creatures & drama
 
 | # | Request | State | Verification |

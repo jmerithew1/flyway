@@ -181,6 +181,8 @@ export interface Bird {
    * contact, i.e. exactly when a shape is on screen. A dead bird now just
    * leaves its seat empty. -1 = not in the current form. */
   slotIdx: number
+  /** countdown to the next radiating alarm pulse */
+  riskPulseT: number
   flapPhase: number
   flapFreq: number
   renderAngle: number // smoothed heading for the sprite (kills rotation jitter)
@@ -283,6 +285,7 @@ export class Flock {
       edginess: rand(0.4, 1.25),
       sidePref: Math.random() < 0.5 ? -rand(0.4, 1) : rand(0.4, 1),
       slotIdx: -1,
+      riskPulseT: 0,
       flapPhase: rand(0, Math.PI * 2),
       // most birds beat steadily; a few glide with slow lazy strokes
       flapFreq: Math.random() < 0.15 ? rand(2.5, 4) : rand(7, 11),
@@ -1126,9 +1129,24 @@ export class Flock {
 
   /** Never more than this many rings at once — past a dozen it stops reading
    * as "these birds" and starts reading as UI noise. */
-  private static readonly MAX_RISK_RINGS = 6
+  private static readonly MAX_RISK_RINGS = 14
 
-  private markAtRisk(b: Bird, d01: number): void {
+  /**
+   * A bird about to be torn away RADIATES.
+   *
+   * A static ring drawn around it read as decoration - and as the owner put
+   * it, circling the bird just looks weird. What reads as an alarm is a pulse
+   * that leaves the bird: a bright ring born at its position, expanding and
+   * fading, fired faster and faster as its time runs out. Like a heartbeat
+   * going wrong. The bird itself flashes hard white on each beat, so the
+   * signal is on the bird AND in the space around it.
+   */
+  private markAtRisk(b: Bird, d01: number, dt: number): void {
+    // beat interval tightens from ~0.5s down to ~0.13s as danger peaks
+    b.riskPulseT -= dt
+    if (b.riskPulseT > 0) return
+    b.riskPulseT = 0.5 - d01 * 0.37
+
     if (this.riskUsed >= Flock.MAX_RISK_RINGS) return
     let h = this.riskHalos[this.riskUsed]
     if (!h) {
@@ -1139,14 +1157,21 @@ export class Flock {
       this.riskHalos.push(h)
     }
     this.riskUsed++
-    const pulse = 0.72 + 0.28 * Math.sin(this.time * 13 + b.flapPhase)
-    const size = 52 - d01 * 14 // the ring CLOSES in as the bird runs out of time
-    h.setVisible(true)
-      .setPosition(b.x, b.y)
-      .setDisplaySize(size, size)
-      // cool white-gold: bright against the navy birds AND the peach sky
-      .setTint(d01 > 0.6 ? 0xfff4e6 : 0xffd9b0)
-      .setAlpha((0.45 + d01 * 0.4) * pulse)
+    h.setVisible(true).setPosition(b.x, b.y).setDisplaySize(20, 20)
+    h.setTint(d01 > 0.55 ? 0xffffff : 0xffe6c4)
+    h.setAlpha(0.95)
+    // the ring leaves the bird and dies - it is a signal being emitted, not a
+    // decoration being worn
+    this.scene.tweens.killTweensOf(h)
+    this.scene.tweens.add({
+      targets: h,
+      displayWidth: 150 + d01 * 90,
+      displayHeight: 150 + d01 * 90,
+      alpha: 0,
+      duration: 340 + (1 - d01) * 140,
+      ease: 'Cubic.easeOut',
+      onComplete: () => h.setVisible(false),
+    })
   }
 
   private render(dt: number): void {
@@ -1173,17 +1198,20 @@ export class Flock {
         // A steady glow reads as decoration. A BLINK reads as an alarm - and
         // it quickens as the bird runs out of time, so the flock visibly
         // starts strobing when you are about to lose birds.
-        const rate = 7 + d01 * 22
+        // a hard white strobe, quickening with danger. setTintFill replaces
+        // the silhouette outright, so the bird BLINKS instead of merely
+        // warming - which is what makes it visible against a bright sky.
+        const rate = 9 + d01 * 30
         const on = Math.sin(this.time * rate + b.flapPhase * 3) > 0
-        if (on && d01 > 0.3) {
-          s.setTint(0xfff2df)
+        if (on) {
+          s.setTintFill(d01 > 0.55 ? 0xffffff : 0xffe9cf)
           s.setAlpha(1)
         } else {
           if (s.isTinted) s.clearTint()
-          s.setAlpha(on || d01 < 0.3 ? 1 : 0.45)
+          s.setAlpha(1)
         }
         s.x += Math.sin(this.time * 42 + b.flapPhase) * d01 * 2.6
-        if (d01 > 0.55) this.riskCandidates.push({ b, d01 })
+        if (d01 > 0.4) this.riskCandidates.push({ b, d01 })
       } else if (this.pulse > 0.3) {
         // SURGE: the leading edge catches the light — a warm spear-tip
         const ahead = (b.x - this.centerX) * Math.cos(b.renderAngle) + (b.y - this.centerY) * Math.sin(b.renderAngle)
@@ -1200,8 +1228,7 @@ export class Flock {
 
     // ring the birds in the WORST trouble, not the first few the loop reached
     if (this.riskCandidates.length > 1) this.riskCandidates.sort((p, q) => q.d01 - p.d01)
-    for (const c of this.riskCandidates) this.markAtRisk(c.b, c.d01)
-    for (let i = this.riskUsed; i < this.riskHalos.length; i++) this.riskHalos[i].setVisible(false)
+    for (const c of this.riskCandidates) this.markAtRisk(c.b, c.d01, dt)
   }
 
   private alignScale(f: number): number {

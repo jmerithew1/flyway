@@ -74,6 +74,49 @@ def strip_fringe(im: Image.Image) -> int:
     return fixed
 
 
+def feather_borders(im: Image.Image, span: int = 90) -> int:
+    """Ramp alpha to zero at any border the art runs right up to.
+
+    Measured: fog_wall_00 and fog_wall_02 are opaque (alpha 253-254) down their
+    entire left edge, and fog_edge_00 on three sides. Scaled up in game, an
+    opaque border IS a straight line - which is the "square in the fog" the
+    owner reported repeatedly. No amount of code fixes it; the piece has to
+    dissolve at its own boundary.
+    """
+    # NOTE: operate on `im` itself. convert('RGBA') returns a COPY, so an
+    # earlier version of this feathered a temporary and saved the original.
+    a = im.getchannel('A')
+    px = a.load()
+    w, h = im.size
+    touched = 0
+    # which borders actually need it
+    left = max(px[0, y] for y in range(0, h, 5)) > 40
+    right = max(px[w - 1, y] for y in range(0, h, 5)) > 40
+    top = max(px[x, 0] for x in range(0, w, 5)) > 40
+    bot = max(px[x, h - 1] for x in range(0, w, 5)) > 40
+    for y in range(h):
+        for x in range(w):
+            v = px[x, y]
+            if v == 0:
+                continue
+            k = 1.0
+            if left and x < span:
+                k = min(k, x / span)
+            if right and x > w - 1 - span:
+                k = min(k, (w - 1 - x) / span)
+            if top and y < span:
+                k = min(k, y / span)
+            if bot and y > h - 1 - span:
+                k = min(k, (h - 1 - y) / span)
+            if k < 1.0:
+                # smoothstep so the dissolve reads as vapour, not as a gradient
+                kk = k * k * (3 - 2 * k)
+                px[x, y] = int(v * kk)
+                touched += 1
+    im.putalpha(a)
+    return touched
+
+
 def main() -> int:
     if not os.path.isdir(SRC):
         print(f'no source folder: {SRC}')
@@ -96,6 +139,7 @@ def main() -> int:
                   f'baked background, NOT usable as a cutout')
             continue
         fixed = strip_fringe(im)
+        feathered = feather_borders(im)
         bb = im.getbbox()
         if bb:
             im = im.crop(bb)
@@ -105,7 +149,7 @@ def main() -> int:
         im.save(os.path.join(OUT, name))
         rows.append((name, im.size, f'{transparent*100:.0f}% alpha', f'{fixed} fringe px'))
         print(f'  {f}  ->  {name}  {im.size}  ({transparent*100:.0f}% transparent, '
-              f'{fixed} fringe pixels cleaned)')
+              f'{fixed} fringe px, {feathered} border px dissolved)')
 
     print(f'\n{len(rows)} pieces written to {OUT}')
     for kind, n in sorted(seen.items()):

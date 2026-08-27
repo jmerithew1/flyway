@@ -1361,11 +1361,16 @@ export class DayScene extends Phaser.Scene {
     this.scatter.update(dt, time, this.flock, Math.min(1, spreadAmt + callBoost))
     for (const s of this.strays) {
       if (s.group.depleted) continue
+      const wasCaged = !s.group.depleted
       const joined = s.group.update(dt, time, this.flock, 200 + spreadAmt * 220 + callBoost * 340)
       if (joined > 0) {
         this.stats.found += joined
         this.flockGain(joined, s.def.x, s.def.y)
+        // FREED BIRDS FLY TO YOU, visibly. Without a streak the join is
+        // invisible - the counter just ticks up and the cage means nothing.
+        for (let i = 0; i < joined; i++) this.freedStreak(s.def.x, s.def.y)
       }
+      if (wasCaged && s.group.depleted) this.cageFreed(s.def.x, s.def.y)
     }
 
     // drafting streamlines: clean straight flight visibly cuts the air
@@ -3000,6 +3005,99 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * A bird breaking out of a cage and streaking home. The join used to be
+   * silent - the count went up and nothing moved - so freeing a cage read as
+   * bookkeeping instead of a rescue.
+   */
+  private freedStreak(x: number, y: number): void {
+    const bird = this.add
+      .image(x + (Math.random() - 0.5) * 60, y + (Math.random() - 0.5) * 60, 'bird-mid')
+      .setScale(0.34)
+      .setTint(0xfff0d4)
+      .setDepth(6.2)
+    const trail = this.add
+      .image(bird.x, bird.y, 'streak')
+      .setTint(0xffd9a0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDisplaySize(90, 10)
+      .setAlpha(0.85)
+      .setDepth(6.1)
+    const tx = this.flock.centerX + (Math.random() - 0.5) * 120
+    const ty = this.flock.centerY + (Math.random() - 0.5) * 100
+    trail.setRotation(Math.atan2(ty - bird.y, tx - bird.x))
+    this.tweens.add({
+      targets: [bird, trail],
+      x: tx,
+      y: ty,
+      duration: 420 + Math.random() * 180,
+      ease: 'Cubic.easeIn',
+      onComplete: () => {
+        bird.destroy()
+        trail.destroy()
+      },
+    })
+    this.tweens.add({ targets: trail, alpha: 0, displayWidth: 220, duration: 460 })
+  }
+
+  /**
+   * THE CAGE GIVES WAY. The whole point of a cage is the moment it breaks, so
+   * this gets the full treatment: a white flash, a shockwave, hit-stop, a
+   * camera kick, and a callout naming what you just won.
+   */
+  private cageFreed(x: number, y: number): void {
+    this.hitStop = Math.max(this.hitStop, 0.07)
+    this.camKick = 2.4
+    this.audio.celebrationSwell(0.7)
+
+    const flash = this.add
+      .image(x, y, 'softdot')
+      .setTint(0xffffff)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDisplaySize(120, 120)
+      .setDepth(7)
+    this.tweens.add({
+      targets: flash,
+      displayWidth: 620,
+      displayHeight: 620,
+      alpha: 0,
+      duration: 520,
+      ease: 'Cubic.easeOut',
+      onComplete: () => flash.destroy(),
+    })
+    const ring = this.add
+      .image(x, y, 'alarmring')
+      .setTint(0xffe6bf)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDisplaySize(80, 80)
+      .setAlpha(0.95)
+      .setDepth(7)
+    this.tweens.add({
+      targets: ring,
+      displayWidth: 520,
+      displayHeight: 520,
+      alpha: 0,
+      duration: 620,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy(),
+    })
+    const at = this.floatAt(x - this.scrollX, y - 70)
+    const t = this.add
+      .text(at.x, at.y, 'FREED', display(30, '#ffe6bf', 10, 500))
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(30)
+    this.tweens.add({
+      targets: t,
+      y: at.y - 60,
+      alpha: { from: 1, to: 0 },
+      scale: { from: 0.8, to: 1.15 },
+      duration: 1400,
+      ease: 'Cubic.easeOut',
+      onComplete: () => t.destroy(),
+    })
+  }
+
   /** Landmark banner: separate slot from tutorial prompts, never collides. */
   private showLandmark(text: string): void {
     this.landmarkText.setText(text).setAlpha(0)
@@ -3013,28 +3111,88 @@ export class DayScene extends Phaser.Scene {
     this.stats.resets++
     this.audio.failureFade()
 
-    // 1) the remaining flock erupts into a cloud of feathers rolling across
-    //    the darkening sky — the dramatic image of the day ending badly
+    // ---- THE FLOCK IS LOST -------------------------------------------------
+    // This was four particles per bird - a tasteful puff. It is the single most
+    // dramatic thing that happens in the game and it should FLOOD THE SCREEN.
+    // Three layers, so it reads as depth rather than as one emitter:
+    //   1. the eruption itself, from every bird, thrown hard and wide
+    //   2. a screen-space downpour that fills the whole frame
+    //   3. a few huge feathers tumbling right past the lens
     const survivors = [...this.flock.birds]
+    this.hitStop = Math.max(this.hitStop, 0.14)
+    this.camKick = 4.2
+
     const cloud = this.add
       .particles(0, 0, 'feather', {
-        speedX: { min: -110, max: 150 },
-        speedY: { min: -170, max: 40 },
-        lifespan: { min: 1600, max: 3400 },
-        scale: { min: 0.35, max: 0.8 },
-        alpha: { start: 0.95, end: 0 },
+        speedX: { min: -420, max: 520 },
+        speedY: { min: -560, max: 220 },
+        lifespan: { min: 2200, max: 4600 },
+        scale: { min: 0.35, max: 1.15 },
+        alpha: { start: 1, end: 0 },
         rotate: { min: 0, max: 360 },
-        gravityY: 22,
-        tint: [0x2a2440, 0x453a5e, 0x6b5f85],
+        gravityY: 90,
+        tint: [0x2a2440, 0x453a5e, 0x6b5f85, 0x8a7aa6],
         emitting: false,
       })
       .setDepth(8)
+
+    // the whole sky fills with falling feathers, in screen space so it does
+    // not matter where the flock happened to be
+    const downpour = this.add
+      .particles(0, 0, 'feather', {
+        x: { min: -80, max: VIEW_W + 80 },
+        y: { min: -260, max: -40 },
+        speedX: { min: -90, max: 90 },
+        speedY: { min: 90, max: 300 },
+        lifespan: { min: 2600, max: 5200 },
+        scale: { min: 0.3, max: 0.95 },
+        alpha: { start: 0.95, end: 0 },
+        rotate: { min: 0, max: 360 },
+        gravityY: 60,
+        tint: [0x2a2440, 0x453a5e, 0x6b5f85],
+        emitting: false,
+      })
+      .setScrollFactor(0)
+      .setDepth(49)
+
+    // and a few enormous ones drifting past the lens, for depth
+    const closeUp = this.add
+      .particles(0, 0, 'feather', {
+        x: { min: 0, max: VIEW_W },
+        y: { min: -300, max: 0 },
+        speedX: { min: -40, max: 40 },
+        speedY: { min: 160, max: 300 },
+        lifespan: 4200,
+        scale: { min: 2.2, max: 3.6 },
+        alpha: { start: 0.5, end: 0 },
+        rotate: { min: 0, max: 360 },
+        gravityY: 30,
+        tint: [0x241d38, 0x352c4e],
+        emitting: false,
+      })
+      .setScrollFactor(0)
+      .setDepth(50)
+
     for (const b of survivors) {
-      cloud.emitParticleAt(b.x, b.y, 4)
+      cloud.emitParticleAt(b.x, b.y, 14)
       this.scatter.spawn(b.x, b.y, b.x - this.flock.centerX, b.y - this.flock.centerY - 40)
       this.flock.removeBird(b)
     }
-    this.time.delayedCall(3600, () => cloud.destroy())
+    // the downpour arrives in waves so the screen keeps filling rather than
+    // emptying out after one burst
+    downpour.emitParticle(150)
+    closeUp.emitParticle(5)
+    for (let i = 1; i <= 5; i++) {
+      this.time.delayedCall(i * 260, () => {
+        downpour.emitParticle(110)
+        if (i % 2 === 0) closeUp.emitParticle(4)
+      })
+    }
+    this.time.delayedCall(7000, () => {
+      cloud.destroy()
+      downpour.destroy()
+      closeUp.destroy()
+    })
     // 2) colour drains toward dusk, then the message
     this.promptText.setAlpha(0)
     this.landmarkText.setAlpha(0)
