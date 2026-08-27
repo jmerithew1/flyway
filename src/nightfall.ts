@@ -81,7 +81,7 @@ export class Nightfall {
       const d = i / (BLOBS - 1)
       this.blobSpec.push({
         // clustered behind the edge, densest deep, sparse and reaching at the front
-        dx: 90 - Math.pow(d, 0.75) * 980 - Math.random() * 150,
+        dx: 430 - Math.pow(d, 0.8) * 1500 - Math.random() * 160,
         y: Math.random() * viewH,
         r: 190 + Math.random() * 230 + d * 190,
         phase: Math.random() * Math.PI * 2,
@@ -106,9 +106,9 @@ export class Nightfall {
     // never ambiguous — this is the single most important pixel of the effect
     this.rim = scene.add
       .image(0, viewH / 2, 'vfade')
-      .setDisplaySize(viewH * 1.2, 300)
+      .setDisplaySize(viewH * 1.2, 130)
       .setRotation(Math.PI / 2)
-      .setTint(0xffb98a)
+      .setTint(0xffd0a8)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setScrollFactor(0)
       .setAlpha(0)
@@ -158,7 +158,9 @@ export class Nightfall {
     this.edgeX = Math.max(this.edgeX, flock.centerX - LEAD_FULL)
 
     const screenEdge = this.edgeX - scrollX
-    this.encroach = Phaser.Math.Clamp((screenEdge + 200) / (viewW * 0.75), 0, 1)
+    // presence ramps early: the dark should be a visible weight on the frame
+    // well before it is close enough to take anything
+    this.encroach = Phaser.Math.Clamp((screenEdge + 620) / (viewW * 0.62), 0, 1)
 
     // ---- the dark takes birds that trail into it
     for (const b of flock.birds) {
@@ -201,7 +203,8 @@ export class Nightfall {
       img.setPosition(x, y)
       img.setDisplaySize(r * 1.55, r)
       // leading wisps stay thin, the body behind is dense
-      const body = 0.34 + sp.depth * 0.78
+      // leading wisps stay sheer so the lethal edge is still readable
+      const body = sp.depth < 0.24 ? 0.16 + sp.depth * 0.5 : 0.42 + sp.depth * 0.9
       img.setAlpha(Math.min(0.95, this.encroach * 1.5 * body * (0.75 + breathe * 0.25)))
     }
 
@@ -214,7 +217,7 @@ export class Nightfall {
     this.rim.setVisible(vis)
     if (vis) {
       this.rim.x = screenEdge + 40
-      this.rim.setAlpha(Math.min(0.55, 0.18 + this.encroach * 0.5))
+      this.rim.setAlpha(Math.min(0.2, 0.05 + this.encroach * 0.18))
     }
 
     // tendrils reach out of the murk toward the nearest trailing birds
