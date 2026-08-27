@@ -130,6 +130,8 @@ export class Atmosphere {
 
   /** two overlay washes: A holds the current act, B fades the next one in */
   private plateA!: Phaser.GameObjects.Rectangle
+  private washA!: Phaser.GameObjects.Rectangle
+  private washB!: Phaser.GameObjects.Rectangle
   private plateB!: Phaser.GameObjects.Rectangle
   private plateAIdx = -1
   private plateBIdx = -1
@@ -163,6 +165,8 @@ export class Atmosphere {
 
     this.plateA = this.makePlate()
     this.plateB = this.makePlate()
+    this.washA = this.makeWash()
+    this.washB = this.makeWash()
 
     for (let i = 0; i < SPARKLE_POOL; i++) {
       const img = scene.add
@@ -186,6 +190,22 @@ export class Atmosphere {
       .setScrollFactor(0)
       .setBlendMode(Phaser.BlendModes.MULTIPLY)
       .setDepth(PLATE_DEPTH)
+      .setAlpha(0)
+  }
+
+  /**
+   * A MULTIPLY plate can only darken, so on a bright dusk sky it moved
+   * luminance without moving hue — all six acts measured the same pink
+   * (hue 338-6 degrees end to end). This companion wash blends normally,
+   * pulling the whole frame a real distance toward the act's colour, which is
+   * what makes The Overgrown read green and Wind Heights read bleached.
+   */
+  private makeWash(): Phaser.GameObjects.Rectangle {
+    return this.scene.add
+      .rectangle(0, 0, VIEW_W, VIEW_H, 0xffffff)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(PLATE_DEPTH + 0.01)
       .setAlpha(0)
   }
 
@@ -276,14 +296,18 @@ export class Atmosphere {
 
     if (this.plateAIdx !== i) {
       this.plateA.setFillStyle(cur.tint)
+      this.washA.setFillStyle(cur.tint)
       this.plateAIdx = i
     }
     if (this.plateBIdx !== nextI) {
       this.plateB.setFillStyle(next.tint)
+      this.washB.setFillStyle(next.tint)
       this.plateBIdx = nextI
     }
     this.plateA.setAlpha(cur.tintAlpha * (1 - t))
     this.plateB.setAlpha(next.tintAlpha * t)
+    this.washA.setAlpha(cur.washAlpha * (1 - t))
+    this.washB.setAlpha(next.washAlpha * t)
 
     // fog eases toward the act's haze rather than snapping
     const fogTarget = Phaser.Math.Clamp(cur.fogAlpha + (next.fogAlpha - cur.fogAlpha) * t, FOG_MIN, FOG_MAX)
@@ -429,6 +453,8 @@ export class Atmosphere {
     this.lit.clear()
     this.litNext.clear()
     this.plateA.destroy()
+    this.washA.destroy()
+    this.washB.destroy()
     this.plateB.destroy()
   }
 }

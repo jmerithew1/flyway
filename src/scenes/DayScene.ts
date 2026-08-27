@@ -652,6 +652,7 @@ export class DayScene extends Phaser.Scene {
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
+    this.layoutHud(safe)
     this.lastShownCount = START_BIRDS
     // dusk tint used by the failure sequence (and later, journey warmth)
     this.duskOverlay = this.add
@@ -1741,6 +1742,30 @@ export class DayScene extends Phaser.Scene {
    * Two popups landing on one spot overstrike into unreadable garbage
    * (the audit caught "++11 BBTRRFSDRRDDD"), so each one takes its own lane. */
   private floatLanes: { x: number; y: number; until: number }[] = []
+
+  /**
+   * Stack the corner readouts off their MEASURED heights. The offsets used to
+   * be literals tuned at desktop size, so the 1.65x touch type ramp made the
+   * bird count and the "N scattered" line land on top of each other, and put
+   * the mastery multiplier hard against the right edge.
+   */
+  private layoutHud(safe: { x: number; y: number; w: number; h: number }): void {
+    const edge = isTouch ? 40 : 26
+    const left = safe.x + edge + 12
+    const right = safe.x + safe.w - edge
+    const top = safe.y + (isTouch ? 14 : 18)
+
+    this.countText.setPosition(left, top)
+    let y = top + this.countText.height + 6
+    this.scatteredText.setPosition(left, y + this.scatteredText.height / 2)
+    y += this.scatteredText.height + 4
+    this.recoveredText.setPosition(left, y + this.recoveredText.height / 2)
+    this.deltaText.setPosition(left + this.countText.width + 16, top + this.countText.height / 2)
+    this.debugText.setPosition(safe.x + 14, y + 26)
+
+    this.scoreText.setPosition(right, top)
+    this.streakText.setPosition(right, top + this.scoreText.height + 6)
+  }
 
   private floatAt(x: number, y: number): { x: number; y: number } {
     const safe = safeArea(this)

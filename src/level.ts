@@ -371,10 +371,12 @@ export function buildObstacles(): { obstacles: Obstacle[]; byFeature: Map<PieceF
 export interface ActPlate {
   x0: number
   x1: number
-  /** OVERLAY wash colour. */
+  /** the act's colour, used by both the multiply plate and the normal wash. */
   tint: number
-  /** OVERLAY wash alpha — capped at 0.14 by house rule. */
+  /** MULTIPLY plate alpha — depth and shadow. */
   tintAlpha: number
+  /** NORMAL wash alpha — this is the term that actually moves the hue. */
+  washAlpha: number
   /** target alpha for the far fog band. */
   fogAlpha: number
   /** drifting-particle tints for this act. */
@@ -385,17 +387,17 @@ export interface ActPlate {
 /** Acts align to the level's existing section comments and its landmarks. */
 export const ACT_PLATES: ActPlate[] = [
   // pale open dawn — cool lavender air, the world not yet warm
-  { x0: 0, x1: 4600, tint: 0x9fb4ee, tintAlpha: 0.2, fogAlpha: 0.16, particleTint: [0x4a4468, 0x5a5480], name: 'Dawn Approach' },
+  { x0: 0, x1: 4600, tint: 0x9fb4ee, tintAlpha: 0.2, washAlpha: 0.2, fogAlpha: 0.16, particleTint: [0x4a4468, 0x5a5480], name: 'Dawn Approach' },
   // warm stone — the sun finds the ruins; peach on every western face
-  { x0: 4600, x1: 9600, tint: 0xffab63, tintAlpha: 0.24, fogAlpha: 0.11, particleTint: [0x5c4a52, 0x6e5a4e], name: 'The Sun Gate' },
+  { x0: 4600, x1: 9600, tint: 0xffab63, tintAlpha: 0.24, washAlpha: 0.2, fogAlpha: 0.11, particleTint: [0x5c4a52, 0x6e5a4e], name: 'The Sun Gate' },
   // green-violet overgrown — muted sage under violet shade
-  { x0: 9600, x1: 12000, tint: 0x74c48c, tintAlpha: 0.22, fogAlpha: 0.13, particleTint: [0x3f5a48, 0x4d6b52], name: 'The Overgrown' },
+  { x0: 9600, x1: 12000, tint: 0x4f9e6a, tintAlpha: 0.24, washAlpha: 0.42, fogAlpha: 0.13, particleTint: [0x3f5a48, 0x4d6b52], name: 'The Overgrown' },
   // bleached windy heights — colour scoured out, haze thick
-  { x0: 12000, x1: 14400, tint: 0xeef2ff, tintAlpha: 0.26, fogAlpha: 0.24, particleTint: [0x8f93a8, 0xa8a5b8], name: 'Wind Heights' },
+  { x0: 12000, x1: 14400, tint: 0xeef2ff, tintAlpha: 0.26, washAlpha: 0.3, fogAlpha: 0.24, particleTint: [0x8f93a8, 0xa8a5b8], name: 'Wind Heights' },
   // cool dark gauntlet ramp — the long slide into violet dusk
-  { x0: 14400, x1: 23200, tint: 0x2f2a63, tintAlpha: 0.3, fogAlpha: 0.12, particleTint: [0x2a2440, 0x37304f], name: 'The Gauntlet' },
+  { x0: 14400, x1: 23200, tint: 0x2f2a63, tintAlpha: 0.3, washAlpha: 0.26, fogAlpha: 0.12, particleTint: [0x2a2440, 0x37304f], name: 'The Gauntlet' },
   // golden final flow — homecoming light, feeding the existing dusk ramp
-  { x0: 23200, x1: SLICE_END, tint: 0xffc98a, tintAlpha: 0.28, fogAlpha: 0.08, particleTint: [0xc9a06a, 0xb08a5e], name: 'Homeward Light' },
+  { x0: 23200, x1: SLICE_END, tint: 0xe8913f, tintAlpha: 0.34, washAlpha: 0.34, fogAlpha: 0.08, particleTint: [0xc9a06a, 0xb08a5e], name: 'Homeward Light' },
 ]
 
 // ===========================================================================
