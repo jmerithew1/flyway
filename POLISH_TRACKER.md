@@ -103,6 +103,18 @@ Their version is also simply better: a visible advancing wall has a LOCATION,
 so the player can watch themselves winning or losing against it. A shrinking
 radius is abstract by comparison.
 
+**What it LOOKS like (owner):** not a clean wall — a billowing smoke-fog,
+scary, rolling in like a curse. Roiling dark cloud with tendrils that reach
+forward out of the murk. This is a better image than a wall AND it unifies two
+requests: **the fog's tendrils ARE the catchers (G4).** They reach out, snatch
+a straggler, and withdraw into the cloud. One threat with a face, rather than
+a hazard system and a separate wall system.
+
+Craft notes: layered scrolling noise at 2-3 parallax depths so it churns rather
+than slides; a bright rim where it eats into the lit air, so the boundary reads
+at a glance; tendrils as animated curls that telegraph BEFORE they grab (H5 —
+every hazard must have a tell); the flock's own light pushes visibly into it.
+
 **The committed design:**
 
 - **Light is AHEAD.** The roost glows on the horizon and grows all flight.
@@ -175,6 +187,37 @@ have. Echo REACHES OUT — sonar rings sweep outward, every lost bird they touch
 lights up as a detected ping, then those birds streak home on trails of light.
 Same goal, opposite gesture, completely different image. Answers C3's ask for
 ripples, detection and a dramatic return.
+
+### K1e. Mote placement — the level design of light
+
+Owner: "the light should be scattered. Cleverly placed motes, etc, to challenge
+and keep interesting for diff skills. Maybe each mote affects darkness a
+version amount."
+
+Motes stop being ambient decoration and become the level's actual design
+surface. Two systems:
+
+**Varying value.** Not all light is equal — this is the classic coin / red-coin
+/ star ladder, and it lets one placement serve every skill level.
+
+| Type | Worth | Where it lives |
+|------|-------|----------------|
+| Drifting mote | small | Scattered along the safe line. A cautious player stays alive on these alone |
+| Mote arc | medium, and pays as a SET | Strung through a gap or around an obstacle — flying the arc cleanly is the reward. This is the DKC banana trail (H1): the light teaches the route |
+| Deep light | large | Behind a brittle curtain, inside a tight passage, low in a dive, out wide where the fog can reach. Only reachable by spending an ability and taking a risk |
+
+**Clever placement is how difficulty is expressed.** The same stretch serves a
+nervous player (hug the safe motes, survive) and a greedy one (spread wide,
+dive for the deep light, push the fog far back and score). Nobody is locked
+out, and skill is paid in daylight rather than in a difficulty setting.
+
+Design rules:
+- Every deep-light cache must have a visible route in AND a route out.
+- A mote arc must obey the balance invariant (K1a): worth more pushback than
+  the detour costs.
+- Deep light near the fog's reach makes greed genuinely dangerous — that is
+  where the tension lives.
+- Never place light where the only way to reach it is a collision.
 
 ### K1b. What darkness unlocks — the glow language
 
@@ -286,6 +329,21 @@ beat below names what currently happens, and what should.
 
 Rule: drama is EARNED and RARE. Between beats the game stays quiet and pretty —
 that contrast is what makes the beats hit. No sustained shake, ever.
+
+## L. Mobile must be outstanding
+
+Owner: "make sure playing on mobile is outstanding. Maybe a movement joystick
+on one side and buttons on the other. Keep intriguing and engaging for our
+short attention spans."
+
+| # | Item | Now | Should be | State |
+|---|------|-----|-----------|-------|
+| L1 | Steering | Drag anywhere on the sky | A floating joystick on the LEFT half — appears where the thumb lands, so there is no fixed target to find. Keeps the intention-point feel while giving a real control surface | ⏳ |
+| L2 | Abilities | Four corner pads | A right-hand cluster: GATHER / SPREAD held, SURGE / FLARE / CALL tapped, thumb-reachable without looking | ⏳ |
+| L3 | Reachability | Untested against real thumb arcs | Verify every control sits inside a natural thumb sweep at 844x390 and on taller phones | ⏳ |
+| L4 | First 20 seconds | Same opening as desktop | Mobile players decide fast. Something must happen inside 10 seconds — light to grab, fog on the horizon, a cage in view | ⏳ |
+| L5 | Session shape | One long flight | Respect short attention: the first act should be a complete, satisfying beat on its own | ⏳ |
+| L6 | Performance | ~5.4ms/frame measured | Re-verify with fog, glow and light all live — these are the expensive additions | ⏳ |
 
 ## D. Creatures & drama
 
