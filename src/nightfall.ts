@@ -47,7 +47,7 @@ const LEAD_EMPTY = -520
 /** How fast the fog edge eases toward its target (px/sec of correction). */
 const EDGE_LERP = 2.1
 /** How many soft blobs build the fog body. */
-const BLOBS = 13
+const BLOBS = 17
 
 export class Nightfall {
   /** 1 = broad day, 0 = the dark is on you. */
@@ -94,7 +94,7 @@ export class Nightfall {
       const d = i / (BLOBS - 1)
       this.blobSpec.push({
         // clustered behind the edge, densest deep, sparse and reaching at the front
-        dx: 420 - Math.pow(d, 0.9) * 760 - Math.random() * 120,
+        dx: 470 - Math.pow(d, 0.9) * 1020 - Math.random() * 130,
         y: Math.random() * viewH,
         r: 340 + Math.random() * 240 + d * 200,
         phase: Math.random() * Math.PI * 2,
@@ -109,7 +109,7 @@ export class Nightfall {
     // straight edge the way a rectangle does.
     this.interior = scene.add
       .image(0, viewH / 2, 'vfade')
-      .setDisplaySize(viewH * 2.2, viewH * 1.35)
+      .setDisplaySize(viewH * 3.4, viewH * 1.9)
       .setRotation(-Math.PI / 2)
       .setTint(0x0b0716)
       .setOrigin(0.5, 0.5)
@@ -229,8 +229,8 @@ export class Nightfall {
     this.interior.setVisible(vis)
     if (vis) {
       // its soft right edge sits just behind the painted front
-      this.interior.x = screenEdge - this.interior.displayHeight * 0.5 - 40
-      this.interior.setAlpha(Math.min(0.96, this.encroach * 1.5))
+      this.interior.x = screenEdge - this.interior.displayHeight * 0.5 + 190
+      this.interior.setAlpha(Math.min(0.92, this.encroach * 1.25))
     }
 
     this.edgeFade.setVisible(vis)

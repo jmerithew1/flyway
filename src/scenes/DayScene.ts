@@ -182,6 +182,8 @@ export class DayScene extends Phaser.Scene {
   private hudUrgency = 0
   private duskOverlay!: Phaser.GameObjects.Rectangle
   /** the advancing dark, and the daylight that holds it off */
+  /** camera bloom: strength rides the daylight so the dark glows hardest */
+  private bloom!: Phaser.FX.Bloom
   private night!: Nightfall
   /** global dusk driven by the daylight level - the darker the world,
    * the more the motes blaze, so light is most visible when most needed */
@@ -768,6 +770,17 @@ export class DayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10.9)
       .setAlpha(0)
+    // ---- BLOOM ------------------------------------------------------------
+    // Light that bleeds is most of what separates a produced game from an
+    // indie one, and Phaser ships it: one camera post-FX pass makes every
+    // mote, sunbeam, cage burst and alarm pulse actually GLOW into the air
+    // around it instead of being a bright sticker on a flat sky. It is also
+    // the cheapest possible way to make the whole frame read as lit, because
+    // it is a single pass rather than per-object work.
+    //
+    // Kept deliberately gentle: this is a painted dusk, not a neon one.
+    this.bloom = this.cameras.main.postFX.addBloom(0xffffff, 1, 1, 0.62, 0.34, 4)
+
     this.night = new Nightfall(this, VIEW_W, VIEW_H)
     this.night.reset(this.flock.centerX)
     this.failTexts = []
@@ -1756,6 +1769,15 @@ export class DayScene extends Phaser.Scene {
     // global dusk from the daylight level
     const dark = 1 - this.night.daylight
     this.nightVeil.setAlpha(dark * 0.5)
+    // and the darker it gets the harder the remaining light blooms, so the
+    // game is at its most beautiful exactly when it is at its most desperate
+    if (this.bloom) {
+      // gentle: at full dark this reaches 0.5, not 2.5. The first pass blew
+      // the whole frame to white - bloom should make lights bleed, not erase
+      // the painting behind them.
+      this.bloom.blurStrength = 0.62 + dark * 0.3
+      this.bloom.strength = 0.34 + dark * 0.16
+    }
 
     // birds the dark took: they strobe and fall like any other loss, so the
     // threat speaks the language the player already knows

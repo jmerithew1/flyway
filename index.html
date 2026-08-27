@@ -32,12 +32,9 @@
       overscroll-behavior: none;
       -webkit-text-size-adjust: 100%;
     }
-    body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      -webkit-tap-highlight-color: transparent;
-    }
+    /* Phaser's autoCenter already centres the canvas; centring it a second
+       time here throws the ENVELOP crop off-axis and crops the HUD away. */
+    body { -webkit-tap-highlight-color: transparent; }
     canvas { display: block; touch-action: none; }
 
     /* Branded boot veil — the wordmark on the game's own navy, instead of
@@ -55,12 +52,44 @@
       pointer-events: none;
     }
     #boot-veil.gone { opacity: 0; }
+    #boot-veil .veil-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 26px;
+    }
     #boot-veil img {
       width: min(46vw, 420px);
       max-width: 76vw;
       height: auto;
-      opacity: 0;
       animation: veil-breathe 2600ms ease-in-out 120ms infinite;
+    }
+    #boot-veil .veil-line {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: clamp(14px, 2.1vw, 20px);
+      color: #d8cbe4;
+      opacity: 0.8;
+      letter-spacing: 0.02em;
+    }
+    /* a real fill, so the wait is legibly progress and not a hang */
+    #boot-veil .veil-rail {
+      width: min(34vw, 300px);
+      height: 2px;
+      background: rgba(240, 207, 154, 0.18);
+      overflow: hidden;
+      border-radius: 2px;
+    }
+    #boot-veil .veil-fill {
+      display: block;
+      height: 100%;
+      width: 12%;
+      background: linear-gradient(90deg, rgba(240,207,154,0) 0%, #f0cf9a 50%, rgba(240,207,154,0) 100%);
+      animation: veil-sweep 1500ms ease-in-out infinite;
+    }
+    @keyframes veil-sweep {
+      0%   { transform: translateX(-120%); }
+      100% { transform: translateX(900%); }
     }
     @keyframes veil-breathe {
       0%   { opacity: 0.34; }
@@ -69,11 +98,18 @@
     }
     @media (prefers-reduced-motion: reduce) {
       #boot-veil img { animation: none; opacity: 0.85; }
+      #boot-veil .veil-fill { animation: none; width: 100%; }
     }
   </style>
 </head>
 <body>
-  <div id="boot-veil"><img src="assets/processed/final/wordmark.png" alt="FLYWAY" /></div>
+  <div id="boot-veil">
+    <div class="veil-inner">
+      <img src="assets/processed/final/wordmark.png" alt="FLYWAY" />
+      <div class="veil-line">Bring the flock home before nightfall.</div>
+      <div class="veil-rail"><span class="veil-fill"></span></div>
+    </div>
+  </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
