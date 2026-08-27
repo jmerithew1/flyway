@@ -116,7 +116,7 @@ export class Nightfall {
     // makes the fog dissolve into lit air instead of stopping at a ruled line
     this.edgeFade = scene.add
       .image(0, viewH / 2, scene.textures.exists(FOG_ART.edge) ? FOG_ART.edge : 'vfade')
-      .setDisplaySize(620, viewH * 1.3)
+      .setDisplaySize(viewH * 0.66, viewH * 1.32)
       .setTint(0xffffff)
       .setScrollFactor(0)
       .setAlpha(0)
@@ -205,7 +205,7 @@ export class Nightfall {
     this.deep.setVisible(vis)
     if (vis) {
       // right edge kept far behind the front so the blobs always hide it
-      this.deep.x = screenEdge - 430
+      this.deep.x = screenEdge - 760
       this.deep.setAlpha(Math.min(0.96, this.encroach * 1.6))
     }
 
@@ -230,7 +230,7 @@ export class Nightfall {
 
     this.edgeFade.setVisible(vis)
     if (vis) {
-      this.edgeFade.x = screenEdge - 250
+      this.edgeFade.x = screenEdge - 210
       this.edgeFade.setAlpha(Math.min(0.95, this.encroach * 1.5))
     }
 
