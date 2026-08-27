@@ -69,6 +69,30 @@ tested you. None of that requires their look.
 Style guard: no coins, no lives counter, no cartoon outlines, no bouncy squash.
 The murmuration, the ruins, the dusk palette and the quiet voice all stand.
 
+## I. Drama pass — the moments that sell the game
+
+Owner: "add more drama to lots of places... dramatic game features and
+mechanics that make it more exciting."
+
+Drama is not sparkle everywhere — that flattens into noise. It is a small
+number of moments that hit HARD, with quiet between them so they land. Each
+beat below names what currently happens, and what should.
+
+| # | Moment | Now | Should be | State |
+|---|--------|-----|-----------|-------|
+| I1 | **Falcon strike** | A sprite crosses the screen and some birds vanish | The sky dims, the score drops out to a single held note, time dips ~70ms, the dive is a hard streak, impact throws a feather burst, the screech lands on the hit. Answers D1 | ⏳ |
+| I2 | **Brittle break** | Alpha fade + dark leaves — the audit called it invisible | It EXPLODES: shards thrown along your heading, a shaft of light through the new hole, hit-stop on contact, the flock punches through in arrow form | ⏳ |
+| I3 | **Mobbing the falcon** | Resolves quietly | The one triumph in the game: the flock rises as a column, the screech turns to a retreat, music swells, the predator flees the frame | ⏳ |
+| I4 | **Act transitions** | Colour crossfades | A curtain rising: light sweeps across, the act name lands, the score changes voice. Six of these already exist as palettes — make each an *arrival* | ⏳ |
+| I5 | **Critical flock ("last stand")** | A colour change on the counter | Below ~25 birds the world reads desperate: score thins to almost nothing, colour drains, wingbeats go loud and ragged. Recovering from it should feel earned | ⏳ |
+| I6 | **Checkpoint reached** | Passes silently | A landmark threshold you fly THROUGH — light gate, a held chord, the name of the place. Makes dying feel survivable (H7) | ⏳ |
+| I7 | **Big multi-bird loss** | Same as losing one | A gut punch: brief desaturation, the flock's voice cracks, the strobe-and-fall en masse | ⏳ |
+| I8 | **Cage break** | Built this session | Verify it lands as hard as it reads on paper | 🟡 |
+| I9 | **Roost arrival** | Ceremony exists | Verify it plays as a climax, not a menu | 🟡 |
+
+Rule: drama is EARNED and RARE. Between beats the game stays quiet and pretty —
+that contrast is what makes the beats hit. No sustained shake, ever.
+
 ## D. Creatures & drama
 
 | # | Request | State | Verification |
