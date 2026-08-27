@@ -89,6 +89,23 @@ can BOTH exist — light is the fuel you spend, twigs are the treasure you carry
 home and see built into the roost at arrival. Recommend shipping light-as-fuel
 first, since it changes how the whole level plays.
 
+### K2. Light as the game's identity (marketing)
+
+Owner: the light mechanic should drive the marketing — cover art, start page,
+the quote. It is the game's unique obstacle, so it should be the thing people
+see first.
+
+This lands well because the tagline already on the title screen — *"Bring the
+flock home before nightfall."* — stops being flavour and becomes a literal
+description of the mechanic. Nothing needs re-pitching; it needs pointing at.
+
+| # | Surface | Change | State |
+|---|---------|--------|-------|
+| K2a | Title premise line | Sharpen so it names the stakes as a mechanic, not a mood — the dark is closing and the light is what holds it back | ⏳ |
+| K2b | Title art | The wordmark already sits in a dusk sky. Push the contrast: gathering light on one side, dark closing from the other, so the screen states the game | ⏳ |
+| K2c | Cover / hero capture | Compose the submission still on the mechanic: a murmuration threading a shaft of light with dusk closing behind it | ⏳ |
+| K2d | Submission copy | Lead with the hook: a flock racing the dark, where the light you gather is the time you have left | ⏳ |
+
 ## J. The HUD — make it read like a real game
 
 Owner: "you never redid the UI component that tells how many birds are left,
