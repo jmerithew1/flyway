@@ -11,8 +11,9 @@ async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True, args=ARGS)
         ctx = await browser.new_context(viewport={'width':1280,'height':720},
-                                        device_scale_factor=2)
+                                        device_scale_factor=1)
         page = await ctx.new_page()
+        page.set_default_timeout(120000)
         logs=[]
         page.on('console', lambda m: logs.append(f"{m.type}: {m.text}"))
         page.on('pageerror', lambda e: logs.append(f"PAGEERROR: {e}"))

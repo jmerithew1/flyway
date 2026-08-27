@@ -19,7 +19,7 @@ Legend: ✅ done & verified · 🟡 landed, needs a look · ⏳ not started
 | A4b | Lost birds: strobe faster, then fall | ✅ | Two beats: ~0.38s stall strobing 16→62Hz, then the strobe stops dead and it drops at 1150px/s². `shots/loss_drama.png` |
 | A5 | Explain *why* gather/call matter, up front | ⏳ | Brief pause + overlay early in the flight, rather than nagging mid-air. |
 | A8 | **Staged tutorial** — don't introduce everything at once; each move pops up mid-play, at the moment it matters, then takes effect | ⏳ | Audit all ~16 one-time prompts for pacing and trigger placement. Title card stays full reference; in-flight teaching is one thing at a time. |
-| A6 | "Collecting the light" — purpose is unclear | ⏳ | Needs a stated reason and a visible payoff. |
+| A6 | "Collecting the light" — purpose is unclear | ⏳ | **Owner: make it branches or something physical instead of light.** Agreed — abstract light has no readable purpose, but a bird carrying NESTING MATERIAL explains itself with no tutorial at all. Collect twigs/seed heads; what you carry home BUILDS the roost, so the arrival ceremony pays off the whole flight. Art on hand: `seed_loose_00..08`, `branch_cluster`, `leaf_strand`. Pairs with H1 (the trail teaches the route). |
 | A7 | Birds render inside/behind ruins — looks flyable when it isn't | ⏳ | Owner's call: do NOT fill the ruins in. A decorative cutout with no real opening should simply be SOLID collider, so the silhouette variety survives but you cannot fly through it. Only arch-sized, clearly-read gaps stay passages — raise MIN_PASSAGE and re-derive. |
 
 ## B. The cage (strays you collect to grow the flock)
@@ -48,6 +48,65 @@ Legend: ✅ done & verified · 🟡 landed, needs a look · ⏳ not started
 | G1 | More moving obstacles | ⏳ | Currently a handful of pendulum movers. |
 | G2 | Variations: moving *openings*, not just moving walls | ⏳ | Gaps that travel or open/close on a beat. |
 | G3 | Mario-esque pacing pressure — keep up or die and restart at the save | ⏳ | Rhythm gates the player must match; checkpoint restore already exists. |
+
+## K. LIGHT AS FUEL — the idea that ties the game together
+
+Owner: "if they don't collect the light, can the whole screen start getting
+darker... causing them to need more light to continue?"
+
+Yes. This is the strongest structural idea we have, because it makes the
+game's own premise — *bring the flock home before nightfall* — into something
+the player can SEE and ACT ON, instead of an invisible par time compared
+against at the results screen.
+
+**The mechanic.** Daylight is a resource that drains as you fly. Motes are
+light. Collecting them holds nightfall back; ignoring them lets the dark close
+in. Run low and the world dims, the horizon goes cold, and the flock struggles.
+
+**Why it fixes so much at once:**
+- A6 — light finally has an obvious purpose. Nobody needs it explained: the
+  screen is getting darker and the glowing things make it brighter.
+- H1 — motes become a TRAIL along the route you should fly (the DKC banana
+  arc). Following the light is simultaneously the safe line and the fuel.
+- H4 — continuous pacing pressure without an anxiety clock. Dawdling costs
+  daylight. This is the "keep pace or pay" demand, expressed diegetically.
+- I5 — running low IS the drama. No invented fail state needed.
+- The nightfall bonus stops being an abstract par and becomes the whole game.
+
+**Design guards:**
+- There must be a floor on darkness. It may become tense and beautiful; it may
+  never become unreadable — obstacles stay legible at minimum light, or the
+  mechanic converts skill into guesswork.
+- Telegraph it early: the first dimming should be unmistakable and survivable,
+  with light clearly available (the four-step lesson, H3).
+- Recovering should feel great — grabbing a rich mote arc after running dark
+  should visibly push the dusk back.
+- Dusk still advances slowly on its own, so the last act is golden regardless;
+  light buys time, it does not stop the day.
+
+Open question for the owner: light-as-fuel and nesting material (A6's branches)
+can BOTH exist — light is the fuel you spend, twigs are the treasure you carry
+home and see built into the roost at arrival. Recommend shipping light-as-fuel
+first, since it changes how the whole level plays.
+
+## J. The HUD — make it read like a real game
+
+Owner: "you never redid the UI component that tells how many birds are left,
+adds more info for the user, makes it like a real game." Correct — the layout
+was fixed this session (it was overlapping itself), but it was never
+*designed*. It is a bare number and a multiplier floating in the corners.
+
+| # | Element | Now | Should be | State |
+|---|---------|-----|-----------|-------|
+| J1 | Flock counter | Bare "118" | A designed readout: flock glyph, count, and a slender arc that DRAINS as birds are lost, so losing is visible without reading a number | ⏳ |
+| J2 | Journey progress | Nothing | A ribbon from roost to roost with landmark ticks and your position on it. This is the single biggest "real game" addition — it gives place, progress and a sense of how far is left (the platformer convention the owner asked for) | ⏳ |
+| J3 | Mastery multiplier | "×1.0" | Designed, with the streak reading off it | ⏳ |
+| J4 | Carried nesting material | Nothing | Count of what you are bringing home (A6) | ⏳ |
+| J5 | Nightfall pressure | Nothing on screen | The daylight meter from section K, read along the journey ribbon — the most important readout in the game once light is fuel | ⏳ |
+| J6 | Critical state | Counter changes colour | Below ~25 birds the whole readout goes urgent (ties to I5) | ⏳ |
+
+Style guard: thin, warm, engraved — not chunky game-UI boxes. It should look
+like it belongs on the same page as the wordmark.
 
 ## H. Platformer grammar, in our own voice
 
