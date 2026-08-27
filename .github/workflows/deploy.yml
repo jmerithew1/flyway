@@ -34,7 +34,11 @@ jobs:
       # deploy rather than shipping a broken build.
       - run: npm run build
 
+      # enablement:true makes the action turn Pages on itself, so a fresh
+      # clone of this repo deploys without a manual settings step first.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

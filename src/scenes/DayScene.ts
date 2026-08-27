@@ -106,7 +106,27 @@ export class DayScene extends Phaser.Scene {
   private strays: { group: StrayGroup; def: (typeof STRAYS)[number] }[] = []
   private scatter!: ScatterSystem
   private roostSwirl: { sprite: Phaser.GameObjects.Image; a: number; r: number; s: number; ph: number }[] = []
+  private roostSwirlOn = true
   private ambientFlocks: AmbientFlock[] = []
+
+  // --- ambient decoration, driven by arithmetic rather than by tween objects.
+  // Every one of these sets scales with the LEVEL (a glow per flyable gap, a
+  // haze per grounded ruin, motes per gap, ghosts per historic route), which
+  // is exactly why they cannot be allowed to each own a repeating tween: the
+  // cost grows with the world. Driven from one clock in updateDecor(), where
+  // being off screen costs nothing instead of costing a tween update.
+  private routeGlows: { img: Phaser.GameObjects.Image; amp: number; per: number; ph: number }[] = []
+  private routeDrift: {
+    img: Phaser.GameObjects.Image
+    x0: number
+    travel: number
+    dur: number
+    per: number
+    ph: number
+  }[] = []
+  private ghostBirds: { img: Phaser.GameObjects.Image; peak: number; per: number; delay: number }[] = []
+  /** Decoration that never animates but still gets a transform every frame. */
+  private decorStatic: { img: Phaser.GameObjects.Image; pad: number }[] = []
   private audio = new GameAudio()
   private falcon!: FalconSystem
 
@@ -213,7 +233,7 @@ export class DayScene extends Phaser.Scene {
   }[] = []
   /** `worth` scales how much daylight the mote returns: the ones that cost
    * a detour pay for it. */
-  private motes: { x: number; y: number; img: Phaser.GameObjects.Image; worth: number }[] = []
+  private motes: { x: number; y: number; img: Phaser.GameObjects.Image; worth: number; taken: boolean }[] = []
   private flowStreak = 0
   private mouseTravel = 0
   private lastPointer = { x: 0, y: 0 }
@@ -273,9 +293,19 @@ export class DayScene extends Phaser.Scene {
     this.strays = []
     this.ambientFlocks = []
     this.roostSwirl = []
+    this.roostSwirlOn = true
     this.echoes = []
     this.joinTimer = 0
     this.parallax = []
+    // the procedurally-driven and culled decoration sets are rebuilt from
+    // scratch below, so their registries have to start empty or a restart
+    // would keep animating destroyed sprites
+    this.routeGlows = []
+    this.routeDrift = []
+    this.ghostBirds = []
+    this.decorStatic = []
+    this.brittleHintQueue = null
+    this.visDirty = true
     this.featureSprites.clear()
     this.obstacleFeature.clear()
     this.prompt = null
@@ -509,7 +539,7 @@ export class DayScene extends Phaser.Scene {
           .setDisplaySize(size, size)
           .setAlpha(0.9 + Math.random() * 0.1)
           .setDepth(2.5)
-        this.motes.push({ x: mx, y: my2, img, worth: tier === 2 ? 2.2 : tier === 1 ? 1.35 : 1 })
+        this.motes.push({ x: mx, y: my2, img, worth: tier === 2 ? 2.2 : tier === 1 ? 1.35 : 1, taken: false })
       }
     }
 
@@ -847,12 +877,15 @@ export class DayScene extends Phaser.Scene {
       // of ending on a hard silhouette line
       if (!airborne) {
         const disp = pieceDisplay(f)
-        this.add
+        const haze = this.add
           .image(f.x, y + (disp.h / 2) * 0.88, 'softdot')
           .setTint(0x6a5c86)
           .setDisplaySize(disp.w * 1.15, 96)
           .setAlpha(0.3)
           .setDepth(3.4)
+        // one per grounded piece across the whole level: pure scenery that
+        // nothing reads back, so it can be culled out of frame for free
+        this.decorStatic.push({ img: haze, pad: disp.w * 0.6 })
       }
       if (f.sway) {
         img.setAngle(-2)
@@ -1409,6 +1442,7 @@ export class DayScene extends Phaser.Scene {
     this.updateMovers(time)
     this.updateFlowGates()
     this.updateMotes()
+    this.updateDecor(time)
     this.updateNightfall(dt)
     this.updateCards(dt)
     // environmental progress storytelling: roost clarifies, light warms,
@@ -1609,13 +1643,35 @@ export class DayScene extends Phaser.Scene {
    * after that the visual language (shimmer, sway, tremble) carries alone. */
   private brittleHints = 0
   private hintedFeatures = new Set<PieceFeature>()
+  /** The brittle pieces still awaiting a hint, built once. Walking the whole
+   * feature map every frame to find them was work done ~60×/s for a thing
+   * that can fire exactly twice in a run. */
+  private brittleHintQueue: { f: PieceFeature; sprite: Phaser.GameObjects.Image }[] | null = null
   private updateBrittleHints(): void {
+    // hard stop once both hints have shown — after this the shimmer, sway and
+    // tremble carry the language alone, so there is nothing left to compute
     if (this.brittleHints >= 2) return
-    for (const [f, sprite] of this.featureSprites) {
-      if (!f.brittle || this.hintedFeatures.has(f)) continue
-      const anyIntact = [...this.obstacleFeature.entries()].some(([o, ft]) => ft === f && !o.broken)
+    if (!this.brittleHintQueue) {
+      this.brittleHintQueue = []
+      for (const [f, sprite] of this.featureSprites) if (f.brittle) this.brittleHintQueue.push({ f, sprite })
+    }
+    const fx = this.flock.centerX
+    for (const { f, sprite } of this.brittleHintQueue) {
+      if (this.hintedFeatures.has(f)) continue
+      // DISTANCE FIRST. The intact test has to walk the obstacle→feature map,
+      // and the old order paid for that walk on every brittle piece in the
+      // whole 25,000px level, every frame — allocating a full copy of the map
+      // to do it. A hint that only ever appears at arm's length has no
+      // business asking anything about a piece two acts away.
+      if (Math.abs(f.x - fx) > 520) continue
+      let anyIntact = false
+      for (const [o, ft] of this.obstacleFeature) {
+        if (ft === f && !o.broken) {
+          anyIntact = true
+          break
+        }
+      }
       if (!anyIntact) continue
-      if (Math.abs(f.x - this.flock.centerX) > 520) continue
       this.hintedFeatures.add(f)
       this.brittleHints++
       const label = this.add
@@ -1625,6 +1681,7 @@ export class DayScene extends Phaser.Scene {
         .setAlpha(0)
       label.setShadow(0, 1, '#2a2036', 4)
       this.tweens.add({ targets: label, alpha: 0.95, duration: 400, yoyo: true, hold: 2400, onComplete: () => label.destroy() })
+      if (this.brittleHints >= 2) return
     }
   }
 
@@ -1799,11 +1856,19 @@ export class DayScene extends Phaser.Scene {
     const x0 = this.scrollX - 100
     const x1 = this.scrollX + VIEW_W + 100
     for (const m of this.motes) {
-      if (!m.img.visible || m.x < x0 || m.x > x1) continue
+      // `taken` used to be spelled `!img.visible`, which meant visibility was
+      // already carrying state and could not also be used to cull. Now it can:
+      // ~179 motes line the whole route and all but a handful are out of frame
+      // at any moment, each one paying a transform and a draw for nothing.
+      if (m.taken) continue
+      const on = m.x >= x0 && m.x <= x1
+      if (m.img.visible !== on) m.img.setVisible(on)
+      if (!on) continue
       for (const b of this.flock.birds) {
         const dx = b.x - m.x
         const dy = b.y - m.y
         if (dx * dx + dy * dy < 42 * 42) {
+          m.taken = true
           m.img.setVisible(false)
           this.audio.collectBloom(1)
           this.awardScore('light', 1, { x: m.x, y: m.y })
@@ -1825,6 +1890,64 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * The ambient decoration, animated and culled in one pass.
+   *
+   * Two facts drove this. First, the route glows, drift motes and ghost
+   * flyways each used to own a `repeat: -1` tween, and there is one per piece
+   * of level geometry rather than a fixed number — a per-frame scheduler cost
+   * that grows every time the level does. Their motion is a raised cosine and
+   * a linear slide, which is what a yoyoing Sine.easeInOut and a linear tween
+   * literally are, so computing them off the sim clock is the same picture
+   * with the objects deleted.
+   *
+   * Second, the flock only ever sees ~1,500px of a 25,000px world, so the
+   * overwhelming majority of this decoration is off screen being transformed
+   * and submitted for nothing. Hiding it is safe here precisely because none
+   * of these sets read their own `visible` back as state — unlike the feature
+   * sprites, where a hidden sprite means "shattered", or the motes, which
+   * needed an explicit `taken` flag before they could be culled at all.
+   *
+   * Culling first also makes the animation cheap: an off-screen glow costs one
+   * comparison instead of a cosine.
+   */
+  private updateDecor(t: number): void {
+    const x0 = this.scrollX - 260
+    const x1 = this.scrollX + VIEW_W + 260
+    const TAU = Math.PI * 2
+
+    for (const d of this.decorStatic) {
+      const on = d.img.x + d.pad > x0 && d.img.x - d.pad < x1
+      if (d.img.visible !== on) d.img.setVisible(on)
+    }
+
+    for (const g of this.routeGlows) {
+      const on = g.img.x + 220 > x0 && g.img.x - 220 < x1
+      if (g.img.visible !== on) g.img.setVisible(on)
+      if (!on || g.amp === 0) continue
+      g.img.setAlpha(0.17 + g.amp * (0.5 - 0.5 * Math.cos(((t + g.ph) / g.per) * TAU)))
+    }
+
+    for (const d of this.routeDrift) {
+      const on = d.x0 + d.travel + 40 > x0 && d.x0 - 40 < x1
+      if (d.img.visible !== on) d.img.setVisible(on)
+      if (!on) continue
+      // one slide-and-fade cycle, then a beat of nothing before it starts over
+      const p = Math.min(((t + d.ph) % d.per) / d.dur, 1)
+      d.img.x = d.x0 + d.travel * p
+      d.img.setAlpha(0.62 * (1 - p))
+    }
+
+    for (const g of this.ghostBirds) {
+      const on = g.img.x + 60 > x0 && g.img.x - 60 < x1
+      if (g.img.visible !== on) g.img.setVisible(on)
+      if (!on) continue
+      // `delay` staggers the wake-up so the stream still lights bird by bird
+      const u = t - g.delay
+      g.img.setAlpha(u <= 0 ? 0 : g.peak * (0.5 - 0.5 * Math.cos((u / g.per) * TAU)))
+    }
+  }
+
   /** Debug: outline every active collider so art/collision mismatch is visible. */
   private drawColliderOverlay(): void {
     const g = this.colliderGfx
@@ -1839,11 +1962,28 @@ export class DayScene extends Phaser.Scene {
   // --------------------------------------------------------------- subsystems
 
   private visCache: Obstacle[] = []
-  private visCacheScroll = -1
+  private visCacheBucket = Number.NaN
+  private visDirty = true
 
+  /**
+   * The old key was raw `scrollX`, which moves EVERY frame — so this cache
+   * never once hit while the flock was flying, and both callers (steering and
+   * the falcon) re-filtered the whole obstacle list and allocated a fresh
+   * array twice per frame. That is straight into the GC, and GC pauses are
+   * what the player feels as chop.
+   *
+   * The window itself is padded 300px behind and 600px ahead, so the answer
+   * does not actually change from one pixel of travel to the next. Bucketing
+   * the key to 96px keeps every answer well inside that pad while letting a
+   * couple of dozen consecutive frames share one array. Breaking or restoring
+   * a piece changes membership without moving the camera, so those paths
+   * mark the cache dirty by hand.
+   */
   private visibleObstacles(): Obstacle[] {
-    if (this.visCacheScroll === this.scrollX) return this.visCache
-    this.visCacheScroll = this.scrollX
+    const bucket = Math.floor(this.scrollX / 96)
+    if (!this.visDirty && this.visCacheBucket === bucket) return this.visCache
+    this.visCacheBucket = bucket
+    this.visDirty = false
     this.visCache = this.filterVisible()
     return this.visCache
   }
@@ -2771,6 +2911,9 @@ export class DayScene extends Phaser.Scene {
     const feature = this.obstacleFeature.get(o)
     let sx = o.x
     let sy = o.y
+    // membership of the visible-obstacle cache just changed without the camera
+    // moving, so tell the cache rather than letting it hand out a stale list
+    this.visDirty = true
     if (feature) {
       for (const [ob, f] of this.obstacleFeature) if (f === feature) ob.broken = true
       const sprite = this.featureSprites.get(feature)
@@ -2932,7 +3075,15 @@ export class DayScene extends Phaser.Scene {
   }
 
   private updateRoostSwirl(dt: number, time: number): void {
-    if (ROOST_X - this.scrollX > VIEW_W + 500) return
+    // this already skipped the SIM while the roost was far off, but the 30
+    // sprites were still being transformed and drawn for the whole flight —
+    // hide them on the edge rather than every frame
+    const on = ROOST_X - this.scrollX <= VIEW_W + 500
+    if (this.roostSwirlOn !== on) {
+      this.roostSwirlOn = on
+      for (const b of this.roostSwirl) b.sprite.setVisible(on)
+    }
+    if (!on) return
     for (const b of this.roostSwirl) {
       b.a += b.s * dt
       const px = ROOST_X + Math.cos(b.a) * b.r
@@ -3314,10 +3465,15 @@ export class DayScene extends Phaser.Scene {
         ),
       )
     }
+    // a rewind un-breaks pieces, which changes the visible set with no camera
+    // movement — same reason the shatter path marks it
+    this.visDirty = true
     for (const z of this.openingZones) if (z.x > cp.x) z.state = 'idle'
     // reset flow gates and motes ahead of the checkpoint
     for (const [f, g] of this.flowGates) if (f.x > cp.x) { g.state = 'idle'; g.clean = true }
-    for (const m of this.motes) if (m.x > cp.x && !m.img.visible) m.img.setVisible(true)
+    // un-take the light ahead of the checkpoint; the cull decides on the next
+    // frame whether it is actually in frame yet
+    for (const m of this.motes) if (m.x > cp.x) m.taken = false
     for (const s of this.strays) {
       if (s.def.x > cp.x) s.group.reset(s.def.count)
     }
@@ -3466,7 +3622,9 @@ export class DayScene extends Phaser.Scene {
     }
     // light, just before the first arc
     if (!this.cardsShown.has('light')) for (const m of this.motes) {
-      if (m.img.visible && m.x - fx > 0 && m.x - fx < 900) {
+      // `!taken`, not `visible` — the card looks up to 900px AHEAD, which is
+      // now often beyond the cull line, and "off screen" is not "collected"
+      if (!m.taken && m.x - fx > 0 && m.x - fx < 900) {
         this.showCard('light', 'GATHER THE LIGHT',
           isTouch ? 'Light holds back the dark. Hold SPREAD to widen the flock and sweep more of it in.'
                   : 'Light holds back the dark. Hold SHIFT to spread wide and sweep more of it in.')
@@ -3687,16 +3845,19 @@ export class DayScene extends Phaser.Scene {
           .setDisplaySize(Math.min(230, h * 1.25), Math.min(360, h * 1.05))
           .setAlpha(0.17)
           .setDepth(2.6)
-        if (decorScale >= 1) {
-          this.tweens.add({
-            targets: glow,
-            alpha: 0.28,
-            duration: 2200 + Math.random() * 1200,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-          })
-        }
+        // The breathe used to be a repeating tween per glow — and there is one
+        // glow per gap per narrowing, which scales with the level rather than
+        // being a fixed cost. Together with the drift below they were most of
+        // the ~400 live tweens standing in the scheduler at all times. A
+        // yoyoing Sine.easeInOut IS a raised cosine, so driving it off the sim
+        // clock is not an approximation: it is the same curve, with the tween
+        // object deleted. Random phase keeps them from breathing in unison.
+        this.routeGlows.push({
+          img: glow,
+          amp: decorScale >= 1 ? 0.11 : 0,
+          per: (2 * (2200 + Math.random() * 1200)) / 1000,
+          ph: Math.random() * 8,
+        })
         // motes drifting THROUGH the gap: the route reads as a current
         const n = Math.max(1, Math.round((h > 260 ? 4 : 3) * decorScale))
         for (let i = 0; i < n; i++) {
@@ -3707,18 +3868,19 @@ export class DayScene extends Phaser.Scene {
             .setDisplaySize(13, 13)
             .setAlpha(0.62)
             .setDepth(2.7)
-          this.tweens.add({
-            targets: m,
-            x: m.x + rand(70, 130),
-            alpha: 0,
-            duration: 2600 + Math.random() * 1600,
-            delay: Math.random() * 2200,
-            repeat: -1,
-            repeatDelay: Math.random() * 900,
-            onRepeat: () => {
-              m.x = lightX + rand(-70, -30)
-              m.setAlpha(0.62)
-            },
+          // ~190 of these drift motes exist across the level, each formerly
+          // holding its own endlessly-repeating tween. The motion is a linear
+          // slide with a linear fade on a fixed cycle, which is two lines of
+          // arithmetic off the clock — and unlike a tween it costs nothing at
+          // all while the gap is off screen (see updateDecor).
+          const dur = (2600 + Math.random() * 1600) / 1000
+          this.routeDrift.push({
+            img: m,
+            x0: m.x,
+            travel: rand(70, 130),
+            dur,
+            per: dur + Math.random() * 0.9,
+            ph: Math.random() * 2.2,
           })
         }
       }
@@ -3765,14 +3927,16 @@ export class DayScene extends Phaser.Scene {
           .setTint(0xd9cff0)
           .setBlendMode(Phaser.BlendModes.ADD)
           .setDepth(1.8)
-        this.tweens.add({
-          targets: g,
-          alpha: 0.16 + Math.random() * 0.1,
-          duration: 1400 + Math.random() * 900,
-          delay: i * 90,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
+        // ~70 ghosts, ~70 forever-repeating tweens, and every one of them off
+        // screen for all but a couple of seconds of a 25,000px flight. Same
+        // raised-cosine identity as the route glows; `delay` becomes a start
+        // offset so the stream still wakes up bird by bird along the route.
+        const dur = (1400 + Math.random() * 900) / 1000
+        this.ghostBirds.push({
+          img: g,
+          peak: 0.16 + Math.random() * 0.1,
+          per: dur * 2,
+          delay: (i * 90) / 1000,
         })
       }
     }

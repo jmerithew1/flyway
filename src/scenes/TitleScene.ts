@@ -99,7 +99,16 @@ export class TitleScene extends Phaser.Scene {
       .setAlpha(0)
       .setInteractive({ useHandCursor: true })
     begin.setShadow(0, 3, '#160d24', 12)
-    begin.input!.hitArea = new Phaser.Geom.Rectangle(-90, -50, begin.width + 180, begin.height + 100)
+    // Match the hit area to the drawn plate rather than guessing an inset, so
+    // the hand cursor appears exactly where the button looks like it is. The
+    // old rectangle was offset from the visible plate, so the clickable region
+    // sat off the button.
+    begin.input!.hitArea = new Phaser.Geom.Rectangle(
+      begin.width / 2 - btnW / 2,
+      begin.height / 2 - btnH / 2,
+      btnW,
+      btnH,
+    )
     begin.input!.hitAreaCallback = Phaser.Geom.Rectangle.Contains
     const beginHint = this.add
       .text(cx, 588, isTouch ? 'tap anywhere' : 'click, or press SPACE', serif(18, '#e6dcf0', 4))
