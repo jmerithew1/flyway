@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#14102a" />
+  <title>FLYWAY</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="./favicon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
+  <meta name="description" content="FLYWAY — bring the flock home before nightfall. A murmuration you steer by intention." />
+  <meta property="og:title" content="FLYWAY" />
+  <meta property="og:description" content="Bring the flock home before nightfall." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #14102a;
+      /* no browser scroll, pinch-zoom or pull-to-refresh stealing the flight */
+      touch-action: none;
+      overscroll-behavior: none;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    canvas { display: block; touch-action: none; }
+
+    /* Branded boot veil — the wordmark on the game's own navy, instead of
+       Phaser's black flash. Removed from the DOM once the game is up. */
+    #boot-veil {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #14102a;
+      z-index: 10;
+      opacity: 1;
+      transition: opacity 520ms ease;
+      pointer-events: none;
+    }
+    #boot-veil.gone { opacity: 0; }
+    #boot-veil img {
+      width: min(46vw, 420px);
+      max-width: 76vw;
+      height: auto;
+      opacity: 0;
+      animation: veil-breathe 2600ms ease-in-out 120ms infinite;
+    }
+    @keyframes veil-breathe {
+      0%   { opacity: 0.34; }
+      50%  { opacity: 0.9; }
+      100% { opacity: 0.34; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #boot-veil img { animation: none; opacity: 0.85; }
+    }
+  </style>
+  <script type="module" crossorigin src="./assets/index-DKGKT1v8.js"></script>
+</head>
+<body>
+  <div id="boot-veil"><img src="assets/processed/final/wordmark.png" alt="FLYWAY" /></div>
+</body>
+</html>

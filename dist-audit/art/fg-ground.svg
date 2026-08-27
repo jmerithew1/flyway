@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="120" viewBox="0 0 900 120">
+  <!-- Tileable dark ground edge. The top contour is irregular — low mounds,
+       a dip, a scatter of scrub — but both ends sit at y=64 so it wraps
+       seamlessly. Near-black; it only anchors the bottom of the frame. -->
+  <g fill="#1d1628">
+    <path d="
+      M 0,64
+      C 40,58 74,44 118,46
+      C 158,48 186,64 226,62
+      C 262,60 288,42 330,44
+      C 372,46 396,66 438,68
+      C 478,70 502,52 544,50
+      C 588,48 614,66 656,68
+      C 694,70 720,54 762,52
+      C 806,50 836,60 866,62
+      C 880,63 890,64 900,64
+      L 900,120 L 0,120 Z"/>
+    <!-- scrub clumps breaking the contour, none evenly spaced -->
+    <ellipse cx="96"  cy="44" rx="30" ry="14"/>
+    <ellipse cx="132" cy="38" rx="20" ry="11"/>
+    <ellipse cx="304" cy="40" rx="26" ry="13"/>
+    <ellipse cx="520" cy="46" rx="34" ry="15"/>
+    <ellipse cx="556" cy="40" rx="19" ry="10"/>
+    <ellipse cx="746" cy="48" rx="28" ry="13"/>
+    <ellipse cx="852" cy="54" rx="22" ry="11"/>
+    <!-- a couple of low sticks poking up out of the scrub -->
+    <path d="M 214,62 C 216,44 214,32 210,22 L 216,22 C 222,34 224,48 224,62 Z"/>
+    <path d="M 646,64 C 648,48 646,38 642,30 L 648,30 C 654,40 656,52 656,64 Z"/>
+  </g>
+</svg>

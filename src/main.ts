@@ -63,8 +63,9 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.ENVELOP,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  // three simultaneous pointers: a GATHER thumb, a SPREAD thumb, and the
-  // finger on the sky that does the steering (Phaser tracks one by default)
-  input: { activePointers: 3 },
+  // four simultaneous pointers: the left thumb on the floating joystick, a
+  // right thumb on a formation pad, and room for the second right-hand digit
+  // players use for chords (Phaser tracks one by default)
+  input: { activePointers: 4 },
   scene: [BootScene, TitleScene, SandboxScene, DayScene, ResultsScene, FlywayMapScene],
 }

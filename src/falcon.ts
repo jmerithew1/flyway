@@ -15,7 +15,16 @@ export interface FalconZone {
   window: number
 }
 
-type Phase = 'idle' | 'unease' | 'shadow' | 'window' | 'strike' | 'exit'
+type Phase = 'idle' | 'unease' | 'shadow' | 'window' | 'strike' | 'exit' | 'flee'
+
+/** How far through the dive the talons cross the flock. The strike RESOLVES
+ * here — not when the dive starts — so birds disappear on the frame the
+ * predator reaches them instead of the frame it leaves the top of the sky. */
+const IMPACT_P = 0.6
+/** Dive duration. Short: this is the fastest thing in the game. */
+const DIVE_DUR = 0.46
+/** Ghost streaks laid along the dive path behind the falcon. */
+const STREAKS = 9
 
 /**
  * Authored predator set piece. Telegraph sequence: exposed upper birds react →
@@ -42,6 +51,23 @@ export class FalconSystem {
   /** birds taken this strike, for HUD messaging */
   lastTaken = 0
   onStrikeResolved: ((taken: number, gathered: boolean, mobbed: boolean) => void) | null = null
+  /** Fires the frame the dive commits, before anything is taken — the scene
+   * uses it to dim the sky and drop the score to a held note. */
+  onDiveBegin: (() => void) | null = null
+  /** Fires the frame the flock's answer is decided as MOB, so the scene can
+   * raise the column while the predator is still on screen. */
+  onMobBegin: (() => void) | null = null
+  /** 0..1 while the dive is in the air — drives the scene's sky dim. */
+  diveT = 0
+  private streaks: Phaser.GameObjects.Image[] = []
+  /** targets chosen when the dive commits, taken when the talons arrive */
+  private pendingTargets: Bird[] = []
+  private pendingGathered = false
+  private resolved = true
+  private diveAngle = 1.3
+  private fleeFrom = { x: 0, y: 0 }
+  private impactY = 430
+  private baseScale = 1
   /** Flock size when the zone armed — mobbing needs ~70% of it intact. */
   private zoneArrivalCount = 120
   private lastX = 0
@@ -65,9 +91,54 @@ export class FalconSystem {
     const tex = scene.textures.get('falcon').getSourceImage() as { width: number; height: number }
     const span = 310
     this.falcon.setScale(span / tex.width)
+    this.baseScale = span / tex.width
     if (!scene.textures.exists('falcon-art') && !scene.textures.exists('falcon_dive')) this.falcon.setTint(0x151024)
     this.shadow.setScale((span * 1.45) / tex.width)
+
+    // I1 — THE DIVE IS A HARD STREAK. A sprite sliding down the screen at 46
+    // frames of travel reads as a sprite sliding down the screen; a stack of
+    // ghost streaks laid along the path behind it reads as SPEED. The tail is
+    // dark (it is a silhouette against dusk); the head carries one thin
+    // additive core so the leading edge cuts.
+    for (let i = 0; i < STREAKS; i++) {
+      const s = scene.add
+        .image(0, 0, 'streak')
+        .setTint(i === 0 ? 0xffe6c8 : 0x0d0918)
+        .setBlendMode(i === 0 ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
+        .setDepth(8.9)
+        .setVisible(false)
+      this.streaks.push(s)
+    }
+
     this.setPose('bank')
+  }
+
+  /** Lay the ghost trail along the dive path behind the talons. */
+  private renderStreaks(p: number, at: (q: number) => { x: number; y: number }): void {
+    for (let i = 0; i < this.streaks.length; i++) {
+      const s = this.streaks[i]
+      // head streak sits ON the falcon; the tail samples back along the path
+      const back = i === 0 ? 0.012 : 0.02 + (i - 1) * 0.036
+      const q = p - back
+      if (q < 0) {
+        s.setVisible(false)
+        continue
+      }
+      const a = at(q)
+      const b = at(Math.max(0, q - 0.03))
+      s.setVisible(true)
+      s.setPosition(a.x, a.y)
+      s.setRotation(Math.atan2(a.y - b.y, a.x - b.x))
+      const k = i === 0 ? 1 : 1 - (i - 1) / (this.streaks.length - 1)
+      s.setDisplaySize(i === 0 ? 300 : 150 + k * 260, i === 0 ? 9 : 4 + k * 26)
+      // the whole trail fades as the dive lands, so nothing lingers after the hit
+      const tail = Math.min(1, (1 - p) * 3.2)
+      s.setAlpha((i === 0 ? 0.85 : 0.16 + k * 0.5) * tail)
+    }
+  }
+
+  private hideStreaks(): void {
+    for (const s of this.streaks) s.setVisible(false)
   }
 
   /** Authored pose sequence from the supplied art (bank/dive/strike/retreat);
@@ -82,6 +153,7 @@ export class FalconSystem {
       // the flock is 27px across; a 310px raptor read as ~11x their size.
       // 210 keeps it clearly the biggest thing in the sky without absurdity.
       this.falcon.setScale(210 / src.width)
+      this.baseScale = 210 / src.width
     }
   }
 
@@ -148,25 +220,55 @@ export class FalconSystem {
       this.falcon.setPosition(bankX, 120 + wob * 16)
       this.falcon.setRotation(wob * 0.08)
       if (t > this.window) {
-        this.phase = 'strike'
         this.timer = 0
-        this.beginStrike(flock)
+        this.armStrike(flock)
       }
     } else if (this.phase === 'strike') {
-      // dive along a steep arc through the flock's x (art: dive, then talons)
-      const p = Math.min(1, this.timer / 0.55)
-      this.setPose(p < 0.6 ? 'dive' : 'strike')
-      const fx = this.strikeX + (p - 0.5) * 260
-      const fy = -160 + p * (flock.centerY + 240)
+      // dive along a steep line through the flock's x (art: dive, then talons)
+      const p = Math.min(1, this.timer / DIVE_DUR)
+      this.diveT = p
+      this.setPose(p < IMPACT_P ? 'dive' : 'strike')
+      const at = (q: number): { x: number; y: number } => ({
+        x: this.strikeX + (q - IMPACT_P) * 300,
+        y: -220 + (q / IMPACT_P) * (this.impactY + 220),
+      })
+      const f = at(p)
+      this.faceTravel(f.x - (this.lastX || f.x))
+      this.lastX = f.x
+      this.falcon.setPosition(f.x, f.y)
+      this.falcon.setRotation(this.diveAngle - 0.35 - p * 0.3)
+      this.renderStreaks(p, at)
+      // THE TALONS ARRIVE. Not a frame earlier: the screech, the hit-stop and
+      // the birds all land together, on contact.
+      if (!this.resolved && p >= IMPACT_P) this.resolveStrike(flock)
+      // carried birds trail from the talons
+      for (const c of this.carried) c.sprite.setPosition(f.x + c.dx, f.y + c.dy)
+      if (p >= 1) {
+        this.hideStreaks()
+        this.diveT = 0
+        this.phase = 'exit'
+        this.timer = 0
+      }
+    } else if (this.phase === 'flee') {
+      // I3 — MOBBED. The predator is driven off: a hard recoil away from the
+      // column, then it climbs out of the frame shrinking as it goes.
+      this.setPose('retreat')
+      const p = Math.min(1, this.timer / 1.5)
+      // recoil (first ~0.2) then flight; ease-out so it never decelerates
+      const recoil = Math.max(0, 1 - p / 0.14)
+      const run = Math.pow(Math.max(0, (p - 0.1) / 0.9), 1.7)
+      const fx = this.fleeFrom.x - recoil * 90 + run * 1500
+      const fy = this.fleeFrom.y - recoil * 40 - run * (this.fleeFrom.y + 620)
       this.faceTravel(fx - (this.lastX || fx))
       this.lastX = fx
       this.falcon.setPosition(fx, fy)
-      this.falcon.setRotation(0.9 - p * 0.5)
-      // carried birds trail from the talons
-      for (const c of this.carried) c.sprite.setPosition(fx + c.dx, fy + c.dy)
+      // it TUMBLES out of control at first, then straightens into the run
+      this.falcon.setRotation(-0.35 - Math.sin(p * 22) * 0.5 * recoil - run * 0.35)
+      this.falcon.setAlpha(1 - Math.pow(p, 2.4) * 0.85)
+      this.falcon.setScale(this.baseScale * (1 - run * 0.55))
       if (p >= 1) {
-        this.phase = 'exit'
-        this.timer = 0
+        this.falcon.setVisible(false).setAlpha(1).setScale(this.baseScale)
+        this.phase = 'idle'
       }
     } else if (this.phase === 'exit') {
       // wheeling away (art: falcon_retreat) — also the mob/defense pose
@@ -188,10 +290,17 @@ export class FalconSystem {
     }
   }
 
-  /** Resolve the strike against the flock's CURRENT formation. */
-  private beginStrike(flock: Flock): void {
-    this.falcon.setVisible(true)
+  /**
+   * The dive COMMITS. Everything is decided here — who the falcon is coming
+   * for, and whether the flock's answer turns it away — but nothing is taken
+   * yet: the take waits for the talons (resolveStrike, at IMPACT_P).
+   */
+  private armStrike(flock: Flock): void {
+    this.falcon.setVisible(true).setAlpha(1).setScale(this.baseScale)
     this.strikeX = flock.centerX
+    this.impactY = flock.centerY
+    // the line the streaks are laid along
+    this.diveAngle = Math.atan2((this.impactY + 220) / IMPACT_P, 300)
     const gathered = flock.form > 0.35
 
     // MOBBING: a large, healthy, committed flock turns the tables — it rises
@@ -199,16 +308,27 @@ export class FalconSystem {
     // (size + form + low strain) so it pays out the whole game's discipline.
     if (gathered && flock.count >= this.zoneArrivalCount * 0.7 && flock.gatherStrain < 0.4) {
       this.lastTaken = 0
-      this.phase = 'exit'
+      this.phase = 'flee'
       this.timer = 0
+      this.fleeFrom = { x: flock.centerX + 40, y: Math.max(140, flock.centerY - 220) }
+      this.falcon.setPosition(this.fleeFrom.x, this.fleeFrom.y)
+      this.hideStreaks()
       this.audio.falconMiss()
+      this.audio.falconRetreatScreech()
+      this.audio.mobSwell()
       for (const b of flock.birds) {
         b.vy -= 260 + Math.random() * 160
         b.panic = Math.max(b.panic, 0.5)
       }
+      this.onMobBegin?.()
       this.onStrikeResolved?.(0, true, true)
       return
     }
+
+    this.phase = 'strike'
+    this.resolved = false
+    this.diveT = 0
+    this.pendingGathered = gathered
     const spreadOrFrayed = flock.form < -0.3 || flock.spreadStrain > 0.4 || flock.gatherStrain > 0.6
 
     const range = gathered ? FALCON_TAKE_GATHER : spreadOrFrayed ? FALCON_TAKE_SPREAD : FALCON_TAKE_NEUTRAL
@@ -236,7 +356,23 @@ export class FalconSystem {
       .filter((b) => !covered(b))
       .map((b) => ({ b, d: Math.hypot(b.x - flock.centerX, b.y - flock.centerY) + (flock.centerY - b.y) * 0.6 }))
       .sort((a, bb) => bb.d - a.d)
-    this.strikeTargets = exposed.slice(0, want).map((e) => e.b)
+    this.pendingTargets = exposed.slice(0, want).map((e) => e.b)
+
+    // the sky goes cold and the score drops out — this is the scene's cue,
+    // and it fires BEFORE the hit so the dive falls through a held breath
+    this.onDiveBegin?.()
+    this.audio.strikeHeldNote(DIVE_DUR + 0.95)
+  }
+
+  /**
+   * The talons arrive. Birds leave the flock, the screech lands, and the
+   * scene's impact (hit-stop, feathers, kick) fires on this same frame.
+   */
+  private resolveStrike(flock: Flock): void {
+    this.resolved = true
+    // re-check membership: anything already lost to the dark or a collision
+    // between commit and contact is no longer the falcon's to take
+    this.strikeTargets = this.pendingTargets.filter((b) => flock.birds.includes(b))
     this.lastTaken = this.strikeTargets.length
 
     // flock buckles away from the strike line
@@ -255,9 +391,17 @@ export class FalconSystem {
       flock.removeBird(tb)
     }
 
+    // THE SCREECH LANDS ON THE HIT
+    this.audio.falconStrikeScreech()
     if (this.lastTaken > 0) this.audio.falconHit()
     else this.audio.falconMiss()
-    this.onStrikeResolved?.(this.lastTaken, gathered, false)
+    this.onStrikeResolved?.(this.lastTaken, this.pendingGathered, false)
+    this.pendingTargets = []
+  }
+
+  /** Where the talons crossed the flock — the scene's impact origin. */
+  get impactPoint(): { x: number; y: number } {
+    return { x: this.strikeX, y: this.impactY }
   }
 
   get active(): boolean {
@@ -271,8 +415,12 @@ export class FalconSystem {
   reset(beforeX: number): void {
     for (const z of this.zones) if (z.x > beforeX) z.done = false
     this.phase = 'idle'
-    this.falcon.setVisible(false)
+    this.falcon.setVisible(false).setAlpha(1).setScale(this.baseScale)
     this.shadow.setAlpha(0)
+    this.hideStreaks()
+    this.diveT = 0
+    this.resolved = true
+    this.pendingTargets = []
     for (const c of this.carried) c.sprite.destroy()
     this.carried = []
   }

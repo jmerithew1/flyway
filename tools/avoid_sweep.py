@@ -9,7 +9,7 @@ reloaded between runs so no state leaks. window.__AVOID is mutated live.
 """
 from playwright.sync_api import sync_playwright
 
-DEV = 'http://localhost:58759/?day'
+DEV = 'http://localhost:5199/?day'
 END = 25400
 
 AFK = """() => {

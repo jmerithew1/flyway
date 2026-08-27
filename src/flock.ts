@@ -89,6 +89,74 @@ const TUNING = {
   spreadSpeedDrag: 0.12,
 }
 
+// ---- SHAPE SIGNAL timing --------------------------------------------------
+// The old envelope was a triangle: it touched 1.0 for a single frame and fell
+// away immediately, so a cast shape was never fully formed and was legible for
+// ~180ms at most. Four phases fix that, and every cast uses the SAME timing so
+// arrow, fan and ring are equally readable.
+/** Wind-up. The flock compresses before it throws the form. */
+const SHAPE_COIL = 0.055
+/** Envelope level reached by the end of the coil (a tightening, not a shape). */
+const SHAPE_COIL_PEAK = 0.14
+/** Snap. Ends at t=0.14s, so the silhouette exists before any eye finds it. */
+const SHAPE_ATTACK = 0.085
+/** FULL HOLD at env=1. This is the beat the whole feature was missing. */
+const SHAPE_HOLD = 0.22
+/** Melt back into boids. Long and soft so it dissolves rather than snapping off. */
+const SHAPE_RELEASE = 0.5
+/** One duration for every cast: 0.055 + 0.085 + 0.22 + 0.5. */
+const SHAPE_DUR = SHAPE_COIL + SHAPE_ATTACK + SHAPE_HOLD + SHAPE_RELEASE
+/** Distance between adjacent slots, in px. Must exceed the shaped separation
+ * radius or the boid rules shove birds straight back out of the form. */
+const SLOT_SPACING = 18
+/** How far the envelope suppresses separation. At full form, sepRadius falls
+ * from 62px to ~9px, which is below SLOT_SPACING — so the form can close. */
+const SHAPE_SEP_CUT = 0.85
+
+/** Nested chevrons: a bold arrowhead band, not a single-file line (120 birds
+ * on one outline at real spacing would be 2400px long). */
+function arrowSlots(n: number): Array<[number, number]> {
+  const half = 10 // 21 birds per rank, with a bird ON the tip
+  const dxStep = -SLOT_SPACING * 0.6
+  const dyStep = SLOT_SPACING * 0.8
+  const rankGap = -SLOT_SPACING * 0.95
+  const out: Array<[number, number]> = []
+  for (let r = 0; out.length < n; r++) {
+    for (let j = -half; j <= half && out.length < n; j++) {
+      out.push([Math.abs(j) * dxStep + r * rankGap, j * dyStep])
+    }
+    if (r > 40) break
+  }
+  return out
+}
+
+/** A braking crescent: nested arcs bowed backward at the centre, wings forward. */
+function fanSlots(n: number): Array<[number, number]> {
+  const halfAng = 1.2
+  const out: Array<[number, number]> = []
+  for (let r = 205; out.length < n && r > 18; r -= SLOT_SPACING) {
+    const cnt = Math.max(3, Math.round((2 * halfAng * r) / SLOT_SPACING))
+    for (let k = 0; k < cnt && out.length < n; k++) {
+      const a = -halfAng + (cnt === 1 ? halfAng : (k / (cnt - 1)) * 2 * halfAng)
+      out.push([-Math.cos(a) * r * 0.5 - 25, Math.sin(a) * r * 0.85])
+    }
+  }
+  return out
+}
+
+/** The call going out: concentric rings, filled from the outside in. */
+function ringSlots(n: number): Array<[number, number]> {
+  const out: Array<[number, number]> = []
+  for (let r = 178; out.length < n && r > 14; r -= SLOT_SPACING) {
+    const cnt = Math.max(3, Math.round((2 * Math.PI * r) / SLOT_SPACING))
+    for (let k = 0; k < cnt && out.length < n; k++) {
+      const a = (k / cnt) * Math.PI * 2
+      out.push([Math.cos(a) * r, Math.sin(a) * r])
+    }
+  }
+  return out
+}
+
 export interface Bird {
   x: number
   y: number
@@ -106,6 +174,13 @@ export interface Bird {
   homeBias: number // per-bird leash multiplier — ragged flock boundary
   edginess: number // jitter amplitude scale
   sidePref: number // -1..1 bias when splitting head-on
+  /** STABLE seat in the current shape signal, assigned once at cast time.
+   * Never derived from the array index: birds.splice() on a death used to
+   * shift every later bird one slot along the curve, teleporting half the
+   * flock — and deaths happen precisely during falcon strikes and fog
+   * contact, i.e. exactly when a shape is on screen. A dead bird now just
+   * leaves its seat empty. -1 = not in the current form. */
+  slotIdx: number
   flapPhase: number
   flapFreq: number
   renderAngle: number // smoothed heading for the sprite (kills rotation jitter)
@@ -207,6 +282,7 @@ export class Flock {
       homeBias: rand(0.7, 1.45),
       edginess: rand(0.4, 1.25),
       sidePref: Math.random() < 0.5 ? -rand(0.4, 1) : rand(0.4, 1),
+      slotIdx: -1,
       flapPhase: rand(0, Math.PI * 2),
       // most birds beat steadily; a few glide with slow lazy strokes
       flapFreq: Math.random() < 0.15 ? rand(2.5, 4) : rand(7, 11),
@@ -267,51 +343,97 @@ export class Flock {
    */
   shapeKind: 'arrow' | 'fan' | 'ring' | null = null
   private shapeT = 0
-  private shapeDur = 0.72
+  private shapeDur = SHAPE_DUR
+  /** The current form, in flock-local space (x along the heading, y across it).
+   * Built once per cast and indexed by Bird.slotIdx, never by array index. */
+  private shapeSlots: Array<[number, number]> = []
 
-  /** Throw a shape. It rams in over ~0.13s, holds, then releases back to boids. */
-  formShape(kind: 'arrow' | 'fan' | 'ring', dur = 0.72): void {
+  /**
+   * Throw a shape: coil, snap, HOLD, melt. Every cast runs the same
+   * SHAPE_DUR so no ability gets a less readable silhouette than another.
+   */
+  formShape(kind: 'arrow' | 'fan' | 'ring'): void {
     this.shapeKind = kind
     this.shapeT = 0
-    this.shapeDur = dur
+    this.shapeDur = SHAPE_DUR
+    this.assignSlots(kind)
   }
 
-  /** 0..1 envelope: hard attack so the snap lands, soft release so it melts. */
+  /**
+   * Build the form and seat every bird in it ONCE, sorted along the shape's
+   * dominant axis. Without the sort, a bird on the far left is as likely to be
+   * given the right wingtip as the left one, and the cast reads as 120 birds
+   * crossing paths rather than a flock collapsing into a form.
+   */
+  private assignSlots(kind: 'arrow' | 'fan' | 'ring'): void {
+    const n = this.birds.length
+    const slots = kind === 'arrow' ? arrowSlots(n) : kind === 'fan' ? fanSlots(n) : ringSlots(n)
+    // CENTRE THE FORM ON ITS OWN CENTROID. Slots are aimed at centerX/centerY,
+    // which is the mean of the birds — so if the slot cloud's mean is not the
+    // origin, every step drags the whole flock by that offset and the form
+    // never settles. (Measured: an uncentred arrowhead pulled the flock
+    // backwards ~99px per step and squashed to a 90px blob. The ring was the
+    // only shape that already read, and the only one centred on zero.)
+    if (slots.length) {
+      let mx = 0
+      let my = 0
+      for (const s of slots) {
+        mx += s[0]
+        my += s[1]
+      }
+      mx /= slots.length
+      my /= slots.length
+      for (const s of slots) {
+        s[0] -= mx
+        s[1] -= my
+      }
+    }
+    this.shapeSlots = slots
+    if (n === 0) return
+    const sp = Math.hypot(this.meanVX, this.meanVY) || 1
+    const hx = this.meanVX / sp
+    const hy = this.meanVY / sp
+    // arrow and fan both spread ACROSS the heading — that is the axis a bird
+    // must not have to cross. The ring's is angular.
+    const key = (lx: number, ly: number): number => (kind === 'ring' ? Math.atan2(ly, lx) : ly)
+    const seats = this.shapeSlots.map((s, i) => ({ i, k: key(s[0], s[1]) })).sort((a, b) => a.k - b.k)
+    const flyers = this.birds
+      .map((b) => {
+        const dx = b.x - this.centerX
+        const dy = b.y - this.centerY
+        return { b, k: key(dx * hx + dy * hy, -dx * hy + dy * hx) }
+      })
+      .sort((a, b) => a.k - b.k)
+    for (let i = 0; i < flyers.length; i++) flyers[i].b.slotIdx = i < seats.length ? seats[i].i : -1
+  }
+
+  /**
+   * 0..1 envelope in four phases. The measured failure of the old triangle was
+   * that it peaked at 0.994 and decayed the next frame: the form never fully
+   * existed. This one holds at exactly 1 for SHAPE_HOLD seconds.
+   */
   private shapeEnvelope(): number {
     if (!this.shapeKind) return 0
-    const p = this.shapeT / this.shapeDur
-    if (p >= 1) return 0
-    return p < 0.18 ? p / 0.18 : 1 - (p - 0.18) / 0.82
+    const t = this.shapeT
+    if (t < 0) return 0
+    if (t < SHAPE_COIL) return SHAPE_COIL_PEAK * (t / SHAPE_COIL)
+    const a = t - SHAPE_COIL
+    if (a < SHAPE_ATTACK) {
+      const p = a / SHAPE_ATTACK
+      return SHAPE_COIL_PEAK + (1 - SHAPE_COIL_PEAK) * (1 - (1 - p) * (1 - p))
+    }
+    const h = a - SHAPE_ATTACK
+    if (h < SHAPE_HOLD) return 1
+    const r = (h - SHAPE_HOLD) / SHAPE_RELEASE
+    if (r >= 1) return 0
+    return 0.5 + 0.5 * Math.cos(Math.PI * r)
   }
 
-  /** Where bird `i` of `n` belongs in the current shape, in flock-local space
-   * (x along the heading, y across it). */
-  private shapeSlot(i: number, n: number): [number, number] {
-    const spread = 30 + Math.sqrt(n) * 11
-    // deterministic per-slot jitter keeps the form organic, never stencilled
-    const j = Math.sin(i * 12.9898) * 0.5
-    switch (this.shapeKind) {
-      case 'arrow': {
-        // two swept edges meeting at a point that leads the flock
-        const t = (i / Math.max(1, n - 1)) * 2 - 1 // -1..1
-        const a = Math.abs(t)
-        return [spread * (1.25 - a * 2.1) + j * 6, t * spread * 0.62 + j * 5]
-      }
-      case 'fan': {
-        // a wide braking crescent, wings out
-        const t = (i / Math.max(1, n - 1)) * 2 - 1
-        const ang = t * 1.15
-        return [-Math.cos(ang) * spread * 0.5 - spread * 0.15 + j * 7, Math.sin(ang) * spread * 1.25 + j * 7]
-      }
-      case 'ring': {
-        // the call going out: an open circle, everyone facing the world
-        const ang = (i / Math.max(1, n)) * Math.PI * 2
-        const r = spread * 0.95
-        return [Math.cos(ang) * r + j * 6, Math.sin(ang) * r + j * 6]
-      }
-      default:
-        return [0, 0]
-    }
+  /** 0..1 only during the wind-up: squeezes the flock so the snap has somewhere
+   * to come FROM. Anticipation is what makes the form land as a move. */
+  private shapeCoil(): number {
+    if (!this.shapeKind || this.shapeT >= SHAPE_COIL) return 0
+    return this.shapeT / SHAPE_COIL
   }
   /** Flare: 0..1 air-brake bloom, decays over ~0.4s. */
   flareAmt = 0
@@ -603,11 +725,22 @@ export class Flock {
       }
     }
 
+    // SHAPE vs BOIDS. Separation is what was sanding the silhouettes off:
+    // sepRadius sits at 62px (105px under flare) while the slots ask for 18px,
+    // so every bird was being shoved out of its seat as fast as it arrived.
+    // Both the radius and the weight now collapse with the envelope, which
+    // means the boid rules hand the flock over for the length of the hold and
+    // take it back as the form melts — no hard mode switch.
+    const shapeEnv = this.shapeEnvelope()
+    const coil = this.shapeCoil()
+    const shapeRelax = 1 - SHAPE_SEP_CUT * shapeEnv
     const sepRadius =
       (f >= 0
         ? lerp(TUNING.sepRadiusNeutral, TUNING.sepRadiusGather, gather)
         : lerp(TUNING.sepRadiusNeutral, TUNING.sepRadiusSpread, spread)) *
-      (1 + this.flareAmt * 0.7)
+      (1 + this.flareAmt * 0.7) *
+      shapeRelax *
+      (1 - coil * 0.45)
     // neutral flocks cohere loosely (big living cloud); gathering multiplies pull.
     // VORTEX adds a gentle inward term so the whirl reads as a column with a
     // held radius instead of a cloud that merely spins in place.
@@ -615,8 +748,9 @@ export class Flock {
       TUNING.wCohesion *
       lerp(0.35, 1, Math.abs(f)) *
       (1 + gather * 2.1 - spread * 0.6) *
-      (1 + this.vortex * VORTEX_COHESION_BOOST)
-    const wSep = TUNING.wSeparation * (1 + spread * 0.5 - gather * 0.25)
+      (1 + this.vortex * VORTEX_COHESION_BOOST) *
+      (1 + coil * 1.6)
+    const wSep = TUNING.wSeparation * (1 + spread * 0.5 - gather * 0.25) * shapeRelax
     const wInt = TUNING.wIntent * (1 + gather * 0.35 + this.leaderAura * 0.1)
     const wJit = TUNING.wJitter * (1 + spread * 0.9) * (1 + gStrain * 1.2 + sStrain * 0.5)
 
@@ -904,7 +1038,10 @@ export class Flock {
       if (this.pulse > 0.12) {
         const proj = (b.x - this.centerX) * hx + (b.y - this.centerY) * hy
         const helix = Math.sin(this.time * 11 + proj * 0.025 + b.flapPhase * 0.6)
-        const amp = 640 * this.pulse
+        // the corkscrew and the arrowhead are the same beat, and the helix is
+        // strong enough to chew the chevron apart — so it yields while the
+        // form is held and comes back as the form melts
+        const amp = 640 * this.pulse * (1 - shapeEnv)
         ax += -hy * helix * amp
         ay += hx * helix * amp
       }
@@ -924,22 +1061,24 @@ export class Flock {
       // SHAPE SIGNAL: applied AFTER the accel clamp, because this is an
       // authored move rather than steering — the boid rules would sand the
       // silhouette off before it ever became legible.
-      const env = this.shapeEnvelope()
-      if (env > 0.01) {
-        const [sx, sy] = this.shapeSlot(i, this.birds.length)
+      const env = shapeEnv
+      const seat = env > 0.01 && b.slotIdx >= 0 ? this.shapeSlots[b.slotIdx] : undefined
+      if (seat) {
+        const sx = seat[0]
+        const sy = seat[1]
         // lay the slot out along the flock's heading, so the arrow points
         // where the flock is actually going
         const tx = this.centerX + sx * hx - sy * hy
         const ty = this.centerY + sx * hy + sy * hx
         // A force alone loses to separation and the shape never becomes
-        // legible (measured: the arrow read as an ordinary blob). For the
-        // ~0.7s a signal is held, birds are drawn kinematically onto their
-        // slot as well, so the silhouette actually arrives while velocity
-        // continuity keeps it from looking teleported.
+        // legible (measured: the arrow read as an ordinary blob). While a
+        // signal is held, birds are drawn kinematically onto their seat as
+        // well, so the silhouette actually arrives while velocity continuity
+        // keeps it from looking teleported.
         const pull = 40 * env
         b.vx += (tx - b.x) * pull * dt
         b.vy += (ty - b.y) * pull * dt
-        const snap = Math.min(0.55, env * env * 0.5)
+        const snap = Math.min(0.6, env * env * 0.55)
         b.x += (tx - b.x) * snap
         b.y += (ty - b.y) * snap
       }

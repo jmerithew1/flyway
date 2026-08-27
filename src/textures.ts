@@ -14,6 +14,37 @@ export function createCoreTextures(scene: Phaser.Scene): void {
   makeAlarmRing(scene)
   makeCageTexture(scene)
   makeFogRoll(scene)
+  makeShardTexture(scene)
+}
+
+/** An angular chip of broken matter. Feathers drift; SHARDS have corners and
+ * a lit facet, which is the whole difference between "it faded" and "it broke".
+ * Drawn white for runtime tinting. */
+function makeShardTexture(scene: Phaser.Scene): void {
+  if (scene.textures.exists('shard')) return
+  const w = 26
+  const h = 18
+  const canvas = scene.textures.createCanvas('shard', w, h)
+  if (!canvas) return
+  const ctx = canvas.context
+  // irregular quad — no two edges parallel, so rotation always reads
+  ctx.beginPath()
+  ctx.moveTo(1, 7)
+  ctx.lineTo(15, 1)
+  ctx.lineTo(25, 11)
+  ctx.lineTo(9, 17)
+  ctx.closePath()
+  ctx.fillStyle = 'rgba(255,255,255,0.95)'
+  ctx.fill()
+  // a brighter facet along the top-left break, so it catches light as it spins
+  ctx.beginPath()
+  ctx.moveTo(1, 7)
+  ctx.lineTo(15, 1)
+  ctx.lineTo(13, 6)
+  ctx.closePath()
+  ctx.fillStyle = 'rgba(255,255,255,1)'
+  ctx.fill()
+  canvas.refresh()
 }
 
 /** Load every curated piece from the manifest as a plain image. */

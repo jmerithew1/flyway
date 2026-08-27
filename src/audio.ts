@@ -670,6 +670,244 @@ export class GameAudio {
     this.master.gain.setTargetAtTime(0.34, t + 1.2, 0.9)
   }
 
+  // ------------------------------------------------------- I1 / I3 predator
+
+  /**
+   * I1 — the score DROPS OUT to a single held note the instant the dive
+   * commits. Pad, bells and the wing bed all duck away; one low sustained
+   * tone carries the fall, so the impact lands in near-silence.
+   */
+  strikeHeldNote(dur = 1.4): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    // everything musical steps aside
+    for (const layer of STEM_LAYERS) {
+      const g = this.layerGains.get(layer)
+      if (!g) continue
+      g.gain.cancelScheduledValues(t)
+      g.gain.setTargetAtTime(layer === 'wings' ? 0.22 : 0.05, t, 0.05)
+    }
+    // ONE note, low, unresolved — a held breath rather than a chord
+    const base = DRONE_BASE * Math.pow(2, ACT_SEMIS[this.actIdx] / 12)
+    for (const [mult, amp, type] of [
+      [1, 0.075, 'triangle'],
+      [2, 0.028, 'sine'],
+    ] as Array<[number, number, OscillatorType]>) {
+      const o = ctx.createOscillator()
+      o.type = type
+      o.frequency.value = base * mult
+      const g = ctx.createGain()
+      g.gain.setValueAtTime(0.0001, t)
+      g.gain.exponentialRampToValueAtTime(amp, t + 0.07)
+      g.gain.setValueAtTime(amp, t + dur * 0.62)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+      o.connect(g).connect(this.master)
+      o.start(t)
+      o.stop(t + dur + 0.05)
+    }
+    // the score returns only after the beat has resolved
+    this.restoreLayers(t + dur * 0.72, 0.7)
+  }
+
+  /** Put pad / bells / wings back where the journey mix wants them. */
+  private restoreLayers(at: number, tau: number): void {
+    const pad = this.layerGains.get('pad')
+    pad?.gain.setTargetAtTime(this.padTarget, at, tau)
+    const bells = this.layerGains.get('bells')
+    bells?.gain.setTargetAtTime(this.bellsTarget, at, tau)
+    const wings = this.layerGains.get('wings')
+    wings?.gain.setTargetAtTime(this.wingsTarget, at, tau)
+  }
+
+  /**
+   * I1 — the cry that lands ON the hit. The telegraph screech is distant and
+   * falling; this one is close: a hard transient, a wider throat, and a
+   * shorter, angrier sweep.
+   */
+  falconStrikeScreech(): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    // transient crack — the talon contact itself
+    const len = Math.floor(ctx.sampleRate * 0.09)
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3)
+    const nsrc = ctx.createBufferSource()
+    nsrc.buffer = buf
+    const hp = ctx.createBiquadFilter()
+    hp.type = 'highpass'
+    hp.frequency.value = 900
+    const ng = ctx.createGain()
+    ng.gain.value = 0.3
+    nsrc.connect(hp).connect(ng).connect(this.master)
+    nsrc.start(t)
+    // the cry: steeper and louder than the telegraph
+    const o = ctx.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.setValueAtTime(2750, t)
+    o.frequency.exponentialRampToValueAtTime(720, t + 0.38)
+    const vib = ctx.createOscillator()
+    vib.frequency.value = 33
+    const vg = ctx.createGain()
+    vg.gain.value = 130
+    vib.connect(vg).connect(o.frequency)
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 1750
+    bp.Q.value = 2.6
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.02)
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
+    o.connect(bp).connect(g).connect(this.master)
+    o.start(t)
+    vib.start(t)
+    o.stop(t + 0.55)
+    vib.stop(t + 0.55)
+  }
+
+  /**
+   * I3 — the same throat, but the cry BREAKS UPWARD and thins as the bird
+   * goes: a retreat, not a threat. Read against falconStrikeScreech, which
+   * falls, this is unmistakably the predator losing.
+   */
+  falconRetreatScreech(): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    const o = ctx.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.setValueAtTime(900, t)
+    o.frequency.exponentialRampToValueAtTime(2600, t + 0.5)
+    o.frequency.exponentialRampToValueAtTime(3100, t + 1.1)
+    const vib = ctx.createOscillator()
+    vib.frequency.value = 21
+    const vg = ctx.createGain()
+    vg.gain.value = 70
+    vib.connect(vg).connect(o.frequency)
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.setValueAtTime(1600, t)
+    // it recedes: the band closes down as the distance opens
+    bp.frequency.exponentialRampToValueAtTime(3400, t + 1.1)
+    bp.Q.value = 5
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.15, t + 0.05)
+    g.gain.exponentialRampToValueAtTime(0.035, t + 0.6)
+    g.gain.exponentialRampToValueAtTime(0.0005, t + 1.35)
+    o.connect(bp).connect(g).connect(this.master)
+    o.start(t)
+    vib.start(t)
+    o.stop(t + 1.4)
+    vib.stop(t + 1.4)
+  }
+
+  /**
+   * I3 — the flock wins. The one moment the score is allowed to be loud: the
+   * layers come back up over a rising open chord that resolves UP, and the
+   * wing bed roars with the column.
+   */
+  mobSwell(): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    this.master.gain.cancelScheduledValues(t)
+    this.master.gain.setTargetAtTime(0.5, t, 0.35)
+    this.master.gain.setTargetAtTime(0.42, t + 3.2, 1.2)
+    // wings surge: 120 birds climbing at once
+    const wings = this.layerGains.get('wings')
+    wings?.gain.cancelScheduledValues(t)
+    wings?.gain.setTargetAtTime(Math.min(1.6, this.wingsTarget * 1.7 + 0.3), t, 0.12)
+    wings?.gain.setTargetAtTime(this.wingsTarget, t + 1.6, 0.8)
+    const pad = this.layerGains.get('pad')
+    pad?.gain.cancelScheduledValues(t)
+    pad?.gain.setTargetAtTime(Math.min(1.5, this.padTarget * 2.2 + 0.35), t, 0.3)
+    pad?.gain.setTargetAtTime(this.padTarget, t + 3.0, 1.2)
+    const bells = this.layerGains.get('bells')
+    bells?.gain.cancelScheduledValues(t)
+    bells?.gain.setTargetAtTime(Math.min(1.6, this.bellsTarget * 1.5 + 0.25), t, 0.25)
+    bells?.gain.setTargetAtTime(this.bellsTarget, t + 3.0, 1.2)
+    // a rising open-fifth-to-major figure — entries stacked upward
+    const base = 196 * Math.pow(2, ACT_SEMIS[this.actIdx] / 12)
+    const ratios = [1, 1.5, 2, 2.5, 3]
+    ratios.forEach((r, i) => {
+      const o = ctx.createOscillator()
+      o.type = i > 2 ? 'triangle' : 'sawtooth'
+      o.frequency.value = base * r
+      const lp = ctx.createBiquadFilter()
+      lp.type = 'lowpass'
+      lp.frequency.setValueAtTime(700, t)
+      lp.frequency.linearRampToValueAtTime(2600, t + 1.4)
+      const g = ctx.createGain()
+      const at = t + i * 0.14
+      g.gain.setValueAtTime(0, at)
+      g.gain.linearRampToValueAtTime(0.05 - i * 0.005, at + 0.5)
+      g.gain.linearRampToValueAtTime(0.03 - i * 0.004, at + 2.0)
+      g.gain.linearRampToValueAtTime(0.0001, at + 3.4)
+      o.connect(lp).connect(g).connect(this.master)
+      o.start(at)
+      o.stop(at + 3.5)
+    })
+  }
+
+  /**
+   * I2 — the curtain does not fade, it SHATTERS: a hard crack, a spray of
+   * chip transients, and a short bright ring as light comes through the hole.
+   */
+  brittleShatter(): void {
+    if (!this.ctx) return
+    const ctx = this.ctx
+    const t = ctx.currentTime
+    // the crack
+    const len = Math.floor(ctx.sampleRate * 0.3)
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) {
+      const k = i / len
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - k, 2.2)
+    }
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.setValueAtTime(2600, t)
+    bp.frequency.exponentialRampToValueAtTime(600, t + 0.28)
+    bp.Q.value = 0.8
+    const g = ctx.createGain()
+    g.gain.value = 0.34
+    src.connect(bp).connect(g).connect(this.master)
+    src.start(t)
+    // chips: short high clicks scattering after the crack
+    for (let i = 0; i < 7; i++) {
+      const o = ctx.createOscillator()
+      o.type = 'triangle'
+      const at = t + 0.02 + Math.random() * 0.26
+      o.frequency.setValueAtTime(1400 + Math.random() * 2200, at)
+      const cg = ctx.createGain()
+      cg.gain.setValueAtTime(0.05 + Math.random() * 0.04, at)
+      cg.gain.exponentialRampToValueAtTime(0.0005, at + 0.09)
+      o.connect(cg).connect(this.master)
+      o.start(at)
+      o.stop(at + 0.1)
+    }
+    // light through the hole: a brief bright fifth
+    for (const f of [784, 1176]) {
+      const o = ctx.createOscillator()
+      o.type = 'sine'
+      o.frequency.value = f
+      const og = ctx.createGain()
+      og.gain.setValueAtTime(0, t + 0.05)
+      og.gain.linearRampToValueAtTime(0.045, t + 0.16)
+      og.gain.exponentialRampToValueAtTime(0.0005, t + 1.5)
+      o.connect(og).connect(this.master)
+      o.start(t + 0.05)
+      o.stop(t + 1.55)
+    }
+  }
+
   private airRush(amp: number, dur: number): void {
     if (!this.ctx) return
     const ctx = this.ctx

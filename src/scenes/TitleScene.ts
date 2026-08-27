@@ -115,7 +115,7 @@ export class TitleScene extends Phaser.Scene {
     // because the rest is taught by the level as it is needed
     const controls = isTouch
       ? [
-          'drag the sky — steer the flock',
+          'left thumb anywhere — the stick appears where you touch',
           'hold GATHER tighten · tap it to SURGE forward',
           'hold SPREAD widen · tap it to FLARE and brake',
           'CALL brings scattered birds back · DIVE trades height for speed',

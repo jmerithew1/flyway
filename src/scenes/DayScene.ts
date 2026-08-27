@@ -50,6 +50,9 @@ import { display, voice, INK, safeArea } from '../ui'
 import { Atmosphere, hazeScenery } from '../atmosphere'
 import { TouchControls, decorScale, isTouch } from '../touch'
 
+/** Owner's number for "the flock is in trouble" (POLISH_TRACKER J6 / I5). */
+const CRITICAL_BIRDS = 25
+
 export interface DayStats {
   startCount: number
   found: number
@@ -148,6 +151,34 @@ export class DayScene extends Phaser.Scene {
   private deltaText!: Phaser.GameObjects.Text
   private scatteredText!: Phaser.GameObjects.Text
   private recoveredText!: Phaser.GameObjects.Text
+
+  // ---- the designed HUD (POLISH_TRACKER J1/J2/J5/J6) -----------------------
+  /** every engraved line in the HUD: the flock dial, the ribbon, the ticks */
+  private hudGfx!: Phaser.GameObjects.Graphics
+  private hudGlyph!: Phaser.GameObjects.Image
+  private hudFlockLabel!: Phaser.GameObjects.Text
+  /** the flock's own position riding the journey ribbon */
+  private hudMarker!: Phaser.GameObjects.Image
+  /** the roost at the far end, warming as it nears (K1b-6, in miniature) */
+  private hudRoostBead!: Phaser.GameObjects.Image
+  /** bloom at the head of the daylight meter */
+  private hudDayBead!: Phaser.GameObjects.Image
+  private hudDayLabel!: Phaser.GameObjects.Text
+  private hudPlaceLabel!: Phaser.GameObjects.Text
+  /** the coral halo that carries the critical-flock read (J6) */
+  private hudAlertBead!: Phaser.GameObjects.Image
+  private hudDeltaX = 0
+  private hudDeltaY = 0
+  /** short ±N colour flash on the count, owned by drawHud so nothing fights */
+  private hudFlash = ''
+  private hudFlashUntil = 0
+  private hudDial = { x: 0, y: 0, r: 0 }
+  private hudRibbon = { x: 0, y: 0, w: 0 }
+  /** eased readouts: the arc and the meters never snap, they settle */
+  private hudArcShown = 1
+  private hudDayShown = 1
+  private hudProgShown = 0
+  private hudUrgency = 0
   private duskOverlay!: Phaser.GameObjects.Rectangle
   /** the advancing dark, and the daylight that holds it off */
   private night!: Nightfall
@@ -201,6 +232,10 @@ export class DayScene extends Phaser.Scene {
   private prevSpread = false
   private hitStop = 0
   private camKick = 0
+  /** I1 — the sky dims under a committed dive: 0 = clear, 1 = full shadow. */
+  private predatorDim = 0
+  private predatorDimTarget = 0
+  private predatorVeil!: Phaser.GameObjects.Rectangle
   private lastCreak = new Map<Obstacle, number>()
   private openingZones: {
     f: PieceFeature
@@ -249,6 +284,8 @@ export class DayScene extends Phaser.Scene {
     this.prevSpread = false
     this.hitStop = 0
     this.camKick = 0
+    this.predatorDim = 0
+    this.predatorDimTarget = 0
     this.lastCreak.clear()
     this.openingZones = []
     this.mouseTravel = 0
@@ -520,41 +557,42 @@ export class DayScene extends Phaser.Scene {
 
     this.colliderGfx = this.add.graphics().setDepth(19).setVisible(false)
 
+    // I1 — the sky goes out under a committed dive. It sits ABOVE the world
+    // and the flock but BELOW the falcon and its streaks (8.9 / 9), so the
+    // predator is the only thing still lit while everything else drops away.
+    this.predatorVeil = this.add
+      .rectangle(0, 0, VIEW_W, VIEW_H, 0x0a0715, 1)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(8.5)
+      .setAlpha(0)
+      .setVisible(false)
+    this.predatorDim = 0
+    this.predatorDimTarget = 0
+
     // authored predator zones: one mid-day, one in the final run
     this.falcon = new FalconSystem(this, this.audio, [8150, 22300])
+    // the dive commits: the light goes before the bird arrives
+    this.falcon.onDiveBegin = () => {
+      this.predatorDimTarget = 1
+    }
+    this.falcon.onMobBegin = () => this.mobColumn()
     this.falcon.onStrikeResolved = (taken, gathered, mobbed) => {
       if (mobbed) {
         // THE FLOCK FIGHTS BACK — triumph, not relief
-        this.mobLift = 1.5
+        this.mobLift = 2.2
         this.flock.gatherTime += 1.5
         this.hitStop = 0.07
         this.camKick = 2.6
-        this.audio.falconScreech()
         this.perfectFlowFeedback()
         this.awardScore('mob')
         return
       }
+      // the sky comes back after the beat, not on the frame of impact
+      this.predatorDimTarget = 0
       if (taken > 0) {
         this.showPrompt('call', '', () => this.scatter.recoveredThisFrame > 0)
-        // sharp feather burst where the talons crossed the flock
-        const burst = this.add.particles(this.flock.centerX, this.flock.centerY - 60, 'feather', {
-          speed: { min: 120, max: 380 },
-          angle: { min: -160, max: -20 },
-          lifespan: { min: 700, max: 1500 },
-          quantity: 30,
-          scale: { min: 0.35, max: 0.75 },
-          alpha: { start: 0.95, end: 0 },
-          rotate: { min: 0, max: 360 },
-          gravityY: 30,
-          tint: [0x2a2440, 0x453a5e, 0x6b5f85],
-          emitting: false,
-        })
-        burst.setDepth(9)
-        burst.explode(30, 0, 0)
-        this.time.delayedCall(1600, () => burst.destroy())
-        this.hitStop = 0.06
-        this.camKick = 2.6
-        this.lossCause('the falcon struck — gather or find cover', this.flock.centerX, this.flock.centerY, this.simClock)
+        this.strikeImpact(taken)
       } else if (gathered) {
         // defensive success: a satisfying near-miss flourish
         this.perfectFlowFeedback()
@@ -663,20 +701,18 @@ export class DayScene extends Phaser.Scene {
       .setDepth(50)
       .setAlpha(0)
 
-    // ---- minimal HUD: bird icon + count only
-    this.add
-      .image(30, 32, 'bird-mid')
-      .setScale(0.34)
-      .setTintFill(0xf2e8f5)
-      .setAlpha(0.9)
-      .setScrollFactor(0)
-      .setDepth(20)
     const safe = safeArea(this)
+    // ---- designed HUD: flock dial, journey ribbon, daylight (J1/J2/J5/J6)
+    this.createHud()
     this.countText = this.add
-      .text(safe.x + 52, safe.y + 18, '120', display(28, INK.bright, 1))
-      .setAlpha(0.92)
+      .text(safe.x + 52, safe.y + 18, String(START_BIRDS), display(30, INK.bright, 1))
+      .setAlpha(0.95)
       .setScrollFactor(0)
       .setDepth(20)
+    // the default legible() shadow is a blurred FILL, which reads as a dark
+    // plate behind the numeral at the 1.65x touch ramp. Shadowing the stroke
+    // only keeps the contrast and gives the engraved rim the style asks for.
+    this.countText.setShadow(0, 2, '#1a1226', 6, true, false)
     this.debugText = this.add
       .text(safe.x + 14, safe.y + 60, '', display(14, '#ffffff'))
       .setAlpha(0.7)
@@ -962,7 +998,7 @@ export class DayScene extends Phaser.Scene {
 
   /** Flare: tap SHIFT — the flock blooms wide and air-brakes. */
   private doFlare(): void {
-    this.flock.formShape('fan', 0.62)
+    this.flock.formShape('fan')
     this.flock.flare()
     this.audio.formSnap('release')
     const m = Math.hypot(this.flock.meanVX, this.flock.meanVY) || 1
@@ -1001,7 +1037,7 @@ export class DayScene extends Phaser.Scene {
   /** Echo Call: tap C — the flock cries out; the scattered and the stray
    * turn toward home. Hoarse (weak) while on its diegetic cooldown. */
   private echoCall(): void {
-    this.flock.formShape('ring', 0.85)
+    this.flock.formShape('ring')
     if (this.finishing || this.failing) return
     const strained = Math.max(this.flock.gatherStrain, this.flock.spreadStrain) > 0.6
     if (this.callCooldown > 0) {
@@ -1189,6 +1225,16 @@ export class DayScene extends Phaser.Scene {
     // decaying micro-kick on the 3 sanctioned impact events (never sustained)
     this.camKick *= Math.exp(-dt * 13)
     cam.scrollX = this.scrollX + this.camKick * Math.sin(this.simClock * 70)
+
+    // I1 — THE SKY DIMS FOR THE DIVE. It slams shut (the falcon takes the
+    // light with it) and opens slowly afterwards, so the beat has a shape.
+    // Capped at 0.5: tense, never unreadable, per the darkness floor guard.
+    {
+      const rate = this.predatorDimTarget > this.predatorDim ? 15 : 2.6
+      this.predatorDim += (this.predatorDimTarget - this.predatorDim) * (1 - Math.exp(-rate * rawDt))
+      const a = this.predatorDim * 0.5
+      this.predatorVeil.setVisible(a > 0.004).setAlpha(a)
+    }
 
     // parallax clusters loop across the view at their own depths
     for (const p of this.parallax) {
@@ -1466,14 +1512,15 @@ export class DayScene extends Phaser.Scene {
     this.scoreShown += (this.score.mastery - this.scoreShown) * Math.min(1, dt * 6)
     this.scoreText.setText(`×${this.scoreShown.toFixed(1)}`)
     this.updateHudCount()
+    this.drawHud(dt)
     const displayed = this.flock.count + this.scatter.recoverableCount
     if (displayed <= WARN_BIRDS && !this.finishing) {
-      this.countText.setColor('#e0a898')
+      // colour is owned by drawHud now, so the urgent ramp and the ±N flash
+      // stop overwriting each other frame to frame
       this.audio.setThin(true)
       this.showPrompt('lowflock', 'the flock is too small to hold together', () => this.flock.count + this.scatter.recoverableCount > WARN_BIRDS + 6)
     } else if (displayed > WARN_BIRDS) {
       this.audio.setThin(false)
-      if (this.countText.style.color === '#e0a898') this.countText.setColor('#f2e8f5')
     }
     if (this.debugVisible) {
       this.debugText.setText(
@@ -1510,13 +1557,20 @@ export class DayScene extends Phaser.Scene {
       .setText(delta > 0 ? `+${delta}` : `${delta}`)
       .setColor(delta > 0 ? '#ffd9a0' : '#e8a090')
       .setAlpha(1)
-      .setY(44)
-    this.tweens.add({ targets: this.deltaText, alpha: 0, y: delta > 0 ? 30 : 58, duration: 1100, ease: 'Quad.easeOut' })
+      .setPosition(this.hudDeltaX, this.hudDeltaY)
+    this.tweens.add({
+      targets: this.deltaText,
+      alpha: 0,
+      y: this.hudDeltaY + (delta > 0 ? -14 : 14),
+      duration: 1100,
+      ease: 'Quad.easeOut',
+    })
     if (delta < 0) {
-      // muted warm-red pulse + tiny feather scatter at the counter
-      this.countText.setColor('#e8a090')
-      this.time.delayedCall(420, () => this.countText.setColor('#f2e8f5'))
-      const burst = this.add.particles(66, 32, 'leaf', {
+      // muted warm-red pulse + tiny feather scatter, thrown off the DIAL so
+      // the loss reads at the same place the arc drains
+      this.hudFlash = '#e8a090'
+      this.hudFlashUntil = this.time.now + 420
+      const burst = this.add.particles(this.hudDial.x, this.hudDial.y, 'leaf', {
         speed: { min: 30, max: 90 },
         angle: { min: 40, max: 140 },
         lifespan: 600,
@@ -1530,8 +1584,8 @@ export class DayScene extends Phaser.Scene {
       burst.explode(Math.min(6, -delta), 0, 0)
       this.time.delayedCall(700, () => burst.destroy())
     } else {
-      this.countText.setColor('#ffd9a0')
-      this.time.delayedCall(420, () => this.countText.setColor('#f2e8f5'))
+      this.hudFlash = '#ffd9a0'
+      this.hudFlashUntil = this.time.now + 420
       this.audio.collectBloom(delta)
     }
   }
@@ -1601,6 +1655,12 @@ export class DayScene extends Phaser.Scene {
     // the charge rides its piece exactly (curtains swing) and brightens as you
     // bear down on it, so a piece about to burst visibly strains first
     for (const g of this.brittleGlows) {
+      // a shattered piece has no charge to show; it comes back with the art
+      if (!g.sprite.visible) {
+        if (g.glow.visible) g.glow.setVisible(false)
+        continue
+      }
+      if (!g.glow.visible) g.glow.setVisible(true)
       const charge = this.featureTremble(g.f)
       g.glow.setPosition(g.sprite.x, g.sprite.y)
       g.glow.setRotation(g.sprite.rotation)
@@ -1888,25 +1948,299 @@ export class DayScene extends Phaser.Scene {
    */
   private layoutHud(safe: { x: number; y: number; w: number; h: number }): void {
     const edge = isTouch ? 40 : 26
-    const left = safe.x + edge + 12
+    const left = safe.x + edge
     const right = safe.x + safe.w - edge
     const top = safe.y + (isTouch ? 14 : 18)
 
-    this.countText.setPosition(left, top)
-    let y = top + this.countText.height + 6
-    this.scatteredText.setPosition(left, y + this.scatteredText.height / 2)
+    // ---- J1: the flock dial. Glyph in the middle of a draining arc, the
+    // count reading off its right, so the number and the loss share one object.
+    const r = isTouch ? 30 : 27
+    const cx = left + r + 2
+    const cy = top + r + 4
+    this.hudDial = { x: cx, y: cy, r }
+    this.hudGlyph.setPosition(cx, cy)
+    this.hudAlertBead.setPosition(cx, cy)
+    const tx = cx + r + 14
+    this.countText.setOrigin(0, 1).setPosition(tx, cy + 5)
+    this.hudFlockLabel.setOrigin(0, 0).setPosition(tx + 2, cy + 8)
+    this.hudDeltaX = tx + this.countText.width + 14
+    this.deltaText.setOrigin(0, 0.5).setPosition(this.hudDeltaX, cy - 8)
+    this.hudDeltaY = cy - 8
+
+    let y = cy + r + 14 + this.hudFlockLabel.height
+    this.scatteredText.setOrigin(0, 0.5).setPosition(left, y + this.scatteredText.height / 2)
     y += this.scatteredText.height + 4
-    this.recoveredText.setPosition(left, y + this.recoveredText.height / 2)
-    this.deltaText.setPosition(left + this.countText.width + 16, top + this.countText.height / 2)
+    this.recoveredText.setOrigin(0, 0.5).setPosition(left, y + this.recoveredText.height / 2)
     this.debugText.setPosition(safe.x + 14, y + 26)
 
-    this.scoreText.setPosition(right, top)
-    this.streakText.setPosition(right, top + this.scoreText.height + 6)
+    // ---- J2/J5: the journey ribbon, centred, with the daylight read along it
+    const rw = Math.min(isTouch ? 600 : 660, safe.w * 0.44)
+    const rx = Math.round(safe.x + safe.w / 2 - rw / 2)
+    const ry = Math.round(top + (isTouch ? 30 : 26))
+    this.hudRibbon = { x: rx, y: ry, w: rw }
+    this.hudRoostBead.setPosition(rx + rw, ry)
+    // each label points AT its own rail: DAYLIGHT sits off the left end of the
+    // meter, the destination off the right end of the journey
+    this.hudDayLabel.setOrigin(1, 0.5).setPosition(rx - 14, ry + 12)
+    this.hudPlaceLabel.setOrigin(0, 0.5).setPosition(rx + rw + 16, ry)
+
+    // the mastery readout clears the touch pause pad (r=42 at safe.y+74)
+    const sTop = isTouch ? safe.y + 126 : top
+    this.scoreText.setPosition(right, sTop)
+    this.streakText.setPosition(right, sTop + this.scoreText.height + 6)
+  }
+
+  /**
+   * The HUD's own furniture. Everything engraved is one Graphics object
+   * redrawn per frame — a few dozen line segments, cheaper than keeping and
+   * re-tweening a pile of sprites, and it lets the arc and the meters carry
+   * real curves instead of chunky bars.
+   */
+  private createHud(): void {
+    this.hudGfx = this.add.graphics().setScrollFactor(0).setDepth(20)
+    // coral halo behind the dial: the readout's urgent state (J6) as light,
+    // not as a box or a colour swap
+    this.hudAlertBead = this.add
+      .image(0, 0, 'softdot')
+      .setDisplaySize(150, 150)
+      .setTint(0xff8a6e)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0)
+      .setScrollFactor(0)
+      .setDepth(19.9)
+    this.hudGlyph = this.add
+      .image(0, 0, 'bird-mid')
+      .setScale(0.3)
+      .setTintFill(0xf2e8f5)
+      .setAlpha(0.92)
+      .setScrollFactor(0)
+      .setDepth(20.1)
+    this.hudFlockLabel = this.add
+      .text(0, 0, 'FLOCK', display(12, '#c8bad4', 5, 300))
+      .setAlpha(0.72)
+      .setScrollFactor(0)
+      .setDepth(20.1)
+    this.hudFlockLabel.setStroke('#241a2e', 2)
+    this.hudFlockLabel.setShadow(0, 1, '#241a2e', 3, true, false)
+
+    this.hudRoostBead = this.add
+      .image(0, 0, 'softdot')
+      .setDisplaySize(46, 46)
+      .setTint(0xffcf94)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0.2)
+      .setScrollFactor(0)
+      .setDepth(20.05)
+    this.hudDayBead = this.add
+      .image(0, 0, 'softdot')
+      .setDisplaySize(30, 30)
+      .setTint(0xffdca8)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0.5)
+      .setScrollFactor(0)
+      .setDepth(20.05)
+    this.hudMarker = this.add
+      .image(0, 0, 'bird-mid')
+      .setScale(0.19)
+      .setTintFill(0xfff3e2)
+      .setScrollFactor(0)
+      .setDepth(20.2)
+    this.hudDayLabel = this.add
+      .text(0, 0, 'DAYLIGHT', display(12, '#c8bad4', 5, 300))
+      .setAlpha(0.6)
+      .setScrollFactor(0)
+      .setDepth(20.1)
+    this.hudDayLabel.setStroke('#241a2e', 2)
+    this.hudDayLabel.setShadow(0, 1, '#241a2e', 3, true, false)
+    this.hudPlaceLabel = this.add
+      .text(0, 0, 'SUN GATE', display(12, '#f0d7b4', 5, 300))
+      .setAlpha(0.75)
+      .setScrollFactor(0)
+      .setDepth(20.1)
+    this.hudPlaceLabel.setStroke('#241a2e', 2)
+    this.hudPlaceLabel.setShadow(0, 1, '#241a2e', 3, true, false)
+  }
+
+  /** Everything that moves in the HUD, eased so nothing ever snaps. */
+  private drawHud(dt: number): void {
+    const n = this.flock.count + this.scatter.recoverableCount
+    const k = 1 - Math.exp(-dt * 6)
+    this.hudArcShown += (Phaser.Math.Clamp(n / START_BIRDS, 0, 1) - this.hudArcShown) * k
+    this.hudDayShown += (this.night.daylight - this.hudDayShown) * k
+    this.hudProgShown += (Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1) - this.hudProgShown) * k
+
+    // J6 — the urgent band. The owner asked for "~25 birds", but the flock
+    // scatters back to its landmark at FAIL_BIRDS (35), so a read that only
+    // began at 25 could never be seen: it ramps from the game's own warning
+    // number and is fully urgent just before the scatter.
+    const urgentFrom = Math.max(CRITICAL_BIRDS, WARN_BIRDS)
+    const urgentTo = Math.max(CRITICAL_BIRDS, FAIL_BIRDS + 2)
+    const uT = this.finishing ? 0 : Phaser.Math.Clamp((urgentFrom - n) / Math.max(1, urgentFrom - urgentTo), 0, 1)
+    this.hudUrgency += (uT - this.hudUrgency) * (1 - Math.exp(-dt * 3))
+    const u = this.hudUrgency
+    const t = this.time.now * 0.001
+    // a slow breath, not a strobe: urgency is dread, not an alarm
+    const pulse = 0.5 + 0.5 * Math.sin(t * 3.1)
+
+    const g = this.hudGfx
+    g.clear()
+    if (this.countText.alpha <= 0.01) {
+      this.hudGlyph.setAlpha(0)
+      this.hudMarker.setAlpha(0)
+      this.hudRoostBead.setAlpha(0)
+      this.hudDayBead.setAlpha(0)
+      this.hudAlertBead.setAlpha(0)
+      this.hudFlockLabel.setAlpha(0)
+      this.hudDayLabel.setAlpha(0)
+      this.hudPlaceLabel.setAlpha(0)
+      return
+    }
+    // one master fade for the whole readout (see the ceremony's tween)
+    const fade = this.countText.alpha
+    g.setAlpha(fade)
+
+    // ---------------------------------------------------- J1: the flock dial
+    const { x: cx, y: cy, r } = this.hudDial
+    const A0 = Phaser.Math.DegToRad(132)
+    const SWEEP = Phaser.Math.DegToRad(276)
+    // engraved: a dark contact line under a pale one, so the arc reads as cut
+    // into the sky rather than painted on top of it
+    g.lineStyle(4, 0x241a2e, 0.5)
+    g.beginPath()
+    g.arc(cx, cy + 1, r, A0, A0 + SWEEP, false)
+    g.strokePath()
+    g.lineStyle(2, 0xcdbfda, 0.24)
+    g.beginPath()
+    g.arc(cx, cy, r, A0, A0 + SWEEP, false)
+    g.strokePath()
+    // the fill DRAINS: the arc is the loss, the number is only the caption
+    const arcCol = u > 0.02 ? this.mixHex(0xf6d9b8, 0xff9d84, u) : 0xf6d9b8
+    g.lineStyle(3, arcCol, 0.55 + 0.35 * (1 - u) + u * pulse * 0.4)
+    g.beginPath()
+    g.arc(cx, cy, r, A0, A0 + SWEEP * Math.max(0.001, this.hudArcShown), false)
+    g.strokePath()
+    // a tick at the head of the fill, so the drain has an edge you can watch
+    const ha = A0 + SWEEP * this.hudArcShown
+    g.lineStyle(2, 0xfff0dc, 0.85)
+    g.lineBetween(
+      cx + Math.cos(ha) * (r - 5),
+      cy + Math.sin(ha) * (r - 5),
+      cx + Math.cos(ha) * (r + 5),
+      cy + Math.sin(ha) * (r + 5),
+    )
+    this.hudGlyph.setAlpha(0.92 * fade).setTintFill(u > 0.02 ? this.mixHex(0xf2e8f5, 0xffb9a4, u) : 0xf2e8f5)
+    this.hudAlertBead.setAlpha(u * (0.1 + pulse * 0.16) * fade)
+    this.countText.setColor(
+      this.time.now < this.hudFlashUntil ? this.hudFlash : u > 0.02 ? this.cssHex(this.mixHex(0xf2e8f5, 0xffb9a4, u)) : '#f2e8f5',
+    )
+    if (u > 0.35) {
+      this.hudFlockLabel.setText('FLOCK CRITICAL').setColor('#ffb9a4').setAlpha((0.6 + pulse * 0.4) * fade)
+    } else {
+      this.hudFlockLabel.setText('FLOCK').setColor('#c8bad4').setAlpha(0.72 * fade)
+    }
+
+    // ------------------------------------- J2/J5: the journey, and the light
+    const { x: rx, y: ry, w: rw } = this.hudRibbon
+    const px = rx + rw * this.hudProgShown
+    // the track: roost to roost, the whole day at a glance. Kept pale and
+    // slight — the two rails must not read as one heavy double rule.
+    g.lineStyle(3, 0x241a2e, 0.3)
+    g.lineBetween(rx, ry + 1, rx + rw, ry + 1)
+    g.lineStyle(2, 0xd6cae2, 0.3)
+    g.lineBetween(rx, ry, rx + rw, ry)
+
+    // the wall of night, placed on the map: the valley it has already taken
+    const fogFrac = Phaser.Math.Clamp(this.night.edgeX / ROOST_X, 0, 1)
+    const fogX = rx + rw * fogFrac
+    if (this.night.encroach > 0.02 && fogX > rx + 1) {
+      g.lineStyle(5, 0x0d0a1c, 0.5 + this.night.encroach * 0.4)
+      g.lineBetween(rx, ry, fogX, ry)
+      g.lineStyle(2, 0xffd0a8, 0.25 + this.night.encroach * 0.35)
+      g.lineBetween(fogX - 3, ry, fogX, ry)
+    }
+    // the room you still have: from the dark's edge to where you are
+    g.lineStyle(3, 0xf6d9b8, 0.62)
+    g.lineBetween(Math.max(rx, fogX), ry, px, ry)
+
+    // landmark ticks — place, and how far is left
+    for (const lm of LANDMARKS) {
+      if (!lm.name) continue
+      const lx = rx + rw * Phaser.Math.Clamp(lm.x / ROOST_X, 0, 1)
+      const passed = this.flock.centerX >= lm.x
+      g.lineStyle(3, 0x241a2e, 0.32)
+      g.lineBetween(lx, ry - 7, lx, ry + 6)
+      g.lineStyle(2, passed ? 0xffd9a0 : 0xe2d8ec, passed ? 0.92 : 0.42)
+      g.lineBetween(lx, ry - (passed ? 9 : 6), lx, ry + (passed ? 6 : 4))
+    }
+    // the two roosts: where you left, where you are going. A hollow mark
+    // behind, a filled one ahead — the ribbon reads roost to roost.
+    g.lineStyle(2, 0x241a2e, 0.4)
+    g.lineBetween(rx, ry - 11, rx, ry + 8)
+    g.lineStyle(2, 0xe8dcf0, 0.55)
+    g.lineBetween(rx, ry - 10, rx, ry + 7)
+    g.lineStyle(1, 0xe8dcf0, 0.5)
+    g.strokeTriangle(rx - 5, ry - 12, rx + 5, ry - 12, rx, ry - 20)
+    const roostLit = 0.45 + this.hudProgShown * 0.5
+    g.lineStyle(2, 0xffd9a0, roostLit)
+    g.lineBetween(rx + rw, ry - 11, rx + rw, ry + 8)
+    g.fillStyle(0xffd9a0, roostLit)
+    g.fillTriangle(rx + rw - 6, ry - 12, rx + rw + 6, ry - 12, rx + rw, ry - 22)
+    this.hudRoostBead.setAlpha((0.16 + this.hudProgShown * 0.6) * fade).setDisplaySize(38 + this.hudProgShown * 26, 38 + this.hudProgShown * 26)
+
+    // you, on the ribbon — a soft mark under the glyph so it is findable
+    // against a busy sky without turning into a cursor
+    g.fillStyle(0xfff3e2, 0.5)
+    g.fillCircle(px, ry, 2.6)
+    this.hudMarker.setAlpha(0.95 * fade).setPosition(px, ry - 13 + Math.sin(t * 2.2) * 1.2)
+
+    // ---- the daylight meter, read along the same ribbon (J5)
+    const dy = ry + 12
+    g.lineStyle(3, 0x241a2e, 0.3)
+    g.lineBetween(rx, dy + 1, rx + rw, dy + 1)
+    g.lineStyle(2, 0xa495b6, 0.26)
+    g.lineBetween(rx, dy, rx + rw, dy)
+    const d = Math.max(0.004, this.hudDayShown)
+    const dayCol = d < 0.24 ? this.mixHex(0xffb9a4, 0xff8f70, 1 - d / 0.24) : d < 0.55 ? this.mixHex(0xffc98a, 0xffdca8, (d - 0.24) / 0.31) : 0xffdca8
+    g.lineStyle(3, dayCol, d < 0.24 ? 0.6 + pulse * 0.35 : 0.85)
+    g.lineBetween(rx, dy, rx + rw * d, dy)
+    this.hudDayBead
+      .setPosition(rx + rw * d, dy)
+      .setTint(dayCol)
+      .setAlpha((0.35 + (d < 0.24 ? pulse * 0.4 : 0.2)) * fade)
+    this.hudDayLabel.setAlpha(0.6 * fade).setColor(d < 0.24 ? '#ffb9a4' : '#c8bad4')
+
+    // the place you are heading for — the platformer's "how far is left"
+    const next = LANDMARKS.find((l) => !!l.name && l.x > this.flock.centerX)
+    const place = next ? next.name : 'THE ROOST'
+    if (this.hudPlaceLabel.text !== place.toUpperCase()) this.hudPlaceLabel.setText(place.toUpperCase())
+    this.hudPlaceLabel.setAlpha(0.75 * fade)
+  }
+
+  private cssHex(c: number): string {
+    return `#${(c & 0xffffff).toString(16).padStart(6, '0')}`
+  }
+
+  /** Blend two packed RGB colours — used for the HUD's warm-to-alert ramps. */
+  private mixHex(a: number, b: number, t: number): number {
+    const k = Phaser.Math.Clamp(t, 0, 1)
+    const ar = (a >> 16) & 255
+    const ag = (a >> 8) & 255
+    const ab = a & 255
+    const br = (b >> 16) & 255
+    const bg = (b >> 8) & 255
+    const bb = b & 255
+    return (
+      ((ar + (br - ar) * k) << 16) |
+      ((ag + (bg - ag) * k) << 8) |
+      ((ab + (bb - ab) * k) | 0)
+    )
   }
 
   private floatAt(x: number, y: number): { x: number; y: number } {
     const safe = safeArea(this)
-    const padGuard = isTouch ? 230 : 90
+    // the touch cluster now reaches up to the BRACE pad at safe.h-294, so
+    // floating copy has to clear more of the lower-right than it used to
+    const padGuard = isTouch ? 320 : 90
     const top = safe.y + 70
     const bottom = safe.y + safe.h - padGuard
     const cx = Phaser.Math.Clamp(x, safe.x + 210, safe.x + safe.w - 210)
@@ -2074,6 +2408,168 @@ export class DayScene extends Phaser.Scene {
     })
   }
 
+  // --------------------------------------------------- I1: the falcon strike
+
+  /**
+   * The moment of contact. Everything here fires on ONE frame: the flash, the
+   * feathers thrown along the dive line, the hit-stop and a 2-3px kick. The
+   * screech and the birds leaving the flock happen on the same frame, inside
+   * FalconSystem.resolveStrike — that co-timing is the whole beat.
+   */
+  private strikeImpact(taken: number): void {
+    const { x, y } = this.falcon.impactPoint
+
+    // 1. the hit itself — a hard, brief pale flash at the talons. It lives for
+    //    ~140ms: any longer and it reads as a glow rather than a blow.
+    const flash = this.add
+      .image(x, y, 'softdot')
+      .setTint(0xfff0dc)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(9.2)
+      .setAlpha(0.9)
+      .setDisplaySize(120, 120)
+    this.tweens.add({
+      targets: flash,
+      displayWidth: 420,
+      displayHeight: 420,
+      alpha: 0,
+      duration: 150,
+      ease: 'Quad.easeOut',
+      onComplete: () => flash.destroy(),
+    })
+
+    // 2. FEATHERS, thrown along the dive. The old burst sprayed upward at a
+    //    fixed angle regardless of where the falcon came from; these leave
+    //    along the strike line, which is what makes the impact look caused.
+    const burst = this.add.particles(x, y, 'feather', {
+      speed: { min: 180, max: 560 },
+      angle: { min: 8, max: 96 }, // down-and-forward: the falcon's heading
+      lifespan: { min: 800, max: 1700 },
+      scale: { min: 0.4, max: 0.95 },
+      alpha: { start: 1, end: 0 },
+      rotate: { min: 0, max: 360 },
+      gravityY: 90,
+      // pale enough to separate from the navy birds they were torn from —
+      // dark-on-dark feathers were invisible in the wreckage
+      tint: [0x6b5f85, 0x9c8db4, 0xc4b6d6, 0xe6dcee],
+      emitting: false,
+    })
+    burst.setDepth(9.1)
+    burst.explode(20 + taken * 6, 0, 0)
+    // and a counter-spray kicked back UP out of the wound — a two-directional
+    // burst reads as an explosion, a one-directional one reads as a jet
+    const back = this.add.particles(x, y, 'feather', {
+      speed: { min: 90, max: 300 },
+      angle: { min: -170, max: -60 },
+      lifespan: { min: 900, max: 2000 },
+      scale: { min: 0.3, max: 0.7 },
+      alpha: { start: 0.9, end: 0 },
+      rotate: { min: 0, max: 360 },
+      gravityY: 40,
+      tint: [0x453a5e, 0x8d7fa6, 0xc4b6d6],
+      emitting: false,
+    })
+    back.setDepth(9.1)
+    back.explode(14 + taken * 3, 0, 0)
+    this.time.delayedCall(2100, () => {
+      burst.destroy()
+      back.destroy()
+    })
+
+    // 3. ~70ms of held time, and a kick that peaks at ~2.6px. No shake.
+    this.hitStop = 0.07
+    this.camKick = 2.6
+    this.lossCause('the falcon struck — gather or find cover', x, y, this.simClock)
+  }
+
+  // ------------------------------------------------- I3: mobbing the falcon
+
+  /**
+   * The one triumph the game offers, and it used to resolve in silence. The
+   * flock RISES AS A COLUMN — the lift itself is driven by mobLift steering
+   * intent; this is the image around it: a shaft of warm light standing where
+   * the predator was, streaks tearing upward through it, and the sky opening
+   * (a brief zoom out) instead of closing.
+   */
+  private mobColumn(): void {
+    const cx = this.flock.centerX
+    const cy = this.flock.centerY
+    // no dim on this beat — the light comes UP
+    this.predatorDimTarget = 0
+
+    // the column: a tall warm shaft that stands up out of the flock
+    const shaft = this.add
+      .image(cx, cy, 'vfade')
+      .setTint(0xffd7a0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(7.5)
+      .setAlpha(0)
+      .setDisplaySize(240, 60)
+      .setOrigin(0.5, 1)
+    this.tweens.add({
+      targets: shaft,
+      alpha: 0.5,
+      displayWidth: 380,
+      displayHeight: 760,
+      duration: 420,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: shaft,
+          alpha: 0,
+          displayHeight: 900,
+          duration: 900,
+          ease: 'Sine.easeIn',
+          onComplete: () => shaft.destroy(),
+        })
+      },
+    })
+
+    // streaks tearing upward through the shaft — the flock's own rush
+    for (let i = 0; i < 18; i++) {
+      const sx = cx + (Math.random() - 0.5) * 300
+      const sy = cy + 80 + Math.random() * 120
+      const st = this.add
+        .image(sx, sy, 'streak')
+        .setTint(i % 3 === 0 ? 0xffe8c4 : 0x8f7fb0)
+        .setBlendMode(i % 3 === 0 ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
+        .setRotation(-Math.PI / 2 + (Math.random() - 0.5) * 0.35)
+        .setDisplaySize(90 + Math.random() * 190, 3 + Math.random() * 7)
+        .setDepth(7.6)
+        .setAlpha(0)
+      this.tweens.add({
+        targets: st,
+        y: sy - 420 - Math.random() * 320,
+        alpha: { from: 0.75, to: 0 },
+        duration: 520 + Math.random() * 380,
+        delay: Math.random() * 260,
+        ease: 'Quad.easeOut',
+        onComplete: () => st.destroy(),
+      })
+    }
+
+    // feathers thrown UPWARD — the mob's own noise, not a loss
+    const up = this.add.particles(cx, cy, 'feather', {
+      speed: { min: 220, max: 620 },
+      angle: { min: -140, max: -40 },
+      lifespan: { min: 900, max: 1900 },
+      scale: { min: 0.3, max: 0.8 },
+      alpha: { start: 0.85, end: 0 },
+      rotate: { min: 0, max: 360 },
+      gravityY: 120,
+      tint: [0x453a5e, 0x6b5f85, 0xa08db8],
+      emitting: false,
+    })
+    up.setDepth(7.4)
+    up.explode(34, 0, 0)
+    this.time.delayedCall(2100, () => up.destroy())
+
+    // the sky OPENS: pull back, then settle. The strike zooms in; this is its
+    // opposite, so the two beats never read the same.
+    this.cameras.main.zoomTo(0.965, 260, 'Sine.easeOut', true)
+    this.time.delayedCall(700, () => this.cameras.main.zoomTo(1, 900, 'Sine.easeInOut', true))
+  }
+
   /** Clean pass: enough birds thread a real opening with zero losses. */
   private updateOpeningZones(): void {
     const cx = this.flock.centerX
@@ -2215,38 +2711,184 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
+  // ---------------------------------------------------- I2: the brittle break
+  //
+  // This used to be an alpha fade over 450ms — an audit called it invisible and
+  // it was right: nothing that dissolves reads as broken. It now EXPLODES.
+  // Three things carry it: the curtain's own art comes apart into slabs thrown
+  // along the flock's heading, angular shards spray with them, and a shaft of
+  // light stands up through the hole that was just made.
+
   /** Breaking one brittle collider clears the whole curtain it belongs to. */
   private breakFeature(o: Obstacle): void {
+    const mvx = this.flock.meanVX
+    const mvy = this.flock.meanVY
+    const speed = Math.max(1, Math.hypot(mvx, mvy))
+    // the flock's heading is the direction everything leaves in
+    const hx = mvx / speed
+    const hy = mvy / speed
+
     const feature = this.obstacleFeature.get(o)
+    let sx = o.x
+    let sy = o.y
     if (feature) {
       for (const [ob, f] of this.obstacleFeature) if (f === feature) ob.broken = true
       const sprite = this.featureSprites.get(feature)
-      if (sprite) this.tweens.add({ targets: sprite, alpha: 0, duration: 450 })
+      if (sprite) {
+        sx = sprite.x
+        sy = sprite.y
+        this.shatterSprite(sprite, hx, hy, speed)
+        sprite.setVisible(false)
+      }
+      // the cold charge dies with the piece — a broken curtain that still
+      // glows "breakable" is a lie about the world. The entry is kept so a
+      // checkpoint rewind can revive it with the art.
+      for (const g of this.brittleGlows) {
+        if (g.f !== feature) continue
+        this.tweens.killTweensOf(g.glow)
+        g.glow.setVisible(false)
+      }
     } else {
       o.broken = true
     }
-    const mvx = this.flock.meanVX
-    const mvy = this.flock.meanVY
-    const emitter = this.add.particles(o.x, o.y, 'leaf', {
-      speedX: { min: mvx * 0.5 - 90, max: mvx * 0.9 + 90 },
-      speedY: { min: mvy * 0.6 - 110, max: mvy * 0.6 + 110 },
-      lifespan: { min: 500, max: 1400 },
-      quantity: 44,
-      scale: { start: 0.9, end: 0.2 },
-      alpha: { start: 0.9, end: 0 },
+
+    // 1. SHARDS, thrown along the heading. Angular chips with corners, not
+    //    drifting leaves — cone-biased forward so the direction is legible.
+    const coneDeg = (Math.atan2(hy, hx) * 180) / Math.PI
+    const shards = this.add.particles(sx, sy, 'shard', {
+      speed: { min: 260, max: 900 },
+      angle: { min: coneDeg - 46, max: coneDeg + 46 },
+      lifespan: { min: 700, max: 1500 },
+      scale: { min: 0.4, max: 1.25 },
+      alpha: { start: 1, end: 0 },
       rotate: { min: 0, max: 360 },
-      tint: [0x2a2440, 0x3a2f55],
+      gravityY: 340,
+      tint: [0x191330, 0x2a2440, 0x3d3358, 0xb9cee0],
       emitting: false,
     })
-    emitter.setDepth(3)
-    emitter.explode(46, 0, 0)
-    this.time.delayedCall(1600, () => emitter.destroy())
-    this.hitStop = 0.07
+    shards.setDepth(6.4)
+    shards.explode(38, 0, 0)
+    // a fine dust that stays put where the curtain stood, so the break has a
+    // location after the shards have gone
+    const dust = this.add.particles(sx, sy, 'softdot', {
+      speed: { min: 20, max: 220 },
+      lifespan: { min: 500, max: 1200 },
+      scale: { start: 0.55, end: 0.05 },
+      alpha: { start: 0.5, end: 0 },
+      tint: [0x6f6288, 0x9a8bb0],
+      emitting: false,
+    })
+    dust.setDepth(6.3)
+    dust.explode(18, 0, 0)
+    this.time.delayedCall(1700, () => {
+      shards.destroy()
+      dust.destroy()
+    })
+
+    // 2. THE SHAFT OF LIGHT through the new hole. The curtain was what stood
+    //    between the flock and the light behind it; the hole is the payoff,
+    //    and it is what tells you at a glance that the way is open.
+    this.lightThroughHole(sx, sy)
+
+    // 3. contact: held time and a small kick, never a sustained shake
+    this.hitStop = 0.08
     this.camKick = 3
     this.awardScore('breakthrough', 1, { x: o.x, y: o.y })
     this.cameras.main.zoomTo(1.02, 100, 'Sine.easeOut', true)
     this.time.delayedCall(200, () => this.cameras.main.zoomTo(1, 280, 'Sine.easeInOut', true))
+    this.audio.brittleShatter()
     this.audio.collisionThump()
+  }
+
+  /**
+   * Tear the curtain's own art into slabs and throw them. Cropping the real
+   * sprite (rather than spawning generic debris) means the thing the player
+   * was looking at is the thing that comes apart.
+   */
+  private shatterSprite(sprite: Phaser.GameObjects.Image, hx: number, hy: number, speed: number): void {
+    const src = this.textures.get(sprite.texture.key).getSourceImage() as { width: number; height: number }
+    const COLS = 3
+    const ROWS = 3
+    for (let cxi = 0; cxi < COLS; cxi++) {
+      for (let cyi = 0; cyi < ROWS; cyi++) {
+        const piece = this.add
+          .image(sprite.x, sprite.y, sprite.texture.key)
+          .setOrigin(sprite.originX, sprite.originY)
+          .setDisplaySize(sprite.displayWidth, sprite.displayHeight)
+          .setFlipX(sprite.flipX)
+          .setRotation(sprite.rotation)
+          .setDepth(sprite.depth + 0.02)
+        piece.setCrop(
+          (cxi * src.width) / COLS,
+          (cyi * src.height) / ROWS,
+          src.width / COLS,
+          src.height / ROWS,
+        )
+        // outward from the middle of the piece, biased along the heading, so
+        // the curtain blows open the way the flock went through it
+        const ox = (cxi - (COLS - 1) / 2) / COLS
+        const oy = (cyi - (ROWS - 1) / 2) / ROWS
+        const kick = 0.55 + Math.random() * 0.7
+        const vx = hx * speed * 0.75 * kick + ox * 620 + (Math.random() - 0.5) * 120
+        const vy = hy * speed * 0.6 * kick + oy * 520 + (Math.random() - 0.5) * 120
+        this.tweens.add({
+          targets: piece,
+          x: { value: piece.x + vx * 0.85, ease: 'Quad.easeOut' },
+          y: { value: piece.y + vy * 0.85 + 260, ease: 'Quad.easeIn' },
+          rotation: piece.rotation + (Math.random() - 0.5) * 1.5,
+          alpha: { value: 0, ease: 'Quad.easeIn' },
+          duration: 620 + Math.random() * 340,
+          onComplete: () => piece.destroy(),
+        })
+      }
+    }
+  }
+
+  /** A shaft standing in the hole the flock just made. */
+  private lightThroughHole(x: number, y: number): void {
+    const shaft = this.add
+      .image(x, y, 'vfade')
+      .setTint(0xffe2b4)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(6.2)
+      .setAlpha(0)
+      .setRotation(-0.28)
+      .setDisplaySize(60, 40)
+    this.tweens.add({
+      targets: shaft,
+      alpha: 0.62,
+      displayWidth: 300,
+      displayHeight: 560,
+      duration: 220,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: shaft,
+          alpha: 0,
+          displayWidth: 380,
+          duration: 1100,
+          ease: 'Sine.easeIn',
+          onComplete: () => shaft.destroy(),
+        })
+      },
+    })
+    // a bright core right in the gap, so the hole itself is the brightest point
+    const core = this.add
+      .image(x, y, 'softdot')
+      .setTint(0xfff2da)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(6.25)
+      .setAlpha(0.85)
+      .setDisplaySize(90, 90)
+    this.tweens.add({
+      targets: core,
+      displayWidth: 300,
+      displayHeight: 300,
+      alpha: 0,
+      duration: 520,
+      ease: 'Quad.easeOut',
+      onComplete: () => core.destroy(),
+    })
   }
 
   private updateRoostSwirl(dt: number, time: number): void {
@@ -2478,6 +3120,7 @@ export class DayScene extends Phaser.Scene {
       if (s.def.x > cp.x) s.group.reset(s.def.count)
     }
     this.falcon.reset(cp.x)
+    this.predatorDimTarget = 0
     // un-break brittle features ahead of the checkpoint and restore their art
     for (const [f, sprite] of this.featureSprites) {
       if (f.x <= cp.x) continue
@@ -2488,7 +3131,9 @@ export class DayScene extends Phaser.Scene {
           restored = true
         }
       }
-      if (restored) sprite.setAlpha(f.alpha ?? 1)
+      // the shatter hides the art rather than fading it, so the rewind has to
+      // put it BACK on screen, not just back to full alpha
+      if (restored) sprite.setVisible(true).setAlpha(f.alpha ?? 1)
     }
   }
 
@@ -2884,6 +3529,9 @@ export class DayScene extends Phaser.Scene {
     // the HUD steps aside for the ceremony (and a zoomed camera would clip it)
     if (t > 0.4 && this.countText.alpha > 0) {
       this.tweens.add({
+        // countText's alpha is the HUD's master fade: drawHud multiplies every
+        // engraved piece by it, so the ribbon and the dial leave together
+        // instead of being re-lit by the next frame's redraw.
         targets: [this.countText, this.scoreText, this.streakText, this.scatteredText, this.recoveredText, this.deltaText],
         alpha: 0,
         duration: 700,

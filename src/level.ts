@@ -245,16 +245,16 @@ export interface PromptDef {
 
 /** Prompt copy per input device — a phone must never be told to press SPACE. */
 export const PROMPT_TEXT: Record<string, { key: string; touch: string }> = {
-  steer: { key: 'move the mouse — steer the flock', touch: 'drag the sky — steer the flock' },
+  steer: { key: 'move the mouse — steer the flock', touch: 'left thumb anywhere — the stick comes to you' },
   gather: { key: 'birds glowing are about to be lost — hold SPACE to gather', touch: 'birds glowing are about to be lost — hold GATHER' },
   spread: { key: 'strays out there — hold SHIFT to reach them', touch: 'strays out there — hold SPREAD to reach them' },
   surge: { key: 'the curtain holds — tap SPACE to punch through', touch: 'the curtain holds — tap GATHER to punch through' },
   flare: { key: 'too fast for that gap — tap SHIFT to brake', touch: 'too fast for that gap — tap SPREAD to brake' },
   call: { key: 'birds are adrift — press C to call them home', touch: 'birds are adrift — tap CALL to call them home' },
-  regroup: { key: 'release — regroup', touch: 'release both — regroup' },
+  regroup: { key: 'release — regroup', touch: 'let the pads go — regroup' },
   dive: { key: 'drop below it — hold the mouse button to dive', touch: 'drop below it — hold DIVE' },
-  brace: { key: 'no time to read it — hold SPACE + SHIFT to slow the world', touch: 'no time to read it — hold BOTH pads to slow the world' },
-  vortex: { key: 'they are scattered — circle the cursor to whirl them in', touch: 'they are scattered — circle your finger to whirl them in' },
+  brace: { key: 'no time to read it — hold SPACE + SHIFT to slow the world', touch: 'no time to read it — hold BRACE to slow the world' },
+  vortex: { key: 'they are scattered — circle the cursor to whirl them in', touch: 'they are scattered — circle the stick to whirl them in' },
 }
 
 export const PROMPTS: PromptDef[] = [

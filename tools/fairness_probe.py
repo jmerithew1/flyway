@@ -12,7 +12,7 @@ home, the level is not asking for skill, it is asking for luck.
 import sys
 from playwright.sync_api import sync_playwright
 
-DEV = 'http://localhost:58759'
+DEV = 'http://localhost:5199'
 
 PILOT = """(cfg) => {
   const d = window.__day;
