@@ -4,6 +4,7 @@ import { Obstacle, AVOID } from '../obstacles'
 import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
 import { Nightfall } from '../nightfall'
+import { Skyline } from '../skyline'
 import { GameAudio } from '../audio'
 import { scoreFeathers } from '../result'
 import { ScoreBook, MasteryEvent, NIGHTFALL_PAR } from '../score'
@@ -207,6 +208,7 @@ export class DayScene extends Phaser.Scene {
   /** the advancing dark, and the daylight that holds it off */
   /** camera bloom: strength rides the daylight so the dark glows hardest */
   private bloom!: Phaser.FX.Bloom
+  private skyline!: Skyline
   private night!: Nightfall
   /** global dusk driven by the daylight level - the darker the world,
    * the more the motes blaze, so light is most visible when most needed */
@@ -220,6 +222,8 @@ export class DayScene extends Phaser.Scene {
   private moteChain = 0
   private moteChainT = 0
   private moteChainBest = 0
+  private lastLightTier = 0
+  private tierRing?: Phaser.GameObjects.Image
   private brittleCharge = new Map<Obstacle, number>()
   /** the cold charge running through a breakable piece, and its host */
   private brittleGlows: {
@@ -252,6 +256,7 @@ export class DayScene extends Phaser.Scene {
     /** drawn size, so the collect burst can scale from it */
     base: number
   }[] = []
+  private chainPlate!: Phaser.GameObjects.Image
   private flowStreak = 0
   private mouseTravel = 0
   private lastPointer = { x: 0, y: 0 }
@@ -369,14 +374,21 @@ export class DayScene extends Phaser.Scene {
       score: this.score.snapshot(),
     }
 
-    // ---- backdrop: the supplied painted plate, covering the view
-    const plate = ART['bg_plate']
-    const cover = Math.max(VIEW_W / plate.w, VIEW_H / plate.h)
-    this.add
-      .image(VIEW_W / 2, VIEW_H / 2, 'bg_plate')
-      .setDisplaySize(plate.w * cover, plate.h * cover)
-      .setScrollFactor(0)
-      .setDepth(-10)
+    // ---- backdrop: six painted skies that creep, and three receding depths.
+    // What was here before was ONE painting pinned with setScrollFactor(0) and
+    // recoloured per act by full-screen tint rectangles - so the same aqueduct
+    // silhouette sat at the same screen pixel in three different "acts", and
+    // across 25,000px of flight the sun never moved. Skyline replaces both.
+    this.skyline = new Skyline(this)
+    if (!this.textures.exists('sky_dawn_approach')) {
+      const plate = ART['bg_plate']
+      const cover = Math.max(VIEW_W / plate.w, VIEW_H / plate.h)
+      this.add
+        .image(VIEW_W / 2, VIEW_H / 2, 'bg_plate')
+        .setDisplaySize(plate.w * cover, plate.h * cover)
+        .setScrollFactor(0)
+        .setDepth(-10)
+    }
 
     // ---- slow parallax: misty ruin clusters from the panorama sheet
     const clusters: Array<[string, number, number, number, number]> = [
@@ -578,8 +590,18 @@ export class DayScene extends Phaser.Scene {
       .setAlpha(0)
       .setDepth(2.2)
 
+    // The most frequently seen reward in the game. At 15px in warm grey it
+    // vanished against a warm sky on a phone - the same washout that made the
+    // motes unreadable. Bigger, near-white, and carried on its own dark plate
+    // so it reads at arm's length on a 390px-tall screen.
+    this.chainPlate = this.add
+      .image(0, 0, 'softdot')
+      .setTint(0x140d24)
+      .setScrollFactor(0)
+      .setDepth(20.9)
+      .setAlpha(0)
     this.chainText = this.add
-      .text(0, 0, '', display(15, '#cdbdd4', 4, 500))
+      .text(0, 0, '', display(26, '#fff6e4', 6, 500))
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(21)
@@ -1850,6 +1872,8 @@ export class DayScene extends Phaser.Scene {
   private updateNightfall(dt: number): void {
     if (this.finishing || this.failing) return
     // later acts are hungrier - the chase tightens as the day runs out
+    this.skyline.setAct(this.atmo.act)
+    this.skyline.update(dt, this.scrollX)
     this.night.setIntensity(1 + this.atmo.act * 0.16)
     this.night.update(dt, this.flock, this.scrollX, VIEW_W, VIEW_H)
 
@@ -1991,6 +2015,39 @@ export class DayScene extends Phaser.Scene {
     if (tier > 0) this.showLightChain(tier)
   }
 
+  /**
+   * The screen answers a tier-up. One full-frame warm rim, in and out inside
+   * 600ms — unmissable on a phone, and gone before it can become noise.
+   */
+  private tierFlash(tier: number): void {
+    const safe = safeArea(this)
+    if (!this.tierRing) {
+      this.tierRing = this.add
+        .image(0, 0, 'alarmring')
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setScrollFactor(0)
+        .setDepth(46)
+        .setAlpha(0)
+    }
+    const r = this.tierRing
+    const tints = [0xffd9a0, 0xffe6bf, 0xfff2d8, 0xffffff]
+    r.setTint(tints[Math.min(3, tier - 1)] ?? 0xffd9a0)
+      .setPosition(safe.x + safe.w / 2, safe.y + safe.h / 2)
+      .setDisplaySize(safe.w * 0.45, safe.h * 0.45)
+      .setAlpha(0.5 + tier * 0.1)
+    this.tweens.killTweensOf(r)
+    this.tweens.add({
+      targets: r,
+      displayWidth: safe.w * 1.9,
+      displayHeight: safe.h * 1.9,
+      alpha: 0,
+      duration: 520 + tier * 60,
+      ease: 'Cubic.easeOut',
+    })
+    this.camKick = Math.max(this.camKick, 1 + tier * 0.5)
+    if (tier >= 3) this.hitStop = Math.max(this.hitStop, 0.05)
+  }
+
   /** The dark closes over light the player left behind. */
   private moteEaten(x: number, y: number): void {
     const g = this.add
@@ -2019,6 +2076,7 @@ export class DayScene extends Phaser.Scene {
     }
     this.moteChain = 0
     this.moteChainT = 0
+    this.lastLightTier = 0
   }
 
   /**
@@ -2645,13 +2703,22 @@ export class DayScene extends Phaser.Scene {
       .setScale(1 + tier * 0.06)
     const at = this.floatAt(this.flock.centerX - this.scrollX, this.flock.centerY + 96)
     this.chainText.setPosition(at.x, at.y)
+    this.chainPlate
+      .setPosition(at.x, at.y)
+      .setDisplaySize(this.chainText.width * 2.1, this.chainText.height * 3.4)
+      .setAlpha(0.72)
     this.tweens.killTweensOf(this.chainText)
-    this.tweens.add({
-      targets: this.chainText,
-      alpha: 0,
-      duration: 900,
-      delay: 420,
-    })
+    this.tweens.killTweensOf(this.chainPlate)
+    this.tweens.add({ targets: [this.chainText, this.chainPlate], alpha: 0, duration: 900, delay: 420 })
+
+    // A TIER-UP takes the whole screen for a moment: a warm rim flashes in from
+    // the edges and falls away. High contrast, instantly readable at any size,
+    // and it costs one sprite - which is the anti-clutter rule (escalate the
+    // SIZE of what changes, never the NUMBER of things changing).
+    if (tier > this.lastLightTier) {
+      this.lastLightTier = tier
+      this.tierFlash(tier)
+    }
   }
 
   private showChain(): void {
