@@ -946,24 +946,57 @@ export class GameAudio {
   }
 
   /** Musical bloom when birds join — bigger groups, bigger chord. */
+  /**
+   * The light ladder — one rung per mote, climbing while the chain holds.
+   *
+   * Two things were wrong before. It played the SAME notes at every chain
+   * length (only the note COUNT changed, at thresholds), so there was no ladder
+   * at all; and every note carried a 0.9s tail with stop(t+1). Arc geometry is
+   * ~33px spacing at ~235px/s, i.e. a mote every ~0.14s — so a 17-mote lane
+   * spawned up to 68 overlapping oscillators inside 2.4 seconds. That is mud,
+   * and it destroys the very thing the ladder exists to communicate.
+   *
+   * The ladder is PENTATONIC, not chromatic. This world is G-major pentatonic
+   * (see BELL_TABLES) over a D2 drone: a rising semitone leaves the key by the
+   * second mote and beats against the drone by the fourth. Rungs cycle every
+   * five and escalate in TIMBRE rather than climbing forever — two octaves up
+   * would put a 17-mote sweep at 2.6kHz, piercing at seven notes a second, and
+   * shrillest exactly when the player is doing best.
+   */
   collectBloom(count: number): void {
     if (!this.ctx) return
     const ctx = this.ctx
     const t = ctx.currentTime
-    const notes = count >= 8 ? [1, 1.25, 1.5, 2] : count >= 3 ? [1, 1.25, 1.5] : [1, 1.5]
-    const base = 392
-    notes.forEach((ratio, i) => {
+    const n = Math.max(1, count)
+    // G-major pentatonic degrees, transposed by the act like everything else
+    const PENT = [392, 440, 523.25, 587.33, 659.25] // G4 A4 C5 D5 E5
+    const semis = ACT_SEMIS[Math.min(this.actIdx, ACT_SEMIS.length - 1)] ?? 0
+    const rung = (n - 1) % 5
+    const cycle = Math.min(3, Math.floor((n - 1) / 5)) // 0..3, then it holds
+    const f = PENT[rung] * Math.pow(2, semis / 12) * (cycle >= 1 ? 2 : 1)
+    const capped = Math.min(f, 1318) // never a dog whistle
+
+    // short and clean, so consecutive rungs stay individually audible
+    const dur = 0.16 + cycle * 0.03
+    const peak = 0.05 + Math.min(cycle, 3) * 0.012
+
+    const voices: Array<[OscillatorType, number, number]> = [['sine', 1, 1]]
+    if (cycle >= 1) voices.push(['sine', 1.5, 0.45]) // a fifth
+    if (cycle >= 2) voices.push(['triangle', 0.5, 0.5]) // an octave beneath
+    if (cycle >= 3) voices.push(['sine', 2.02, 0.22]) // the world's bell partial
+
+    for (const [type, ratio, amp] of voices) {
       const o = ctx.createOscillator()
-      o.type = 'triangle'
-      o.frequency.value = base * ratio
+      o.type = type
+      o.frequency.value = capped * ratio
       const g = ctx.createGain()
-      g.gain.setValueAtTime(0, t + i * 0.05)
-      g.gain.linearRampToValueAtTime(0.05 + Math.min(count, 12) * 0.004, t + i * 0.05 + 0.06)
-      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.05 + 0.9)
+      g.gain.setValueAtTime(0, t)
+      g.gain.linearRampToValueAtTime(peak * amp, t + 0.006)
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur)
       o.connect(g).connect(this.master)
-      o.start(t + i * 0.05)
-      o.stop(t + i * 0.05 + 1)
-    })
+      o.start(t)
+      o.stop(t + dur + 0.02)
+    }
   }
 
   /** Landmark tone — each named place has a stable identity (Bell Tower = bell). */

@@ -15,12 +15,14 @@ export interface FalconZone {
   window: number
 }
 
-type Phase = 'idle' | 'unease' | 'shadow' | 'window' | 'strike' | 'exit' | 'flee'
+type Phase = 'idle' | 'unease' | 'shadow' | 'window' | 'reckoning' | 'strike' | 'exit' | 'flee'
 
 /** How far through the dive the talons cross the flock. The strike RESOLVES
  * here — not when the dive starts — so birds disappear on the frame the
  * predator reaches them instead of the frame it leaves the top of the sky. */
 const IMPACT_P = 0.6
+/** How long the player has to answer the reckoning, in SLOWED world seconds. */
+const RECKON_TIME = 2.6
 /** Dive duration. Short: this is the fastest thing in the game. */
 const DIVE_DUR = 0.46
 /** Ghost streaks laid along the dive path behind the falcon. */
@@ -51,6 +53,10 @@ export class FalconSystem {
   /** birds taken this strike, for HUD messaging */
   lastTaken = 0
   onStrikeResolved: ((taken: number, gathered: boolean, mobbed: boolean) => void) | null = null
+  /** the slow-motion answer window opens / closes */
+  onReckonBegin: (() => void) | null = null
+  onReckonEnd: ((won: boolean) => void) | null = null
+  private reckonFailed = false
   /** Fires the frame the dive commits, before anything is taken — the scene
    * uses it to dim the sky and drop the score to a held note. */
   onDiveBegin: (() => void) | null = null
@@ -207,6 +213,29 @@ export class FalconSystem {
         this.phase = 'window'
         this.timer = 0
       }
+    } else if (this.phase === 'reckoning') {
+      // THE RECKONING — the hawk hangs, the world crawls, and the player must
+      // answer a short sequence to throw the flock up as one enormous bird.
+      //
+      // Mobbing used to resolve automatically off a triple gate, so the single
+      // triumph the game offers happened without the player doing anything and
+      // almost nobody ever saw it. The gate still decides whether the CHANCE is
+      // offered — a small or ragged flock cannot make the shape at all, which
+      // is the whole game's discipline being paid out — but landing it is now
+      // skill, under pressure, in slow motion.
+      this.setPose('bank')
+      this.falcon.setVisible(true)
+      const hover = Math.sin(this.timer * 5.5)
+      this.falcon.setPosition(this.strikeX + hover * 26, 150 + hover * 12)
+      this.falcon.setRotation(hover * 0.06)
+      if (this.reckonFailed || t > RECKON_TIME) {
+        // out of time, or a wrong input: it commits, and this one hurts
+        this.phase = 'strike'
+        this.resolved = false
+        this.diveT = 0
+        this.timer = 0
+        this.onReckonEnd?.(false)
+      }
     } else if (this.phase === 'window') {
       this.shadow.setAlpha(Math.max(0, 0.34 - this.timer * 0.5))
       // the falcon banks visibly high above the flock — the readable "decide
@@ -307,6 +336,16 @@ export class FalconSystem {
     // around the falcon in a screeching column and drives it off. Triple-gated
     // (size + form + low strain) so it pays out the whole game's discipline.
     if (gathered && flock.count >= this.zoneArrivalCount * 0.7 && flock.gatherStrain < 0.4) {
+      // The flock is big enough and tight enough to make the shape — so the
+      // player is OFFERED the reckoning rather than handed the win.
+      this.phase = 'reckoning'
+      this.timer = 0
+      this.reckonFailed = false
+      this.onReckonBegin?.()
+      return
+    }
+
+    if (false) {
       this.lastTaken = 0
       this.phase = 'flee'
       this.timer = 0
@@ -368,6 +407,32 @@ export class FalconSystem {
    * The talons arrive. Birds leave the flock, the screech lands, and the
    * scene's impact (hit-stop, feathers, kick) fires on this same frame.
    */
+  /** The player answered the reckoning: the flock becomes the bigger bird. */
+  mobNow(flock: Flock): void {
+    if (this.phase !== 'reckoning') return
+    this.lastTaken = 0
+    this.phase = 'flee'
+    this.timer = 0
+    this.fleeFrom = { x: flock.centerX + 40, y: Math.max(140, flock.centerY - 220) }
+    this.falcon.setPosition(this.fleeFrom.x, this.fleeFrom.y)
+    this.hideStreaks()
+    this.audio.falconMiss()
+    this.audio.falconRetreatScreech()
+    this.audio.mobSwell()
+    for (const b of flock.birds) {
+      b.vy -= 260 + Math.random() * 160
+      b.panic = Math.max(b.panic, 0.5)
+    }
+    this.onMobBegin?.()
+    this.onReckonEnd?.(true)
+    this.onStrikeResolved?.(0, true, true)
+  }
+
+  /** A wrong input during the reckoning: it commits early and unforgivingly. */
+  failReckoning(): void {
+    if (this.phase === 'reckoning') this.reckonFailed = true
+  }
+
   private resolveStrike(flock: Flock): void {
     this.resolved = true
     // re-check membership: anything already lost to the dark or a collision

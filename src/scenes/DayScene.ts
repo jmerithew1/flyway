@@ -621,6 +621,8 @@ export class DayScene extends Phaser.Scene {
       this.predatorDimTarget = 1
     }
     this.falcon.onMobBegin = () => this.mobColumn()
+    this.falcon.onReckonBegin = () => this.beginReckoning()
+    this.falcon.onReckonEnd = (won) => this.endReckoning(won)
     this.falcon.onStrikeResolved = (taken, gathered, mobbed) => {
       if (mobbed) {
         // THE FLOCK FIGHTS BACK — triumph, not relief
@@ -999,6 +1001,7 @@ export class DayScene extends Phaser.Scene {
 
   /** Surge: tap SPACE — whipcrack pulse. Weak and ragged when strained. */
   private doSurge(): void {
+    if (this.reckonOn) { this.reckonInput('surge'); return }
     this.flock.formShape('arrow')
     this.flock.surge()
     this.audio.surgeWhoosh(1 - this.flock.gatherStrain * 0.5)
@@ -1263,6 +1266,10 @@ export class DayScene extends Phaser.Scene {
     // flock keeps flying and the moment stays alive while you read.
     this.cardEase += ((this.card ? 1 : 0) - this.cardEase) * (1 - Math.exp(-7 * rawDt))
     dt *= 1 - this.cardEase * 0.82
+    // THE RECKONING crawls the world much harder than a card does — this is a
+    // held breath, not a reading pause, and the slow motion IS the drama.
+    this.reckonEase += ((this.reckonOn ? 1 : 0) - this.reckonEase) * (1 - Math.exp(-11 * rawDt))
+    dt *= 1 - this.reckonEase * 0.88
     this.updateBrace(rawDt)
     this.braceAmt += ((this.braceOn ? 1 : 0) - this.braceAmt) * (1 - Math.exp(-BRACE_EASE * rawDt))
     dt *= 1 - this.braceAmt * (1 - BRACE_WORLD_SCALE)
@@ -1323,6 +1330,8 @@ export class DayScene extends Phaser.Scene {
     const world = cam.getWorldPoint(untouched ? VIEW_W * 0.45 : p.x, untouched ? VIEW_H * 0.45 : p.y)
     const gather = !this.finishing && !this.braceOn && (this.keySpace.isDown || this.touch.gather)
     const spread = !this.finishing && !this.braceOn && (this.keyShift.isDown || this.touch.spread)
+    if (gather && this.reckonOn && !this.prevGatherForReckon) this.reckonInput('gather')
+    this.prevGatherForReckon = gather
     if (gather) this.gatherHeld += dt
     if (spread) this.spreadHeld += dt
 
@@ -1959,6 +1968,8 @@ export class DayScene extends Phaser.Scene {
     // pentatonic over a D2 drone, so a chromatic ladder leaves the key by the
     // second mote and grinds the drone by the fourth — and arcs run to 17.
     this.audio.collectBloom(this.moteChain)
+    // the light enters the FLOCK, so the player sees that they took it
+    this.flock.lightPulse(m.x, m.y, Math.min(1, tier * 0.5 + 0.4))
 
     const spark = this.add
       .image(m.x, m.y, 'mote')
@@ -3416,6 +3427,110 @@ export class DayScene extends Phaser.Scene {
     })
   }
 
+  // ---- THE RECKONING ------------------------------------------------------
+  /** the verbs the player must answer with, in order; null when not reckoning */
+  private reckonSeq: Array<'gather' | 'surge' | 'flare'> = []
+  private reckonStep = 0
+  private reckonOn = false
+  private prevGatherForReckon = false
+  private reckonText: Phaser.GameObjects.Text | null = null
+
+  /**
+   * The hawk hangs, the world crawls, and the flock's survival is put in the
+   * player's hands for two and a half seconds.
+   *
+   * This is the game's one triumph, and it used to resolve automatically off a
+   * hidden triple gate — so almost nobody ever saw it happen, and nobody who
+   * did could tell they had caused it. The gate still decides whether the
+   * chance is OFFERED (a small or ragged flock simply cannot make the shape,
+   * which is the whole run's discipline being paid out); landing it is skill.
+   */
+  private beginReckoning(): void {
+    this.reckonOn = true
+    this.reckonStep = 0
+    // three verbs the player already owns, in a random order so it is read and
+    // not memorised
+    const pool: Array<'gather' | 'surge' | 'flare'> = ['gather', 'surge', 'flare']
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0
+      ;[pool[i], pool[j]] = [pool[j], pool[i]]
+    }
+    this.reckonSeq = pool
+    this.cameras.main.zoomTo(1.08, 420, 'Sine.easeOut', true)
+    this.audio.strikeHeldNote?.()
+    this.showReckonPrompt()
+  }
+
+  private reckonLabel(v: 'gather' | 'surge' | 'flare'): string {
+    if (isTouch) return v === 'gather' ? 'HOLD GATHER' : v === 'surge' ? 'TAP GATHER' : 'TAP SPREAD'
+    return v === 'gather' ? 'HOLD SPACE' : v === 'surge' ? 'TAP SPACE' : 'TAP SHIFT'
+  }
+
+  private showReckonPrompt(): void {
+    const v = this.reckonSeq[this.reckonStep]
+    if (!v) return
+    const safe = safeArea(this)
+    if (!this.reckonText) {
+      this.reckonText = this.add
+        .text(0, 0, '', display(40, '#ffe6bf', 10, 500))
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(58)
+    }
+    this.reckonText
+      .setText(this.reckonLabel(v))
+      .setPosition(safe.x + safe.w / 2, safe.y + safe.h * 0.3)
+      .setAlpha(1)
+      .setScale(1.25)
+    this.tweens.killTweensOf(this.reckonText)
+    // it pulses, faster as the window runs down — the tell IS the urgency
+    this.tweens.add({
+      targets: this.reckonText,
+      scale: 1,
+      duration: 220,
+      ease: 'Back.easeOut',
+    })
+  }
+
+  /** One verb answered during the reckoning. Wrong answers end it early. */
+  private reckonInput(v: 'gather' | 'surge' | 'flare'): void {
+    if (!this.reckonOn) return
+    if (v !== this.reckonSeq[this.reckonStep]) {
+      this.falcon.failReckoning()
+      return
+    }
+    this.reckonStep++
+    this.camKick = 1.4
+    this.audio.formSnap('gather')
+    if (this.reckonStep >= this.reckonSeq.length) {
+      this.falcon.mobNow(this.flock)
+    } else {
+      this.showReckonPrompt()
+    }
+  }
+
+  private endReckoning(won: boolean): void {
+    this.reckonOn = false
+    this.reckonSeq = []
+    this.cameras.main.zoomTo(1, 520, 'Sine.easeInOut', true)
+    if (this.reckonText) {
+      this.tweens.add({ targets: this.reckonText, alpha: 0, duration: 260 })
+    }
+    if (won) {
+      // the flock becomes the bigger bird — the hero image of the whole game
+      this.flock.formShape('ring')
+      this.hitStop = Math.max(this.hitStop, 0.12)
+      this.camKick = 4
+      this.showLandmark('THE FLOCK TURNS ON IT')
+    } else {
+      // missing costs almost everything: the hawk goes through an unguarded
+      // flock, which is what makes the window matter
+      this.hitStop = Math.max(this.hitStop, 0.1)
+      this.camKick = 5
+      this.showLandmark('IT BROKE THROUGH')
+    }
+  }
+
   /** Landmark banner: separate slot from tutorial prompts, never collides. */
   private showLandmark(text: string): void {
     this.landmarkText.setText(text).setAlpha(0)
@@ -3694,6 +3809,7 @@ export class DayScene extends Phaser.Scene {
   /** the card currently showing, if any */
   private card: Phaser.GameObjects.Container | null = null
   private cardEase = 0
+  private reckonEase = 0
   private cardsShown = new Set<string>()
   private cardCooldown = 0
 

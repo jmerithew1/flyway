@@ -183,6 +183,8 @@ export interface Bird {
   slotIdx: number
   /** countdown to the next radiating alarm pulse */
   riskPulseT: number
+  /** seconds of carried light left — the flock visibly holds what it takes */
+  litT: number
   flapPhase: number
   flapFreq: number
   renderAngle: number // smoothed heading for the sprite (kills rotation jitter)
@@ -312,6 +314,7 @@ export class Flock {
       sidePref: Math.random() < 0.5 ? -rand(0.4, 1) : rand(0.4, 1),
       slotIdx: -1,
       riskPulseT: 0,
+      litT: 0,
       flapPhase: rand(0, Math.PI * 2),
       // most birds beat steadily; a few glide with slow lazy strokes
       flapFreq: Math.random() < 0.15 ? rand(2.5, 4) : rand(7, 11),
@@ -522,6 +525,28 @@ export class Flock {
   relieveStrain(seconds: number): void {
     this.gatherTime = Math.max(0, this.gatherTime - seconds)
     this.spreadTime = Math.max(0, this.spreadTime - seconds)
+  }
+
+  /**
+   * A mote lands IN the flock.
+   *
+   * Collecting used to happen entirely at the mote's own position — a spark
+   * where the light was, and nothing whatsoever on the birds. So the player
+   * could not see that THEY had taken it. Now the nearest birds flare warm and
+   * carry it for a moment, brightest at the point of contact and falling off
+   * with distance, so the light visibly enters the flock and travels with it.
+   */
+  lightPulse(x: number, y: number, strength = 1): void {
+    const R = 190 + strength * 90
+    const R2 = R * R
+    for (const b of this.birds) {
+      const dx = b.x - x
+      const dy = b.y - y
+      const d2 = dx * dx + dy * dy
+      if (d2 > R2) continue
+      const near = 1 - Math.sqrt(d2) / R
+      b.litT = Math.max(b.litT, 0.22 + near * (0.3 + strength * 0.16))
+    }
   }
 
   /** Tap SPACE: the flock snaps tight and slingshots forward. Strained
@@ -1269,6 +1294,13 @@ export class Flock {
           e.d01 = d01
           this.riskCount++
         }
+      } else if (b.litT > 0) {
+        // carrying light: warm, bright, and fading — ranked BELOW danger so an
+        // alarming bird never looks like a rewarded one
+        b.litT = Math.max(0, b.litT - dt)
+        const k = Math.min(1, b.litT * 2.6)
+        s.setTintFill(0xfff3d6)
+        s.setAlpha(0.55 + 0.45 * k)
       } else if (this.pulse > 0.3) {
         // SURGE: the leading edge catches the light — a warm spear-tip
         const ahead = (b.x - this.centerX) * Math.cos(b.renderAngle) + (b.y - this.centerY) * Math.sin(b.renderAngle)
