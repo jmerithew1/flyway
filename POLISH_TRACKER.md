@@ -356,6 +356,39 @@ short attention spans."
 | M5 | **Skill ceiling**: a player who collects everything well should finish with MOST of the flock, while the run still feels challenging. Generous to mastery, unforgiving to sloppiness | ⏳ |
 | M6 | More unique dramatic effects throughout, in the same register as M1 | ⏳ |
 
+## N. Live playtest feedback (owner + other players)
+
+| # | Item | State |
+|---|------|-------|
+| N1 | Flock wipe reads as an eruption flooding the screen | ✅ 3 layers: per-bird burst, screen-space downpour in waves, huge close-up feathers, hit-stop + kick |
+| N2 | **People were confused whether the game was over, restarting, or what happened** when the flock fell apart | ⏳ the eruption is fixed but the COPY and the flow after it are not — must say plainly what just happened and what comes next |
+| N3 | Freeing a cage must matter: burst, fall, birds flying out, notification | ✅ white flash, shockwave, FREED callout, each bird streaks home on a trail |
+| N4 | Mote collection needs more oomph | 🟡 bloom + bigger brighter motes; the collect burst itself could go further |
+| N5 | The "teleport" of collection must be apparent | 🟡 freed birds streak now; echo-call recovery still needs the same treatment |
+| N6 | At-risk birds: flashing/radiating blink, not a circling ring | ✅ pulses radiate from the bird, quickening; bird strobes hard via setTintFill |
+| N7 | **Can't see the blinking** — needs to be more apparent still | ⏳ verify at play scale, not in a still |
+| N8 | **Beginning must SLOW DOWN and introduce controls ONE AT A TIME — people did not grasp the controls** | 🟡 first-encounter cards exist; the opening needs to be genuinely paced, one control per beat |
+| N9 | "Which objects can be destroyed" must be in the opening walkthrough | ⏳ |
+| N10 | **SPREAD is the least-used ability and needs a real purpose** | 🟡 it is now how you harvest light; the game must TEACH that and demand it |
+| N11 | Surge should look better | ⏳ |
+| N12 | Visuals must not read dull | 🟡 bloom added |
+| N13 | Square in the fog | ✅ art ran to its own frame edge; extraction now dissolves every border |
+| N14 | Hawk reads as a floating sticker | ⏳ |
+| N15 | Loading screen reads as broken | ✅ progress rail + premise line |
+| N16 | Start screen dated; ability explanation still wrong | ⏳ |
+| N17 | Roost hop-off opening and the ending sequence must both be CLEAR | ⏳ |
+| N18 | Equally fun on mobile | ⏳ |
+| N19 | Deploy live | ⏳ |
+| N20 | Performance: 395 tweens, 779/998 objects off-screen, 3.1MB garbage per 60 frames | ⏳ diagnosed; mote tween removal + culling must be redone (first attempt corrupted the file) |
+
+**Tooling answer (owner asked whether to bring in another tool):** no new tool
+needed. The biggest available visual win was Phaser's own WebGL post-FX, which
+was simply not switched on — now it is. HTML/CSS is the right tool for exactly
+one thing, the loading screen, because it renders before Phaser exists; it
+cannot composite with the game's rendering, only sit on top of it. The other
+high-value lever is MORE PAINTED ART of the kind the owner has been generating
+— that has been the single biggest quality jump so far.
+
 ## D. Creatures & drama
 
 | # | Request | State | Verification |
