@@ -92,7 +92,7 @@ export function obstacleField(o: Obstacle, px: number, py: number): { nx: number
  * holding Gather 85% of the time died at x=12905. Mutable so the fairness
  * probe can sweep the space in one session rather than one rebuild per guess.
  */
-export const AVOID = { lookahead: 0.72, margin: 70 }
+export const AVOID = { lookahead: 0.62, margin: 60 }
 
 /**
  * Anticipatory avoidance steering for one bird against one obstacle.

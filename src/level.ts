@@ -234,6 +234,16 @@ export interface MoteArc {
   spanY: number
 }
 export const MOTE_ARCS: MoteArc[] = [
+  // Light must always be REACHABLE. The level ran three deserts with no motes
+  // at all - the opening 4,850px, and 5,700px and 5,380px stretches mid-flight
+  // - so once daylight is a resource the fog closed during them with nothing
+  // the player could do about it. That is a scripted loss, not difficulty.
+  // These fill the gaps so every stretch offers a line worth flying.
+  { x: 2150, y: 470, count: 8, spanX: 420, spanY: 260 }, // first light: teaches collecting before it matters
+  { x: 12250, y: 500, count: 9, spanX: 460, spanY: 280 },
+  { x: 13850, y: 430, count: 8, spanX: 420, spanY: 300 },
+  { x: 21350, y: 480, count: 9, spanX: 460, spanY: 280 },
+  { x: 22850, y: 440, count: 8, spanX: 430, spanY: 300 },
   { x: 4850, y: 330, count: 9, spanX: 460, spanY: 260 },
   // the drafting straight: a long level lane of light — hold the line, sweep it all
   { x: 7000, y: 430, count: 12, spanX: 1300, spanY: 60 },

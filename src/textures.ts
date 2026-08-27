@@ -48,9 +48,18 @@ function makeShardTexture(scene: Phaser.Scene): void {
 }
 
 /** Load every curated piece from the manifest as a plain image. */
+/** Painted nightfall fog. Each piece is a real cutout with its own tendrils. */
+export const FOG_PIECES = [
+  'fog_wall_00', 'fog_wall_01', 'fog_wall_02', 'fog_wall_03',
+  'fog_puff_00', 'fog_edge_00',
+] as const
+
 export function loadArt(scene: Phaser.Scene): void {
   for (const piece of Object.values(ART)) {
     scene.load.image(piece.key, piece.file)
+  }
+  for (const key of FOG_PIECES) {
+    scene.load.image(key, `assets/processed/fog/${key}.png`)
   }
 }
 

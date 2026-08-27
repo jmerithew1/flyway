@@ -61,6 +61,18 @@ PILOT = """(cfg) => {
         const w = 1 + (cfg.samples - s) / cfg.samples;
         score += Math.min(clearAt(x, yy), 260) * w;
       }
+      // CHASE THE LIGHT. Daylight is the resource the whole game runs on, so a
+      // pilot that ignores motes is not playing it - it just flies down empty
+      // corridors until the dark eats it. Lanes that pass through light are
+      // worth a detour, and worth more the darker it gets.
+      const hunger = 1 + (1 - (d.night ? d.night.daylight : 1)) * 2.5;
+      for (const m of d.motes) {
+        if (!m.img.visible) continue;
+        const mdx = m.x - f.centerX;
+        if (mdx < -60 || mdx > cfg.look * 1.5) continue;
+        const mdy = Math.abs(m.y - y);
+        if (mdy < 190) score += (190 - mdy) * 0.45 * hunger;
+      }
       score -= Math.abs(y - 500) * 0.5;        // prefer mid-air over the extremes
       score -= Math.abs(y - f.centerY) * 0.35; // prefer not to lurch
       if (score > bestScore) { bestScore = score; best = y; }
@@ -89,7 +101,16 @@ PILOT = """(cfg) => {
 
     // --- SPREAD to harvest light when nothing is close (the new mechanic's
     //     central trade: wide when safe, tight when not)
-    d.touch.spread = gatherT <= 0 && near > cfg.spreadAt;
+    // SPREAD is how you harvest, and a wide flock clips more stone - so only
+    // pay that price when there is actually light within reach. Holding it
+    // indiscriminately is what a bad player does.
+    let lightNear = false;
+    for (const m of d.motes) {
+      if (!m.img.visible) continue;
+      const mdx = m.x - f.centerX;
+      if (mdx > -40 && mdx < 900 && Math.abs(m.y - f.centerY) < 300) { lightNear = true; break; }
+    }
+    d.touch.spread = gatherT <= 0 && near > cfg.spreadAt && lightNear;
 
     // --- ECHO CALL to recover scattered birds. This is the verb the old probe
     //     ignored entirely, and it is where a large part of the loss went.

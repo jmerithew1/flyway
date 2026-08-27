@@ -1,6 +1,12 @@
 import Phaser from 'phaser'
 import { Flock, Bird } from './flock'
 
+const FOG_ART = {
+  walls: ['fog_wall_00', 'fog_wall_01', 'fog_wall_02', 'fog_wall_03'],
+  puff: 'fog_puff_00',
+  edge: 'fog_edge_00',
+}
+
 /**
  * NIGHTFALL — the game's core threat, and the reason light is worth having.
  *
@@ -18,15 +24,28 @@ import { Flock, Bird } from './flock'
  * detour to reach it. Everything else here is presentation.
  */
 
-/** Daylight lost per second of flight. */
-const DRAIN_PER_SEC = 0.0135
-/** Daylight returned by one mote. Must comfortably exceed the detour cost. */
-const MOTE_GAIN = 0.055
+/**
+ * Daylight lost per second. This is THE difficulty knob: the fog is the only
+ * threat that answers to skill, because collecting light drives it back. A
+ * player who never gathers light is eaten; a player who works the mote arcs
+ * keeps the dark at arm's length the whole way home.
+ *
+ * The ratio is set against the level's actual light budget: 72 motes exist,
+ * and a ~120s flight needs roughly 30 of them - about 40% - to break even. So
+ * ignoring the light is fatal, working it comfortably wins, and there is
+ * headroom left for a greedy player to bank daylight and push the dark far
+ * back. Retune this whenever mote COUNT changes, not by feel.
+ */
+const DRAIN_PER_SEC = 0.024
+/** Daylight returned by one mote. Must comfortably exceed the detour cost —
+ * this ratio is what stops collecting and being chased from fighting. */
+const MOTE_GAIN = 0.095
 /** How far behind the flock the fog sits at full daylight, and at none. */
-const LEAD_FULL = 1500
-const LEAD_EMPTY = -140
+const LEAD_FULL = 1150
+/** Past the flock: at zero daylight the dark is ON you, not merely behind. */
+const LEAD_EMPTY = -520
 /** How fast the fog edge eases toward its target (px/sec of correction). */
-const EDGE_LERP = 1.6
+const EDGE_LERP = 2.1
 /** How many soft blobs build the fog body. */
 const BLOBS = 54
 
@@ -70,12 +89,14 @@ export class Nightfall {
       .setDepth(11)
 
     for (let i = 0; i < BLOBS; i++) {
+      // painted fog: walls carry their own reaching tendrils, puffs build mass
+      const key = i % 3 === 0 ? FOG_ART.puff : FOG_ART.walls[i % FOG_ART.walls.length]
       const img = scene.add
-        .image(0, 0, 'softdot')
-        .setTint(0x0f0a1c)
+        .image(0, 0, scene.textures.exists(key) ? key : 'softdot')
         .setScrollFactor(0)
         .setAlpha(0)
         .setDepth(11.01)
+      if (!scene.textures.exists(key)) img.setTint(0x0f0a1c)
       this.blobs.push(img)
       // depth 0 = the leading wisps, 1 = the body far behind
       const d = i / (BLOBS - 1)
@@ -83,7 +104,7 @@ export class Nightfall {
         // clustered behind the edge, densest deep, sparse and reaching at the front
         dx: 430 - Math.pow(d, 0.8) * 1500 - Math.random() * 160,
         y: Math.random() * viewH,
-        r: 190 + Math.random() * 230 + d * 190,
+        r: 300 + Math.random() * 300 + d * 260,
         phase: Math.random() * Math.PI * 2,
         speed: 0.25 + Math.random() * 0.5,
         rise: 12 + Math.random() * 34,
@@ -94,10 +115,9 @@ export class Nightfall {
     // the boundary itself: a dark gradient that hides the tile's hard edge and
     // makes the fog dissolve into lit air instead of stopping at a ruled line
     this.edgeFade = scene.add
-      .image(0, viewH / 2, 'vfade')
-      .setDisplaySize(viewH * 1.25, 460)
-      .setRotation(-Math.PI / 2)
-      .setTint(0x120c1e)
+      .image(0, viewH / 2, scene.textures.exists(FOG_ART.edge) ? FOG_ART.edge : 'vfade')
+      .setDisplaySize(620, viewH * 1.3)
+      .setTint(0xffffff)
       .setScrollFactor(0)
       .setAlpha(0)
       .setDepth(11.03)
@@ -166,7 +186,7 @@ export class Nightfall {
     for (const b of flock.birds) {
       if (b.x < this.edgeX) {
         const depth = Math.min(1, (this.edgeX - b.x) / 220)
-        b.danger += dt * (0.5 + depth * 2.2)
+        b.danger += dt * (0.9 + depth * 3.4)
         b.panic = Math.max(b.panic, 0.5)
         if (b.danger > 1) {
           b.danger = 0
@@ -201,7 +221,7 @@ export class Nightfall {
       const y = sp.y + Math.sin(t * sp.speed * 0.7 + sp.phase * 1.7) * sp.rise
       const x = screenEdge + sp.dx + Math.cos(t * sp.speed * 0.55 + sp.phase) * 46
       img.setPosition(x, y)
-      img.setDisplaySize(r * 1.55, r)
+      img.setDisplaySize(r * 2.3, r * 1.15)
       // leading wisps stay thin, the body behind is dense
       // leading wisps stay sheer so the lethal edge is still readable
       const body = sp.depth < 0.24 ? 0.16 + sp.depth * 0.5 : 0.42 + sp.depth * 0.9
@@ -210,7 +230,7 @@ export class Nightfall {
 
     this.edgeFade.setVisible(vis)
     if (vis) {
-      this.edgeFade.x = screenEdge - 130
+      this.edgeFade.x = screenEdge - 250
       this.edgeFade.setAlpha(Math.min(0.95, this.encroach * 1.5))
     }
 
