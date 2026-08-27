@@ -77,12 +77,26 @@ def soft_dilate(mask: np.ndarray, cells: int, ds: int, blur: float) -> np.ndarra
     H, W = h // ds, w // ds
     m = mask[:H * ds, :W * ds].reshape(H, ds, W, ds).max(axis=(1, 3))
     for _ in range(cells):
-        m = (m | np.roll(m, 1, 0) | np.roll(m, -1, 0)
-             | np.roll(m, 1, 1) | np.roll(m, -1, 1))
+        # Slice-shift, NOT np.roll. np.roll is circular: a mask touching the
+        # top edge wrapped onto the bottom one, and every border-touching
+        # occluder grew a gate spanning the whole sheet (they cropped to
+        # 1086x1438 instead of ~370x280).
+        o = m.copy()
+        o[1:, :] |= m[:-1, :]
+        o[:-1, :] |= m[1:, :]
+        o[:, 1:] |= m[:, :-1]
+        o[:, :-1] |= m[:, 1:]
+        m = o
     g = Image.fromarray((m * 255).astype(np.uint8), 'L').resize((w, h), Image.BILINEAR)
     if blur:
         g = g.filter(ImageFilter.GaussianBlur(blur))
-    return np.asarray(g).astype(np.float32) / 255.0
+    out = np.asarray(g).astype(np.float32) / 255.0
+    # Floor the tail. Without this the blur leaves a ~2% shoulder reaching far
+    # across the sheet; multiplied by a bright neighbour's alpha it still clears
+    # the bbox test, and the crop balloons to the whole sheet (measured: one
+    # sheet-5 shaft cropped to 518x1518 instead of ~520x480).
+    out[out < 0.06] = 0.0
+    return out
 
 
 def label_components(mask: np.ndarray, ds: int = 4):
@@ -217,6 +231,25 @@ def report(path: str, im: Image.Image, note: str) -> dict:
     }
 
 
+OWNED = ('sky', 'parallax', 'roost', 'colossus', 'shafts',
+         'fogpieces', 'flock', 'fixtures')
+
+
+def wipe(sub: str):
+    """Clear a subdir this script owns, so renames do not leave stale pieces.
+
+    Guarded by OWNED: the pre-existing processed/ dirs (birds, fog, ruins, ...)
+    belong to other extractors and are never touched.
+    """
+    if sub not in OWNED:
+        raise SystemExit(f'refusing to wipe unowned dir: {sub}')
+    d = os.path.join(OUT, sub)
+    if os.path.isdir(d):
+        for f in os.listdir(d):
+            if f.lower().endswith('.png'):
+                os.remove(os.path.join(d, f))
+
+
 def save(im: Image.Image, sub: str, name: str, note: str, rows: list):
     d = os.path.join(OUT, sub)
     os.makedirs(d, exist_ok=True)
@@ -237,6 +270,7 @@ def absorb_contained(boxes, pad_cells=18):
     """
     order = sorted(range(len(boxes)), key=lambda i: -boxes[i][4])
     merged = {i: list(boxes[i]) for i in range(len(boxes))}
+    owned: dict[int, list[int]] = {i: [] for i in range(len(boxes))}
     gone = set()
     for i in order:
         if i in gone:
@@ -249,70 +283,101 @@ def absorb_contained(boxes, pad_cells=18):
             if (x0 >= bx0 - pad_cells and x1 <= bx1 + pad_cells
                     and y0 >= by0 - pad_cells and y1 <= by1 + pad_cells):
                 gone.add(j)
+                owned[i].append(j)
                 merged[i] = [min(bx0, x0), min(by0, y0),
                              max(bx1, x1), max(by1, y1), ba]
                 bx0, by0, bx1, by1, ba = merged[i]
-    return {i: merged[i] for i in range(len(boxes)) if i not in gone}, gone
+    # Ownership must be returned, not recomputed. A fragment can sit inside two
+    # pieces' padded boxes (the dirt above moth_large_b is also inside
+    # thief_launch's), and re-testing containment later handed the SAME
+    # fragment to both crops.
+    return ({i: merged[i] for i in range(len(boxes)) if i not in gone},
+            {i: owned[i] for i in range(len(boxes)) if i not in gone})
 
 
 def extract_cutouts(arr, thr, min_cells, gate_cells, gate_blur, tint,
-                    ds=4, absorb=True):
-    """Threshold -> label -> absorb fragments -> soft-gated per-piece crop."""
+                    ds=4, absorb=True, anchors=None):
+    """Threshold -> label -> group fragments -> soft-gated per-piece crop.
+
+    Two grouping modes. By default fragments are folded into any larger
+    component whose box encloses them (`absorb_contained`) - right for the
+    light-thief's shed feathers. Sheet 8 passes `anchors` instead, because
+    there the occluders' boxes enclose half the sheet and bbox containment
+    swallows the bells; anchor grouping pins each fragment to the nearest
+    named asset position instead.
+    """
     a = arr[:, :, 3]
     lab, n = label_components(a > thr, ds)
-    boxes = []
-    keep_ids = []
+    boxes, keep_ids, cents = [], [], []
     for i in range(1, n + 1):
         ys, xs = np.nonzero(lab == i)
         if len(ys) < min_cells:
             continue
         boxes.append((int(xs.min()), int(ys.min()), int(xs.max()) + 1,
                       int(ys.max()) + 1, len(ys)))
+        cents.append((float(xs.mean()) * ds, float(ys.mean()) * ds))
         keep_ids.append(i)
-    if absorb:
-        merged, gone = absorb_contained(boxes)
+
+    groups = []          # (ids, box_cells, name, desc)
+    if anchors is not None:
+        buckets = {}
+        for ci, (cx, cy) in enumerate(cents):
+            best, bd = None, 1e18
+            for ai, (nm, ax, ay, rad, desc) in enumerate(anchors):
+                d = ((cx - ax) ** 2 + (cy - ay) ** 2) ** 0.5
+                if d <= rad and d < bd:
+                    best, bd = ai, d
+            buckets.setdefault(best, []).append(ci)
+        for ai, cis in buckets.items():
+            ids = [keep_ids[c] for c in cis]
+            bx = [min(boxes[c][0] for c in cis), min(boxes[c][1] for c in cis),
+                  max(boxes[c][2] for c in cis), max(boxes[c][3] for c in cis), 0]
+            if ai is None:
+                for c in cis:
+                    groups.append(([keep_ids[c]], list(boxes[c]),
+                                   None, 'UNMATCHED - inspect contact sheet'))
+            else:
+                nm, _ax, _ay, _r, desc = anchors[ai]
+                groups.append((ids, bx, nm, desc))
     else:
-        merged, gone = {i: list(b) for i, b in enumerate(boxes)}, set()
+        merged, owned = (absorb_contained(boxes) if absorb
+                         else ({i: list(b) for i, b in enumerate(boxes)},
+                               {i: [] for i in range(len(boxes))}))
+        for i, box in merged.items():
+            ids = [keep_ids[i]] + [keep_ids[j] for j in owned[i]]
+            groups.append((ids, box, None, None))
 
     pieces = []
-    for i, box in sorted(merged.items(), key=lambda kv: (kv[1][1] // 30, kv[1][0])):
-        ids = [keep_ids[i]] + [keep_ids[j] for j in gone
-                               if _inside(boxes[j], box)]
+    kept_all = set(keep_ids)
+    for ids, box, nm, desc in sorted(groups, key=lambda g: (g[1][1] // 30, g[1][0])):
         m = np.isin(lab, ids)
         full = np.zeros(a.shape, bool)
         H, W = m.shape
         full[:H * ds, :W * ds] = np.repeat(np.repeat(m, ds, 0), ds, 1)
         gate = soft_dilate(full, gate_cells, ds, gate_blur)
+        # The soft gate reaches ~gate_cells*ds px past the piece. Where that
+        # lands on ANOTHER kept component it drags a neighbour into the crop
+        # (measured: the dirt kicked up by thief_launch sat 12px above
+        # moth_large_b and rode along into it). Punch those pixels back out;
+        # the soft halo over empty sheet is untouched.
+        other = [i for i in kept_all if i not in ids]
+        if other:
+            om = np.isin(lab, other)
+            ofull = np.zeros(a.shape, bool)
+            ofull[:H * ds, :W * ds] = np.repeat(np.repeat(om, ds, 0), ds, 1)
+            gate = gate * (1.0 - soft_dilate(ofull, 0, ds, 1.5))
         piece = arr.copy()
         piece[:, :, 3] = (a * gate).astype(np.int16)
         killed, softened = strip_fringe(piece, tint)
         im = pil_rgba(piece)
-        bb = Image.fromarray((np.asarray(im.getchannel('A')) > 6).astype(np.uint8) * 255).getbbox()
+        bb = Image.fromarray((np.asarray(im.getchannel('A')) > 10).astype(np.uint8) * 255).getbbox()
         if not bb:
             continue
         im = im.crop(bb)
         if im.size[0] < 24 or im.size[1] < 24:
             continue
-        centre = ((box[0] + box[2]) * ds / 2.0, (box[1] + box[3]) * ds / 2.0)
-        pieces.append((im, killed, softened, centre))
+        pieces.append((im, killed, softened, nm, desc))
     return pieces
-
-
-def _inside(b, box, pad=18):
-    return (b[0] >= box[0] - pad and b[2] <= box[2] + pad
-            and b[1] >= box[1] - pad and b[3] <= box[3] + pad)
-
-
-def name_pieces(pieces, names, prefix):
-    """Attach names in the deterministic reading order the sorter produced."""
-    out = []
-    for i, p in enumerate(pieces):
-        if i < len(names):
-            nm, desc = names[i]
-        else:
-            nm, desc = f'{prefix}_extra_{i:02d}', 'UNNAMED - inspect contact sheet'
-        out.append((p, nm, desc))
-    return out
 
 
 # ------------------------------------------------------------- contact sheet
@@ -328,10 +393,17 @@ def _font(size=15):
     return ImageFont.load_default()
 
 
-def contact(pieces_named, title, path, cols=5, cell=280):
+def contact(pieces_named, title, path, cols=5, cell=280, cell_h=None):
+    """Composite every piece on mid-grey so alpha shapes are actually visible.
+
+    `cell_h` lets a sheet of very wide, very short pieces (the parallax strips)
+    use letterbox cells instead of squares - in square cells they scale down to
+    an illegible smear and the sheet cannot be checked.
+    """
+    ch = cell_h or cell
     n = max(1, len(pieces_named))
     rows = (n + cols - 1) // cols
-    W, H = cols * cell, rows * cell + 34
+    W, H = cols * cell, rows * ch + 34
     sheet = Image.new('RGB', (W, H), (128, 128, 128))
     d = ImageDraw.Draw(sheet)
     fb, fs = _font(17), _font(15)
@@ -339,17 +411,17 @@ def contact(pieces_named, title, path, cols=5, cell=280):
     d.text((8, 7), f'{title}   ({len(pieces_named)} pieces)  mid-grey backdrop',
            fill=(240, 240, 240), font=fb)
     for i, (im, nm, _desc) in enumerate(pieces_named):
-        cx, cy = (i % cols) * cell, 34 + (i // cols) * cell
-        d.rectangle([cx + 1, cy + 1, cx + cell - 2, cy + cell - 2],
+        cx, cy = (i % cols) * cell, 34 + (i // cols) * ch
+        d.rectangle([cx + 1, cy + 1, cx + cell - 2, cy + ch - 2],
                     outline=(96, 96, 100))
         t = im.copy()
-        t.thumbnail((cell - 16, cell - 34), Image.LANCZOS)
+        t.thumbnail((cell - 16, ch - 34), Image.LANCZOS)
         cellbg = Image.new('RGBA', t.size, (128, 128, 128, 255))
         cellbg.alpha_composite(t)
         sheet.paste(cellbg.convert('RGB'),
                     (cx + (cell - t.size[0]) // 2, cy + 6))
-        d.text((cx + 7, cy + cell - 25), f'{i:02d} {nm}', fill=(16, 16, 16), font=fs)
-        d.text((cx + 6, cy + cell - 26), f'{i:02d} {nm}', fill=(255, 246, 190), font=fs)
+        d.text((cx + 7, cy + ch - 25), f'{i:02d} {nm}', fill=(16, 16, 16), font=fs)
+        d.text((cx + 6, cy + ch - 26), f'{i:02d} {nm}', fill=(255, 246, 190), font=fs)
     os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
     sheet.save(path)
     return path
@@ -519,16 +591,17 @@ CUTOUT_SHEETS = {
                 ('fog_bank_tall', 'tall dense fog wall, curled boiling edge on the right'),
                 ('fog_cloud_mid', 'horizontal fog cloud with a flat base and a lit crest'),
                 ('fog_wisp_low', 'low serpentine wisp, a single reaching finger of vapour'),
-                ('mote_01', 'small comet mote, bright core with a short tail'),
-                ('mote_02', 'comet mote with a curling tail'),
-                ('mote_03', 'large spiral mote, bright core in a swirl of vapour'),
-                ('mote_04', 'small round mote'),
-                ('mote_05', 'small mote with a soft halo'),
-                ('mote_streak_06', 'long bright mote streak, comet head and a wide trailing plume'),
+                ('mote_curl_01', 'comet mote, bright core with a short curling tail'),
+                ('mote_spiral_large', 'large spiral mote, bright core inside a swirl of vapour'),
+                ('mote_tiny_01', 'tiny mote, bright core and a faint halo'),
+                ('mote_streak_long', 'long mote streak, comet head and a wide trailing plume'),
                 ('vessel_bottle', 'stoppered glass bottle in a wire cradle, light trapped inside'),
-                ('vessel_lamp', 'ornate brass lamp with a filigree cage, burning core'),
+                ('mote_tiny_02', 'tiny mote with a short tail'),
+                ('vessel_lamp', 'ornate brass lamp with a filigree cage and curled feet, burning core'),
+                ('mote_curl_02', 'small mote, core with a curling wisp'),
+                ('mote_tiny_03', 'tiny mote, round core'),
+                ('vessel_feather', 'long indigo feather with a burning gold quill'),
                 ('vessel_orb', 'engraved brass orb venting a plume of light'),
-                ('vessel_feather', 'long indigo feather with a burning quill'),
             ]),
     7: dict(sub='flock', thr=150, min_cells=45, gate=4, blur=5,
             tint=(1.00, 0.95, 0.92), cols=5,
@@ -540,109 +613,90 @@ CUTOUT_SHEETS = {
                 ('falcon_bank', 'falcon banking, wings raised in a deep upstroke'),
                 ('falcon_glide', 'falcon gliding wings wide, talons dropped to land'),
                 ('thief_scatter_b', 'light-thief mid-scatter, body dissolving into drifting feathers'),
-                ('thief_launch', 'light-thief launching from a mound, glowing chest, wings up'),
-                ('falcon_turn', 'falcon turning away, wings swept, teal sheen on the primaries'),
-                ('thief_perched', 'light-thief perched on a mossy stump, glowing chest, tail down'),
-                ('thief_level', 'light-thief in level flight, glowing chest, wings streaming back'),
+                ('thief_launch', 'light-thief launching off a mound, glowing chest, wings up, dirt kicked loose'),
+                ('thief_perched', 'light-thief perched on a mossy stump, glowing chest, long tail down'),
+                ('thief_level', 'light-thief in level flight, glowing chest, wings streaming back, teal sheen'),
+                ('falcon_turn', 'falcon turning away, wings swept forward, teal sheen on the primaries'),
                 ('moth_large_a', 'large pale moth, wings spread flat, eye-spots on all four wings'),
-                ('moth_large_b', 'pale moth, wings angled, three-quarter view'),
-                ('moth_small_01', 'small moth, wings spread'),
-                ('moth_small_02', 'small moth, wings angled'),
+                ('moth_large_b', 'large pale moth, wings angled, three-quarter view'),
+                ('moth_small_01', 'small moth, wings spread flat'),
+                ('moth_small_02', 'small moth, wings angled, banking'),
                 ('moth_small_03', 'small moth, wings raised'),
                 ('moth_small_04', 'small moth, wings half-folded'),
+                ('moth_cluster', 'a dense drift of many small moths clustered together'),
                 ('moth_small_05', 'small moth in profile'),
                 ('moth_small_06', 'small moth, wings back'),
-                ('moth_cluster', 'a drift of many small moths clustered together'),
             ]),
-    8: dict(sub='fixtures', thr=235, min_cells=45, gate=5, blur=6,
-            tint=(1.00, 0.94, 0.90), cols=6,
+    8: dict(sub='fixtures', thr=235, min_cells=70, gate=5, blur=6,
+            tint=(1.00, 0.94, 0.90), cols=6, absorb=False,
             title='sheet 8 - lamps, ribbons, bells & near-plane occluders',
-            names=[]),   # named by anchor, see SHEET8_ANCHORS
+            names=[], anchors=None),   # anchors attached below the table
 }
 
-# Sheet 8 is the one that will not sort cleanly by reading order: the
-# near-plane occluders bleed off three frame edges and their bounding boxes
-# interleave with the lamps and bells, so row-banded ordering is unstable.
-# Pieces are matched to these anchor points (centre x, centre y in source
-# pixels) instead, which survives small changes in the art.
+# Sheet 8 is the one sheet that will not sort cleanly by reading order. Its
+# near-plane occluders bleed off all four frame edges and their bounding boxes
+# enclose the bells and ribbons, so bbox-containment grouping swallows them
+# (measured: the left column occluder absorbed both hanging bells). The column
+# and the bottom-left foliage are also genuinely ONE connected component.
+#
+# Each asset is therefore pinned to an anchor: (name, cx, cy, radius, desc),
+# in source pixels, taken from the measured component centroids. Every
+# component lands in the nearest anchor inside its radius; anything outside
+# every radius is written as an `unmatched_*` piece and flagged, so a
+# regenerated sheet fails loudly instead of silently mislabelling.
 SHEET8_ANCHORS = [
-    ('occluder_canopy_tl', 190, 130, 'near-plane leaf canopy bleeding in from the top-left corner'),
-    ('occluder_wisteria_tr', 880, 120, 'near-plane wisteria curtain hanging from the top-right'),
-    ('lantern_small_unlit', 54, 388, 'small hanging lantern, glass dark'),
-    ('lantern_small_lit', 134, 388, 'small hanging lantern, warm flame lit'),
-    ('sconce_unlit', 246, 340, 'wall sconce on a scrolled bracket, lantern dark'),
-    ('sconce_lit', 344, 338, 'wall sconce on a scrolled bracket, lantern lit'),
-    ('lantern_tall_unlit', 470, 298, 'tall leaf-capped lantern on a chain, glass dark violet'),
-    ('lantern_tall_lit', 600, 280, 'tall leaf-capped lantern on a chain, burning gold'),
-    ('chandelier_unlit', 780, 326, 'hanging chandelier basket on three chains, unlit'),
-    ('chandelier_lit', 976, 328, 'hanging chandelier basket on three chains, full of flame'),
-    ('ribbon_short', 122, 566, 'short pennant ribbon on a ring, folded close'),
-    ('ribbon_stream_a', 426, 564, 'long ribbon streaming right from a ring'),
-    ('ribbon_stream_b', 834, 574, 'long twisting ribbon banner on a ring'),
-    ('ribbon_bell', 302, 706, 'ribbon on a ring with a small bell hung beneath'),
-    ('ribbon_stream_c', 812, 702, 'long ribbon curling back on itself'),
-    ('ribbon_stream_d', 280, 838, 'ribbon streaming right, pale and violet panels'),
-    ('ribbon_stream_e', 808, 844, 'wide ribbon banner, deep fold in the middle'),
-    ('bell_hanging_a', 218, 1006, 'hanging bronze bell with a leaf crown and a tail clapper'),
-    ('bell_hanging_b', 350, 1014, 'hanging bronze bell, verdigris, tail clapper'),
-    ('bell_fallen', 528, 1040, 'bell fallen on its side in the grass, mouth open'),
-    ('bell_small', 684, 1012, 'small bell on a short chain'),
-    ('bell_large', 814, 1008, 'large bronze bell with a heavy visible clapper'),
-    ('bell_bracket', 990, 1010, 'empty iron mounting bracket / yoke'),
-    ('occluder_column_l', 75, 950, 'near-plane stone column bleeding in from the left edge'),
-    ('occluder_foliage_bl', 200, 1300, 'near-plane dark foliage mass along the bottom-left'),
-    ('occluder_capital_b', 614, 1344, 'near-plane fallen capital and plinth on the bottom edge'),
-    ('occluder_cypress_br', 954, 1258, 'near-plane cypress silhouettes on the bottom-right'),
+    ('occluder_canopy_tl', 131, 102, 330, 'near-plane leaf canopy bleeding in from the top-left corner'),
+    ('occluder_wisteria_tr', 914, 57, 240, 'near-plane wisteria curtain hanging from the top-right edge'),
+    ('sconce_unlit', 240, 332, 110, 'wall sconce on a scrolled bracket, lantern dark violet'),
+    ('sconce_lit', 339, 336, 110, 'wall sconce on a scrolled bracket, lantern burning gold'),
+    ('lantern_tall_unlit', 468, 293, 130, 'tall leaf-capped lantern on a chain, glass dark violet'),
+    ('lantern_tall_lit', 596, 289, 130, 'tall leaf-capped lantern on a chain, burning gold'),
+    ('chandelier_unlit', 785, 330, 160, 'hanging chandelier bowl on three chains, unlit'),
+    ('lantern_small_unlit', 51, 406, 95, 'small hanging lantern, glass dark'),
+    ('lantern_small_lit', 134, 404, 95, 'small hanging lantern, warm flame lit'),
+    ('chandelier_lit', 979, 368, 160, 'hanging chandelier bowl on three chains, full of flame'),
+    ('ribbon_short', 120, 558, 120, 'short pennant ribbon on a ring, folded close'),
+    ('ribbon_stream_a', 398, 552, 150, 'long ribbon streaming right from a ring'),
+    ('ribbon_stream_b', 832, 560, 170, 'long twisting ribbon banner on a ring'),
+    ('ribbon_bell', 276, 700, 150, 'ribbon on a ring with a small bell hung beneath'),
+    ('ribbon_stream_c', 764, 708, 170, 'long ribbon curling back on itself'),
+    ('ribbon_stream_d', 266, 830, 150, 'ribbon streaming right, pale and violet panels'),
+    ('ribbon_stream_e', 803, 842, 170, 'wide ribbon banner with a deep fold in the middle'),
+    ('bell_hanging_a', 216, 1006, 110, 'hanging bronze bell, leaf crown, long tail clapper'),
+    ('bell_hanging_b', 349, 1021, 110, 'hanging bronze bell, verdigris, tail clapper'),
+    ('bell_fallen', 528, 1049, 150, 'bell fallen on its side in the grass, mouth open'),
+    ('bell_small', 682, 1010, 120, 'small bell on a short chain with a tail clapper'),
+    ('bell_large', 813, 1027, 130, 'large bronze bell with a heavy visible clapper'),
+    ('bell_bracket', 997, 998, 120, 'empty iron mounting bracket / yoke'),
+    ('occluder_column_foliage_l', 117, 1205, 300,
+     'near-plane stone column and the dark foliage mass below it, one connected '
+     'silhouette bleeding off the left and bottom edges'),
+    ('occluder_capital_b', 612, 1361, 220, 'near-plane fallen capital and plinth on the bottom edge'),
+    ('occluder_cypress_br', 959, 1302, 240, 'near-plane cypress silhouettes on the bottom-right corner'),
 ]
-
-
-def match_anchors(pieces_boxes, anchors):
-    """Greedy nearest-centre assignment of anchors to extracted pieces."""
-    used = set()
-    out = {}
-    pairs = []
-    for ai, (nm, ax, ay, desc) in enumerate(anchors):
-        for pi, (cx, cy) in enumerate(pieces_boxes):
-            pairs.append((((cx - ax) ** 2 + (cy - ay) ** 2) ** 0.5, ai, pi))
-    pairs.sort()
-    for d, ai, pi in pairs:
-        if ai in out or pi in used:
-            continue
-        out[ai] = (pi, d)
-        used.add(pi)
-    return out, used
+CUTOUT_SHEETS[8]['anchors'] = SHEET8_ANCHORS
 
 
 def do_cutout_sheet(n, arr, rows):
     cfg = CUTOUT_SHEETS[n]
     pieces = extract_cutouts(arr, cfg['thr'], cfg['min_cells'], cfg['gate'],
                              cfg['blur'], cfg['tint'],
-                             absorb=cfg.get('absorb', True))
-    named = []
-    if n == 8:
-        centres = [p[3] for p in pieces]
-        assign, used = match_anchors(centres, SHEET8_ANCHORS)
-        lbl = {}
-        for ai, (pi, d) in assign.items():
-            nm, _x, _y, desc = SHEET8_ANCHORS[ai]
-            lbl[pi] = (nm, desc, d)
-        for pi, p in enumerate(pieces):
-            im = p[0]
-            nm, desc, d = lbl.get(pi, (f'fixture_extra_{pi:02d}',
-                                       'UNNAMED - inspect contact sheet', 0.0))
-            if d > 190:
-                desc += f'  [anchor {d:.0f}px away - VERIFY]'
-            named.append((im, nm, desc))
-    else:
-        for i, (im, k, s, _c) in enumerate(pieces):
-            if i < len(cfg['names']):
+                             absorb=cfg.get('absorb', True),
+                             anchors=cfg.get('anchors'))
+    out = []
+    extra = 0
+    for i, (im, _k, _s, nm, desc) in enumerate(pieces):
+        if nm is None:
+            if cfg.get('anchors'):
+                nm, desc = f'unmatched_{extra:02d}', desc or 'UNMATCHED - inspect'
+                extra += 1
+                print(f'  !! {cfg["sub"]}: component {i} matched no anchor')
+            elif i < len(cfg['names']):
                 nm, desc = cfg['names'][i]
             else:
-                nm, desc = f"{cfg['sub']}_extra_{i:02d}", 'UNNAMED - inspect contact sheet'
-            named.append((im, nm, desc))
-
-    out = []
-    for im, nm, desc in named:
+                nm = f"{cfg['sub']}_extra_{i:02d}"
+                desc = 'UNNAMED - inspect contact sheet'
+                print(f'  !! {cfg["sub"]}: component {i} has no name in the table')
         feather_borders(im, span=36)
         save(im, cfg['sub'], f'{nm}.png', desc, rows)
         out.append((im, nm, desc))
@@ -673,6 +727,8 @@ def main() -> int:
 
     rows: list[dict] = []
     made = {}
+    for sub in OWNED:
+        wipe(sub)
     print('reading sheets from', SRC)
     for n in range(1, 9):
         arr = np_rgba(Image.open(sheets[n]))
@@ -692,8 +748,9 @@ def main() -> int:
             title = CUTOUT_SHEETS[n]['title']
         made[n] = named
         cols = CUTOUT_SHEETS.get(n, {}).get('cols', 3 if n == 3 else 5)
+        kw = dict(cols=2, cell=760, cell_h=120) if n == 2 else dict(cols=cols)
         cs = contact(named, title, os.path.join(SHOTS, f'sheet{n}_contact.png'),
-                     cols=cols)
+                     **kw)
         print(f'  {len(named)} pieces  ->  contact {cs}')
 
     print('\n' + '=' * 96)
