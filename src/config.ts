@@ -152,3 +152,21 @@ export const FALCON_WINDOWS = [1.0, 0.9]
 export const FALCON_TAKE_SPREAD: [number, number] = [6, 12]
 export const FALCON_TAKE_NEUTRAL: [number, number] = [2, 5]
 export const FALCON_TAKE_GATHER: [number, number] = [0, 2]
+
+
+// -- The harvest chain -------------------------------------------------------
+/**
+ * How long a chain survives without a new mote. The counter existed but nothing
+ * ever expired it, so nothing was at stake; a live window is what turns 179
+ * collectables from a flat trickle into a rhythm you can lose.
+ */
+export const MOTE_CHAIN_WINDOW = 1.6
+
+/**
+ * Five NAMED tiers rather than a smooth curve: a player cannot feel 1.075x vs
+ * 1.15x, but they can feel arriving somewhere that has a name. Aligned to the
+ * 5-rung pentatonic cycle so the audio ladder and the state machine are one
+ * object. Checked against real arc sizes: a clean 13-mote arc reaches RUNNING,
+ * the 17-mote lanes reach BLAZING, and the top rung needs a genuine sweep.
+ */
+export const MOTE_TIERS = ['', 'KINDLED', 'RUNNING', 'BLAZING', 'THE FLYWAY REMEMBERS'] as const

@@ -4,7 +4,7 @@ import { W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { GAME_TITLE, TAGLINE, TITLE_HINT } from '../config'
 import { birdFrameKey } from '../textures'
 import { isTouch } from '../touch'
-import { display, voice, INK } from '../ui'
+import { display, voice, INK, safeArea } from '../ui'
 import { GameAudio } from '../audio'
 
 /** Minimal elegant title screen on the painted plate, with drifting birds. */
@@ -86,18 +86,27 @@ export class TitleScene extends Phaser.Scene {
       .setTint(0x0d0820)
       .setDisplaySize(880, 300)
       .setAlpha(0)
-    const btnW = 440
-    const btnH = 108
-    const btnPlate2 = this.add.graphics().setAlpha(0)
-    btnPlate2.fillStyle(0x120c26, 0.94)
-    btnPlate2.fillRoundedRect(cx - btnW / 2, 500 - btnH / 2, btnW, btnH, btnH / 2)
-    btnPlate2.lineStyle(2, 0xf0cf9a, 0.85)
-    btnPlate2.strokeRoundedRect(cx - btnW / 2, 500 - btnH / 2, btnW, btnH, btnH / 2)
+    // The label goes through UI_SCALE, which is 1.65x on touch, so a plate with
+    // hard-coded dimensions fits on desktop and is overflowed by its own text on
+    // a phone. Build the text FIRST, measure it, then draw the plate around it —
+    // the same fix the HUD needed for the same reason.
     const begin = this.add
       .text(cx, 498, 'BEGIN FLIGHT', serif(38, '#fff3dc', 10))
       .setOrigin(0.5)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true })
+    const btnW = Math.min(VIEW_W - 80, Math.round(begin.width + (isTouch ? 130 : 150)))
+    const btnH = Math.round(begin.height + (isTouch ? 46 : 54))
+    const btnPlate2 = this.add.graphics().setAlpha(0)
+    btnPlate2.fillStyle(0x120c26, 0.94)
+    btnPlate2.fillRoundedRect(cx - btnW / 2, 498 - btnH / 2, btnW, btnH, btnH / 2)
+    btnPlate2.lineStyle(2, 0xf0cf9a, 0.85)
+    btnPlate2.strokeRoundedRect(cx - btnW / 2, 498 - btnH / 2, btnW, btnH, btnH / 2)
+    // Explicit positive depths: the plate must sit ABOVE the background
+    // painting but BELOW its own label. A negative depth put it behind the
+    // backdrop entirely and the button disappeared.
+    btnPlate2.setDepth(5)
+    begin.setDepth(6)
     begin.setShadow(0, 3, '#160d24', 12)
     // Match the hit area to the drawn plate rather than guessing an inset, so
     // the hand cursor appears exactly where the button looks like it is. The
@@ -136,9 +145,16 @@ export class TitleScene extends Phaser.Scene {
           'C calls scattered birds back · hold the mouse button to DIVE',
         ]
     const ctrlObjs: Phaser.GameObjects.Text[] = []
+    // Anchored to the bottom of the VISIBLE band rather than to a fixed y:
+    // on a landscape phone the canvas is cropped and absolute coordinates put
+    // these off-screen, and the touch type ramp makes them taller too.
+    const safe = safeArea(this)
+    const ctrlH = isTouch ? 34 : 29
+    const ctrlBottom = safe.y + safe.h - (isTouch ? 26 : 40)
+    const ctrlTop = ctrlBottom - ctrlH * (controls.length - 1)
     controls.forEach((line, i) => {
       const t = this.add
-        .text(cx, 812 + i * 29, line, serif(i === 0 ? 19 : 17, i === 0 ? '#f9f4fd' : '#ece4f4', 2))
+        .text(cx, ctrlTop + i * ctrlH, line, serif(i === 0 ? 19 : 17, i === 0 ? '#f9f4fd' : '#ece4f4', 2))
         .setOrigin(0.5)
         .setAlpha(0)
       t.setShadow(0, 2, '#100a1e', 8)

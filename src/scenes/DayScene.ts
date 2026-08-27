@@ -32,7 +32,10 @@ import {
   SKY_BOTTOM,
 } from '../level'
 import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
-import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS } from '../config'
+import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS,
+  MOTE_CHAIN_WINDOW,
+  MOTE_TIERS,
+} from '../config'
 import {
   BRACE_CHORD_DELAY,
   BRACE_COOLDOWN,
@@ -213,6 +216,10 @@ export class DayScene extends Phaser.Scene {
   private prompt: ActivePrompt | null = null
   private shownPrompts = new Set<string>()
   private lastHit = new Map<Bird, number>()
+  /** live mote chain: length, its remaining window, and the run's best */
+  private moteChain = 0
+  private moteChainT = 0
+  private moteChainBest = 0
   private brittleCharge = new Map<Obstacle, number>()
   /** the cold charge running through a breakable piece, and its host */
   private brittleGlows: {
@@ -233,7 +240,18 @@ export class DayScene extends Phaser.Scene {
   }[] = []
   /** `worth` scales how much daylight the mote returns: the ones that cost
    * a detour pay for it. */
-  private motes: { x: number; y: number; img: Phaser.GameObjects.Image; worth: number; taken: boolean }[] = []
+  private motes: {
+    x: number
+    y: number
+    img: Phaser.GameObjects.Image
+    worth: number
+    /** collected by the flock */
+    taken: boolean
+    /** consumed by the dark instead — light you left behind */
+    eaten: boolean
+    /** drawn size, so the collect burst can scale from it */
+    base: number
+  }[] = []
   private flowStreak = 0
   private mouseTravel = 0
   private lastPointer = { x: 0, y: 0 }
@@ -539,7 +557,10 @@ export class DayScene extends Phaser.Scene {
           .setDisplaySize(size, size)
           .setAlpha(0.9 + Math.random() * 0.1)
           .setDepth(2.5)
-        this.motes.push({ x: mx, y: my2, img, worth: tier === 2 ? 2.2 : tier === 1 ? 1.35 : 1, taken: false })
+        this.motes.push({
+          x: mx, y: my2, img, taken: false, eaten: false, base: size,
+          worth: tier === 2 ? 2.2 : tier === 1 ? 1.35 : 1,
+        })
       }
     }
 
@@ -1441,7 +1462,7 @@ export class DayScene extends Phaser.Scene {
 
     this.updateMovers(time)
     this.updateFlowGates()
-    this.updateMotes()
+    this.updateMotes(dt)
     this.updateDecor(time)
     this.updateNightfall(dt)
     this.updateCards(dt)
@@ -1852,42 +1873,141 @@ export class DayScene extends Phaser.Scene {
   }
 
   /** Wide rewards: golden motes; a spread flock sweeps far more of them. */
-  private updateMotes(): void {
+  /**
+   * THE HARVEST — and the compounding loop the game already had and severed.
+   *
+   * A research panel found FLYWAY owns the best death-spiral substrate of any
+   * game it surveyed, and had neutralised it at exactly one link:
+   *
+   *   miss light -> less daylight -> fog closer -> fog takes trailing birds ->
+   *   fewer birds -> SMALLER NET -> fewer motes -> less daylight
+   *
+   * Every term is already on screen. The loop was broken because the harvest
+   * radius was a fixed 42px per bird, so losing thirty birds cost you nothing
+   * you could feel. It scales with flock size now, and the spiral closes.
+   *
+   * Guarded deliberately: the exponent is gentle and the radius has a floor, so
+   * a battered flock is disadvantaged, never doomed. Compounding pressure, not
+   * an unrecoverable slide.
+   */
+  private updateMotes(dt: number): void {
     const x0 = this.scrollX - 100
     const x1 = this.scrollX + VIEW_W + 100
+
+    // the chain window: a live clock on the most frequent action in the game
+    if (this.moteChain > 0) {
+      this.moteChainT -= dt
+      if (this.moteChainT <= 0) this.endMoteChain(false)
+    }
+
+    // spread widens the net, and a shrunken flock narrows it
+    const spread01 = Math.max(0, -this.flock.form)
+    const health = Phaser.Math.Clamp(this.flock.count / START_BIRDS, 0.35, 1)
+    const reach = (26 + 104 * spread01) * (0.55 + 0.45 * Math.pow(health, 0.7))
+    const reach2 = reach * reach
+
     for (const m of this.motes) {
       // `taken` used to be spelled `!img.visible`, which meant visibility was
       // already carrying state and could not also be used to cull. Now it can:
       // ~179 motes line the whole route and all but a handful are out of frame
       // at any moment, each one paying a transform and a draw for nothing.
       if (m.taken) continue
+
+      // LIGHT YOU LEAVE IS FED TO THE THING CHASING YOU. A missed mote used to
+      // be a non-event; now the dark visibly closes over it, which is what
+      // makes missing cost something the player can see.
+      if (!m.eaten && m.x < this.night.edgeX) {
+        m.eaten = true
+        m.taken = true
+        this.moteEaten(m.x, m.y)
+        continue
+      }
+
       const on = m.x >= x0 && m.x <= x1
       if (m.img.visible !== on) m.img.setVisible(on)
       if (!on) continue
+
       for (const b of this.flock.birds) {
         const dx = b.x - m.x
         const dy = b.y - m.y
-        if (dx * dx + dy * dy < 42 * 42) {
+        if (dx * dx + dy * dy < reach2) {
           m.taken = true
           m.img.setVisible(false)
-          this.audio.collectBloom(1)
-          this.awardScore('light', 1, { x: m.x, y: m.y })
-          // the old flyway's light steadies the flock AND buys back daylight,
-          // which is what makes collecting worth the detour (the invariant the
-          // whole nightfall mechanic rests on)
-          this.flock.relieveStrain(0.5)
-          this.night.feed(m.worth)
-          const spark = this.add
-            .image(m.x, m.y, 'softdot').setTint(0xffd9a0)
-            .setDisplaySize(40, 40)
-            .setAlpha(0.9)
-            .setBlendMode(Phaser.BlendModes.ADD)
-            .setDepth(4)
-          this.tweens.add({ targets: spark, displayWidth: 110, displayHeight: 110, alpha: 0, duration: 450, onComplete: () => spark.destroy() })
+          this.collectMote(m)
           break
         }
       }
     }
+  }
+
+  /** One mote taken: the chain advances, and the chain is what pays. */
+  private collectMote(m: { x: number; y: number; worth: number; base: number }): void {
+    this.moteChain += 1
+    this.moteChainT = MOTE_CHAIN_WINDOW
+    this.moteChainBest = Math.max(this.moteChainBest, this.moteChain)
+
+    // The chain pays in DAYLIGHT, which is the fog's distance — so a long
+    // sweep does not add an abstract score, it physically shoves the wall of
+    // night backward. That is the reward the game already owns.
+    const tier = Math.min(4, Math.floor(this.moteChain / 5))
+    const mult = [1, 1.25, 1.6, 2, 3][tier]
+    this.flock.relieveStrain(0.5)
+    this.night.feed(m.worth * mult)
+    this.awardScore('light', 1, { x: m.x, y: m.y })
+
+    // A rising PENTATONIC rung, not a chromatic semitone: the score is G-major
+    // pentatonic over a D2 drone, so a chromatic ladder leaves the key by the
+    // second mote and grinds the drone by the fourth — and arcs run to 17.
+    this.audio.collectBloom(this.moteChain)
+
+    const spark = this.add
+      .image(m.x, m.y, 'mote')
+      .setDisplaySize(m.base, m.base)
+      .setAlpha(0.95)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(4)
+    // escalate the SIZE of what changes, never the NUMBER of things changing —
+    // additive clutter is how reward feedback becomes noise
+    const grow = m.base * (2.2 + tier * 0.75)
+    this.tweens.add({
+      targets: spark,
+      displayWidth: grow,
+      displayHeight: grow,
+      alpha: 0,
+      duration: 380 + tier * 90,
+      onComplete: () => spark.destroy(),
+    })
+    if (tier > 0) this.showLightChain(tier)
+  }
+
+  /** The dark closes over light the player left behind. */
+  private moteEaten(x: number, y: number): void {
+    const g = this.add
+      .image(x, y, 'mote')
+      .setDisplaySize(46, 46)
+      .setTint(0x6a5a86)
+      .setDepth(4)
+      .setAlpha(0.85)
+    this.tweens.add({
+      targets: g,
+      displayWidth: 8,
+      displayHeight: 8,
+      alpha: 0,
+      duration: 620,
+      ease: 'Cubic.easeIn',
+      onComplete: () => g.destroy(),
+    })
+  }
+
+  /** A chain ends — quietly when it simply lapses, loudly on a collision. */
+  private endMoteChain(broken: boolean): void {
+    if (this.moteChain >= 5) {
+      // a long chain ending is worth hearing either way: a soft settle when it
+      // simply lapsed, a harder fall when stone broke it
+      this.audio.formSnap(broken ? 'spread' : 'gather')
+    }
+    this.moteChain = 0
+    this.moteChainT = 0
   }
 
   /**
@@ -2498,6 +2618,31 @@ export class DayScene extends Phaser.Scene {
   /** The live chain, pinned beside the flock and PERSISTENT — the audit found
    * it invisible until x2, for 2.2s, in a corner the player never looks at. */
   private chainText!: Phaser.GameObjects.Text
+  /**
+   * The LIGHT chain readout. Distinct from showChain(), which reports the
+   * mastery streak ("N CLEAN IN A ROW") — this one names the tier you have
+   * climbed to, because a player can feel arriving somewhere named and cannot
+   * feel the difference between a 1.25x and a 1.6x multiplier.
+   */
+  private showLightChain(tier: number): void {
+    const label = `${this.moteChain}  ${MOTE_TIERS[tier]}`
+    const colours = ['#cdbdd4', '#ffd9a0', '#ffe6bf', '#fff2d8', '#ffffff']
+    this.chainText
+      .setText(label)
+      .setColor(colours[tier])
+      .setAlpha(1)
+      .setScale(1 + tier * 0.06)
+    const at = this.floatAt(this.flock.centerX - this.scrollX, this.flock.centerY + 96)
+    this.chainText.setPosition(at.x, at.y)
+    this.tweens.killTweensOf(this.chainText)
+    this.tweens.add({
+      targets: this.chainText,
+      alpha: 0,
+      duration: 900,
+      delay: 420,
+    })
+  }
+
   private showChain(): void {
     const n = this.score.chain
     if (n <= 0) return

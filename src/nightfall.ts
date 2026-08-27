@@ -47,11 +47,14 @@ const LEAD_EMPTY = -520
 /** How fast the fog edge eases toward its target (px/sec of correction). */
 const EDGE_LERP = 2.1
 /** How many soft blobs build the fog body. */
-const BLOBS = 17
+const BLOBS = 26
 
 export class Nightfall {
   /** 1 = broad day, 0 = the dark is on you. */
   daylight = 1
+  /** Furthest the flock has actually reached. The dark is anchored to this,
+   * not to where the flock is now, so turning back never moves it. */
+  private furthestX = 0
   /** World x of the fog's leading edge. */
   edgeX = -4000
   /** 0..1, how much of the frame the fog currently owns — drives the mix. */
@@ -64,7 +67,6 @@ export class Nightfall {
   private blobSpec: { dx: number; y: number; r: number; phase: number; speed: number; rise: number; depth: number }[] = []
   private rim!: Phaser.GameObjects.Image
   private edgeFade!: Phaser.GameObjects.Image
-  private interior!: Phaser.GameObjects.Image
   private tendrils: Phaser.GameObjects.Image[] = []
   private tendrilT: number[] = []
   private tendrilY: number[] = []
@@ -114,18 +116,12 @@ export class Nightfall {
       })
     }
 
-    // the interior: one wide soft gradient, dark at the left, dissolving to
-    // nothing at its right. A single cheap draw, and it can never show a
-    // straight edge the way a rectangle does.
-    this.interior = scene.add
-      .image(0, viewH / 2, 'vfade')
-      .setDisplaySize(viewH * 3.4, viewH * 1.9)
-      .setRotation(-Math.PI / 2)
-      .setTint(0x0b0716)
-      .setOrigin(0.5, 0.5)
-      .setScrollFactor(0)
-      .setAlpha(0)
-      .setDepth(10.99)
+    // NO GRADIENT LAYER. A 'vfade' is smooth along one axis and a HARD CUT
+    // across the other, so however it is sized or rotated one of its edges is a
+    // straight line — which is the "black boxes in the fog" reported repeatedly
+    // on both desktop and mobile. The painted pieces are feathered on every
+    // border and physically cannot produce a straight edge, so they carry the
+    // entire mass alone. Opacity is made up with more of them, not with a quad.
 
     // the boundary itself: a dark gradient that hides the tile's hard edge and
     // makes the fog dissolve into lit air instead of stopping at a ruled line
@@ -140,7 +136,7 @@ export class Nightfall {
     // a bright edge where the dark eats into lit air, so the boundary is
     // never ambiguous — this is the single most important pixel of the effect
     this.rim = scene.add
-      .image(0, viewH / 2, 'vfade')
+      .image(0, viewH / 2, scene.textures.exists(FOG_ART.edge) ? FOG_ART.edge : 'vfade')
       .setDisplaySize(viewH * 1.2, 130)
       .setRotation(Math.PI / 2)
       .setTint(0xffd0a8)
@@ -176,6 +172,7 @@ export class Nightfall {
   }
 
   reset(flockX: number): void {
+    this.furthestX = flockX
     this.daylight = 1
     this.edgeX = flockX - LEAD_FULL
     this.encroach = 0
@@ -185,13 +182,24 @@ export class Nightfall {
     this.takenThisFrame.length = 0
     this.daylight = Math.max(0, this.daylight - dt * DRAIN_PER_SEC * this.intensity)
 
-    // the fog wants to sit LEAD behind the flock, and LEAD shrinks with the light
+    // THE DARK DOES NOT FOLLOW YOU — it advances.
+    //
+    // This used to track flock.centerX, so flying BACKWARD dragged the fog
+    // backward too: retreating cost nothing and the chase had no teeth. Night
+    // does not un-fall because you turned around. The edge is therefore
+    // anchored to the furthest point the flock has REACHED, so backing up
+    // closes the distance rather than moving the threat.
+    this.furthestX = Math.max(this.furthestX, flock.centerX)
     const lead = LEAD_EMPTY + (LEAD_FULL - LEAD_EMPTY) * this.daylight
-    const want = flock.centerX - lead
-    this.edgeX += (want - this.edgeX) * (1 - Math.exp(-EDGE_LERP * dt))
+    const want = this.furthestX - lead
+    // Advancing is free; RETREATING only happens because daylight was gained,
+    // which is the light you collected buying ground back. Two rates, so the
+    // reward reads as a deliberate shove rather than as drift.
+    const rate = want > this.edgeX ? EDGE_LERP : EDGE_LERP * 1.5
+    this.edgeX += (want - this.edgeX) * (1 - Math.exp(-rate * dt))
     // it never retreats past its full-daylight standoff, so light buys room
     // rather than erasing the threat
-    this.edgeX = Math.max(this.edgeX, flock.centerX - LEAD_FULL)
+    this.edgeX = Math.max(this.edgeX, this.furthestX - LEAD_FULL)
 
     const screenEdge = this.edgeX - scrollX
     // presence ramps early: the dark should be a visible weight on the frame
@@ -238,15 +246,8 @@ export class Nightfall {
       img.setDisplaySize(r * 2.3, r * 1.15)
       // leading wisps stay thin, the body behind is dense
       // leading wisps stay sheer so the lethal edge is still readable
-      const body = sp.depth < 0.2 ? 0.3 + sp.depth * 0.8 : 0.72 + sp.depth * 1.1
+      const body = sp.depth < 0.2 ? 0.34 + sp.depth * 0.9 : 0.86 + sp.depth * 1.25
       img.setAlpha(Math.min(0.95, this.encroach * 1.5 * body * (0.75 + breathe * 0.25)))
-    }
-
-    this.interior.setVisible(vis)
-    if (vis) {
-      // its soft right edge sits just behind the painted front
-      this.interior.x = screenEdge - this.interior.displayHeight * 0.5 + 190
-      this.interior.setAlpha(Math.min(0.92, this.encroach * 1.25))
     }
 
     this.edgeFade.setVisible(vis)
@@ -317,7 +318,6 @@ export class Nightfall {
   destroy(): void {
     for (const bl of this.blobs) bl.destroy()
     this.edgeFade.destroy()
-    this.interior.destroy()
     for (const t of this.tendrils) t.destroy()
     this.rim.destroy()
   }
