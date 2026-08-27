@@ -868,10 +868,11 @@ export class Flock {
    * pulsing, so they separate from both the navy flock and the warm sky. */
   private riskHalos: Phaser.GameObjects.Image[] = []
   private riskUsed = 0
+  private riskCandidates: { b: Bird; d01: number }[] = []
 
   /** Never more than this many rings at once — past a dozen it stops reading
    * as "these birds" and starts reading as UI noise. */
-  private static readonly MAX_RISK_RINGS = 12
+  private static readonly MAX_RISK_RINGS = 6
 
   private markAtRisk(b: Bird, d01: number): void {
     if (this.riskUsed >= Flock.MAX_RISK_RINGS) return
@@ -895,8 +896,7 @@ export class Flock {
   }
 
   private render(dt: number): void {
-    // release last frame's halos; markAtRisk() re-claims what it needs
-    for (let i = this.riskUsed; i < this.riskHalos.length; i++) this.riskHalos[i].setVisible(false)
+    this.riskCandidates.length = 0
     this.riskUsed = 0
     const rk = 1 - Math.exp(-9 * dt)
     for (const b of this.birds) {
@@ -920,7 +920,7 @@ export class Flock {
         if (s.isTinted) s.clearTint()
         s.setAlpha(1)
         s.x += Math.sin(this.time * 42 + b.flapPhase) * d01 * 2.6
-        this.markAtRisk(b, d01)
+        if (d01 > 0.45) this.riskCandidates.push({ b, d01 })
       } else if (this.pulse > 0.3) {
         // SURGE: the leading edge catches the light — a warm spear-tip
         const ahead = (b.x - this.centerX) * Math.cos(b.renderAngle) + (b.y - this.centerY) * Math.sin(b.renderAngle)
@@ -934,6 +934,11 @@ export class Flock {
       s.scaleY = this.scale * b.depth * (0.94 + 0.08 * flap)
       s.scaleX = this.scale * b.depth
     }
+
+    // ring the birds in the WORST trouble, not the first few the loop reached
+    if (this.riskCandidates.length > 1) this.riskCandidates.sort((p, q) => q.d01 - p.d01)
+    for (const c of this.riskCandidates) this.markAtRisk(c.b, c.d01)
+    for (let i = this.riskUsed; i < this.riskHalos.length; i++) this.riskHalos[i].setVisible(false)
   }
 
   private alignScale(f: number): number {

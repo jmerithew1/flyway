@@ -79,16 +79,20 @@ export class TitleScene extends Phaser.Scene {
 
     // ---- BEGIN FLIGHT: the one thing that matters, so it is the one thing
     // that is unmissable — a lit plate, big warm caps, and room around it
+    // A soft radial blob behind the label read as a smudge, not a control.
+    // A real plate with an edge reads as a button from across the room.
     const btnPlate = this.add
       .image(cx, 500, 'softdot')
-      .setTint(0x0e0920)
-      .setDisplaySize(760, 250)
+      .setTint(0x0d0820)
+      .setDisplaySize(880, 300)
       .setAlpha(0)
-    const btnPlate2 = this.add
-      .image(cx, 500, 'softdot')
-      .setTint(0x0b0718)
-      .setDisplaySize(470, 150)
-      .setAlpha(0)
+    const btnW = 440
+    const btnH = 108
+    const btnPlate2 = this.add.graphics().setAlpha(0)
+    btnPlate2.fillStyle(0x120c26, 0.94)
+    btnPlate2.fillRoundedRect(cx - btnW / 2, 500 - btnH / 2, btnW, btnH, btnH / 2)
+    btnPlate2.lineStyle(2, 0xf0cf9a, 0.85)
+    btnPlate2.strokeRoundedRect(cx - btnW / 2, 500 - btnH / 2, btnW, btnH, btnH / 2)
     const begin = this.add
       .text(cx, 498, 'BEGIN FLIGHT', serif(38, '#fff3dc', 10))
       .setOrigin(0.5)
@@ -98,10 +102,10 @@ export class TitleScene extends Phaser.Scene {
     begin.input!.hitArea = new Phaser.Geom.Rectangle(-90, -50, begin.width + 180, begin.height + 100)
     begin.input!.hitAreaCallback = Phaser.Geom.Rectangle.Contains
     const beginHint = this.add
-      .text(cx, 546, isTouch ? 'tap anywhere' : 'click, or press SPACE', serif(15, '#c9bcd6', 4))
+      .text(cx, 588, isTouch ? 'tap anywhere' : 'click, or press SPACE', serif(18, '#e6dcf0', 4))
       .setOrigin(0.5)
       .setAlpha(0)
-    beginHint.setShadow(0, 2, '#180f28', 6)
+    beginHint.setShadow(0, 3, '#180f28', 10, true, true)
     if (!isTouch) {
       begin.on('pointerover', () => begin.setColor('#ffe6bf'))
       begin.on('pointerout', () => begin.setColor('#fff3dc'))
@@ -115,7 +119,7 @@ export class TitleScene extends Phaser.Scene {
     const ctrlObjs: Phaser.GameObjects.Text[] = []
     controls.forEach((line, i) => {
       const t = this.add
-        .text(cx, 826 + i * 30, line, serif(i === 2 ? 14 : 16, i === 2 ? '#c4b8d4' : '#f2eaf8', 2))
+        .text(cx, 826 + i * 30, line, serif(i === 2 ? 17 : 18, i === 2 ? '#e2d8ee' : '#f9f4fd', 2))
         .setOrigin(0.5)
         .setAlpha(0)
       t.setShadow(0, 2, '#100a1e', 8)
@@ -134,10 +138,10 @@ export class TitleScene extends Phaser.Scene {
 
     this.tweens.add({ targets: title, alpha: 1, duration: 1100 })
     this.tweens.add({ targets: tag, alpha: 0.95, duration: 900, delay: 500 })
-    this.tweens.add({ targets: ctrlObjs, alpha: 0.95, duration: 800, delay: 1700 })
-    this.tweens.add({ targets: hint, alpha: 0.85, duration: 800, delay: 1700 })
-    this.tweens.add({ targets: [btnPlate], alpha: 0.62, duration: 800, delay: 1300 })
-    this.tweens.add({ targets: [btnPlate2], alpha: 0.5, duration: 800, delay: 1300 })
+    this.tweens.add({ targets: ctrlObjs, alpha: 1, duration: 800, delay: 1700 })
+    this.tweens.add({ targets: hint, alpha: 1, duration: 800, delay: 1700 })
+    this.tweens.add({ targets: [btnPlate], alpha: 0.55, duration: 800, delay: 1300 })
+    this.tweens.add({ targets: [btnPlate2], alpha: 1, duration: 800, delay: 1300 })
     this.tweens.add({ targets: [begin, beginHint], alpha: 1, duration: 800, delay: 1400 })
     this.tweens.add({ targets: begin, scale: 1.045, duration: 1300, delay: 2300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
 
@@ -156,7 +160,7 @@ export class TitleScene extends Phaser.Scene {
       .text(VIEW_W / 2, VIEW_H / 2 - 14, 'turn your phone to fly', voice(38, INK.warm))
       .setOrigin(0.5)
     const sub = this.add
-      .text(VIEW_W / 2, VIEW_H / 2 + 46, 'THE FLOCK NEEDS THE WIDE SKY', display(16, INK.dim, 8, 300))
+      .text(VIEW_W / 2, VIEW_H / 2 + 46, 'THE FLOCK NEEDS THE WIDE SKY', display(16, INK.soft, 8, 300))
       .setOrigin(0.5)
     this.rotateCard = this.add.container(0, 0, [scrim, line, sub]).setDepth(200).setScrollFactor(0)
     this.tweens.add({ targets: line, alpha: 0.55, duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })

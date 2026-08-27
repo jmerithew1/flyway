@@ -14,9 +14,9 @@ export const FONT_BODY = '"Cormorant Garamond", "Iowan Old Style", Palatino, Geo
 export const INK = {
   bright: '#f6f1fa', // primary titles
   warm: '#f6d9b8', // earned / gold accents
-  soft: '#c6bcd4', // secondary copy
-  dim: '#96899f', // tertiary, unearned
-  alert: '#e0a898', // low-flock warning
+  soft: '#ddd5e6', // secondary copy
+  dim: '#b3a7bd', // tertiary, unearned
+  alert: '#ffb9a4', // low-flock warning
 } as const
 
 type TextStyle = Phaser.Types.GameObjects.Text.TextStyle
@@ -35,6 +35,26 @@ const UI_SCALE = ((): number => {
 
 const sized = (px: number): string => `${Math.round(px * UI_SCALE)}px`
 
+/**
+ * Pale glyphs on a bright dusk sky measured as low as 1.12:1 — far under the
+ * 3:1 floor for large text, and the reason copy kept "disappearing". Every
+ * string in the game is built by display() or voice(), so carrying a dark
+ * contact shadow plus a thin dark halo in these two functions lifts the whole
+ * UI at once, wherever it happens to sit and whatever colour the sky is doing.
+ */
+const legible = (size: number): Partial<TextStyle> => ({
+  stroke: '#241a2e',
+  strokeThickness: Math.max(3, Math.round(size * UI_SCALE * 0.1)),
+  shadow: {
+    offsetX: 0,
+    offsetY: Math.max(2, Math.round(size * UI_SCALE * 0.055)),
+    color: '#1a1226',
+    blur: Math.max(7, Math.round(size * UI_SCALE * 0.4)),
+    stroke: true,
+    fill: true,
+  },
+})
+
 /** Wide-tracked geometric caps: titles, labels, buttons, HUD numerals. */
 export function display(size: number, color: string = INK.bright, tracking = 0, weight: 300 | 400 | 500 = 400): TextStyle {
   return {
@@ -43,6 +63,7 @@ export function display(size: number, color: string = INK.bright, tracking = 0, 
     color,
     fontStyle: `${weight}`,
     letterSpacing: tracking,
+    ...legible(size),
   } as TextStyle
 }
 
@@ -54,6 +75,7 @@ export function voice(size: number, color: string = INK.soft, tracking = 0): Tex
     color,
     fontStyle: 'italic 300',
     letterSpacing: tracking,
+    ...legible(size),
   } as TextStyle
 }
 

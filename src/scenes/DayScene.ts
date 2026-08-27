@@ -1737,13 +1737,38 @@ export class DayScene extends Phaser.Scene {
   }
 
   /** Keep floating text inside the visible rect AND clear of the touch pads. */
+  /** Rows recently claimed by a floating callout, with the time they free up.
+   * Two popups landing on one spot overstrike into unreadable garbage
+   * (the audit caught "++11 BBTRRFSDRRDDD"), so each one takes its own lane. */
+  private floatLanes: { x: number; y: number; until: number }[] = []
+
   private floatAt(x: number, y: number): { x: number; y: number } {
     const safe = safeArea(this)
     const padGuard = isTouch ? 230 : 90
-    return {
-      x: Phaser.Math.Clamp(x, safe.x + 210, safe.x + safe.w - 210),
-      y: Phaser.Math.Clamp(y, safe.y + 70, safe.y + safe.h - padGuard),
+    const top = safe.y + 70
+    const bottom = safe.y + safe.h - padGuard
+    const cx = Phaser.Math.Clamp(x, safe.x + 210, safe.x + safe.w - 210)
+    let cy = Phaser.Math.Clamp(y, top, bottom)
+
+    const now = this.time.now
+    this.floatLanes = this.floatLanes.filter((l) => l.until > now)
+    const clashes = (ty: number): boolean =>
+      this.floatLanes.some((l) => Math.abs(l.y - ty) < 42 && Math.abs(l.x - cx) < 300)
+    if (clashes(cy)) {
+      // walk outward in both directions for the nearest free lane
+      let found = false
+      for (let step = 44; step <= 220 && !found; step += 44) {
+        for (const cand of [cy - step, cy + step]) {
+          if (cand >= top && cand <= bottom && !clashes(cand)) {
+            cy = cand
+            found = true
+            break
+          }
+        }
+      }
     }
+    this.floatLanes.push({ x: cx, y: cy, until: now + 900 })
+    return { x: cx, y: cy }
   }
 
   /** Say WHY birds were lost, at the place it happened. Rate-limited so a

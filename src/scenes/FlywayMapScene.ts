@@ -249,7 +249,7 @@ export class FlywayMapScene extends Phaser.Scene {
           })
           nodeObjs.push(
             this.add
-              .text(p.x, labelY + 82, `${best.birdsArrived} birds  ·  ${best.perfectFlows} flows`, display(14, '#cbb9a4', 3, 300))
+              .text(p.x, labelY + 82, `${best.birdsArrived} birds  ·  ${best.perfectFlows} flows`, display(16, '#f0dcc4', 3, 300))
               .setOrigin(0.5)
               .setDepth(5),
           )
@@ -284,16 +284,15 @@ export class FlywayMapScene extends Phaser.Scene {
         })
         nodeObjs.push(
           this.add
-            .text(p.x, p.y + h * 0.58, node.label, display(13, '#7f88b8', 5, 300))
+            .text(p.x, p.y + h * 0.58, node.label, display(17, '#c2c9ee', 5, 300))
             .setOrigin(0.5)
-            .setAlpha(0.7)
             .setDepth(5),
         )
       }
     })
 
     const continues = this.add
-      .text(VIEW_W * 0.63, VIEW_H * 0.78, 'the flyway continues…', voice(20, '#9aa2cf'))
+      .text(VIEW_W * 0.63, VIEW_H * 0.78, 'the flyway continues…', voice(22, '#c8cff2'))
       .setOrigin(0.5)
       .setDepth(5)
       .setAlpha(0)
@@ -322,7 +321,7 @@ export class FlywayMapScene extends Phaser.Scene {
       btn.on('pointerout', () => btn.setColor(base))
       btn.on('pointerdown', run)
       const sub = this.add
-        .text(x, VIEW_H - 48, hint, display(12, INK.dim, 2, 300))
+        .text(x, VIEW_H - 48, hint, display(15, INK.soft, 2, 300))
         .setOrigin(0.5)
         .setAlpha(0)
         .setDepth(6)
