@@ -4,7 +4,7 @@ import { ART } from '../artManifest'
 import { DAY_NAME, FLOCK_STAR_RETURNED, FLOW_STAR_FRACTION } from '../config'
 import { FlightResult, FLOW_COLLISION_CAP, recordBest } from '../result'
 import { MASTERY_LABEL, MasteryEvent } from '../score'
-import { display, voice, INK } from '../ui'
+import { display, voice, INK, safeArea } from '../ui'
 
 /**
  * The arrival ceremony's second half: the roost stays visible behind a rising
@@ -47,7 +47,10 @@ export class ResultsScene extends Phaser.Scene {
     const cx = VIEW_W * 0.4
     const style = (size: number, color: string = INK.bright, ls = 0) => display(size, color, ls, 300)
 
-    const title = this.add.text(cx, 92, `${DAY_NAME} — HOME`, style(32, '#f7f0ea', 8)).setOrigin(0.5).setAlpha(0)
+    const safe = safeArea(this)
+    const topY = safe.y + 46
+    const botY = safe.y + safe.h
+    const title = this.add.text(cx, topY, `${DAY_NAME} — HOME`, style(32, '#f7f0ea', 8)).setOrigin(0.5).setAlpha(0)
 
     // ---- the flock, counted back
     const rows: Array<[string, number, string, string]> = [
@@ -58,7 +61,7 @@ export class ResultsScene extends Phaser.Scene {
     ]
     const rowObjs: Phaser.GameObjects.Text[] = []
     rows.forEach(([k, v, prefix, c], i) => {
-      const y = 158 + i * 32
+      const y = topY + 66 + i * 32
       rowObjs.push(this.add.text(cx - 24, y, k, style(17, INK.soft)).setOrigin(1, 0.5).setAlpha(0))
       const val = this.add.text(cx + 24, y, `${prefix}0`, style(20, c, 1)).setOrigin(0, 0.5).setAlpha(0)
       rowObjs.push(val)
@@ -129,7 +132,7 @@ export class ResultsScene extends Phaser.Scene {
     const featherBase = 1900 + lines.length * 140 + 800
     feathers.forEach(([label, earned, why], i) => {
       const x = cx + (i - 1) * 250
-      const y = VIEW_H - 218
+      const y = botY - 218
       const key = `${ratingKeys[i]}_${earned ? 'on' : 'off'}`
       const icon = this.textures.exists(key)
         ? this.add.image(x, y, key).setDisplaySize(90, 90)
@@ -155,7 +158,7 @@ export class ResultsScene extends Phaser.Scene {
     const beatBest = !prevBest || (result.score ?? 0) > (prevBest.score ?? 0)
     const bestLine = beatBest ? 'NEW BEST FLIGHT' : `Best: ${prevBest?.score ?? 0} · ${prevBest?.birdsArrived ?? 0} birds`
     const best = this.add
-      .text(cx, VIEW_H - 100, bestLine, display(beatBest ? 18 : 14, beatBest ? '#ffe6bf' : INK.dim, beatBest ? 6 : 2, beatBest ? 500 : 300))
+      .text(cx, botY - 100, bestLine, display(beatBest ? 18 : 14, beatBest ? '#ffe6bf' : INK.dim, beatBest ? 6 : 2, beatBest ? 500 : 300))
       .setOrigin(0.5)
       .setAlpha(0)
     this.at(featherBase + 1600, () => this.tweens.add({ targets: best, alpha: 1, duration: 480 }))
@@ -164,7 +167,7 @@ export class ResultsScene extends Phaser.Scene {
     const mk = (x: number, label: string, hint: string, run: () => void, warm = false) => {
       const base = warm ? INK.warm : INK.bright
       const btn = this.add
-        .text(x, VIEW_H - 52, label, display(19, base, 6, 400))
+        .text(x, botY - 62, label, display(19, base, 6, 400))
         .setOrigin(0.5)
         .setAlpha(0)
         .setInteractive({ useHandCursor: true })
@@ -174,7 +177,7 @@ export class ResultsScene extends Phaser.Scene {
       btn.on('pointerover', () => btn.setColor('#ffe6bf'))
       btn.on('pointerout', () => btn.setColor(base))
       btn.on('pointerdown', run)
-      const sub = this.add.text(x, VIEW_H - 28, hint, display(11, INK.dim, 2, 300)).setOrigin(0.5).setAlpha(0)
+      const sub = this.add.text(x, botY - 34, hint, display(11, INK.dim, 2, 300)).setOrigin(0.5).setAlpha(0)
       this.at(featherBase + 1800, () => this.tweens.add({ targets: [btn, sub], alpha: 0.92, duration: 480 }))
     }
     mk(cx - 175, 'REPLAY FLIGHT', 'press R', () => this.scene.start('Day'), true)

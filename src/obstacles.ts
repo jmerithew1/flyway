@@ -77,8 +77,22 @@ export function obstacleField(o: Obstacle, px: number, py: number): { nx: number
   return { nx: 0, ny: Math.sign(dy || 1), dist: qy }
 }
 
-const AVOID_LOOKAHEAD = 0.95 // seconds of anticipation
-const AVOID_MARGIN = 92 // px of comfortable clearance
+// These were raised to 0.95s/92px to stop silhouette colliders over-punishing,
+// and overshot catastrophically: an audit drove the full level with the pointer
+// PARKED and no key ever pressed, and finished with 223 birds, zero collisions,
+// at any altitude. The birds were solving the level by themselves - there was
+// no game left. Avoidance must read as flock instinct, not as an autopilot:
+// enough to make a murmuration feel alive around stone, not enough to route it.
+/**
+ * How far ahead a bird anticipates stone, and how much room it wants.
+ *
+ * This pair decides whether there is a game at all. At 0.95s/92px an audit
+ * drove the entire level with the pointer PARKED and finished with 223 birds
+ * and zero collisions - the flock solved it alone. At 0.5s/46px even a pilot
+ * holding Gather 85% of the time died at x=12905. Mutable so the fairness
+ * probe can sweep the space in one session rather than one rebuild per guess.
+ */
+export const AVOID = { lookahead: 0.88, margin: 84 }
 
 /**
  * Anticipatory avoidance steering for one bird against one obstacle.
@@ -96,13 +110,13 @@ export function avoidSteer(
 ): AvoidResult | null {
   if (o.broken) return null
   const now = obstacleField(o, px, py)
-  const ax = px + vx * AVOID_LOOKAHEAD
-  const ay = py + vy * AVOID_LOOKAHEAD
+  const ax = px + vx * AVOID.lookahead
+  const ay = py + vy * AVOID.lookahead
   const ahead = obstacleField(o, ax, ay)
   const dist = Math.min(now.dist, ahead.dist)
-  if (dist > AVOID_MARGIN) return null
+  if (dist > AVOID.margin) return null
 
-  const urgency = 1 - Math.max(dist, 0) / AVOID_MARGIN
+  const urgency = 1 - Math.max(dist, 0) / AVOID.margin
   // Base push: away from the surface (use the more urgent sample).
   const src = ahead.dist < now.dist ? ahead : now
   let fx = src.nx

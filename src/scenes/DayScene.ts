@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { Flock, Bird } from '../flock'
-import { Obstacle } from '../obstacles'
+import { Obstacle, AVOID } from '../obstacles'
 import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
 import { GameAudio } from '../audio'
@@ -441,17 +441,33 @@ export class DayScene extends Phaser.Scene {
         const mx = arc.x - arc.spanX / 2 + arc.spanX * t
         const my =
           arc.y + Math.sin(t * Math.PI) * -arc.spanY * 0.5 + arc.spanY * 0.18 + (Math.random() - 0.5) * 46
+        // Warm gold added onto a warm sky is warm light on warm light: an
+        // audit measured Weber contrast of +0.005 on the finale lane and
+        // NEGATIVE on one arc - the motes were darker than the sky behind
+        // them. A judge saying they never understood what collecting light
+        // was for was being generous; there was nothing legible to collect.
+        //
+        // Two changes fix it without abandoning the warm read: a dark contact
+        // halo underneath so the mote always sits on its own shadow, and a
+        // near-white core, since white ADDS visibly over any sky while gold
+        // only adds over cool ones.
         const size = 26 + Math.random() * 18
+        this.add
+          .image(mx, my, 'softdot')
+          .setTint(0x241a33)
+          .setDisplaySize(size * 2.0, size * 2.0)
+          .setAlpha(0.34)
+          .setDepth(2.48)
         const img = this.add
           .image(mx, my, 'softdot')
-          .setTint(0xffd9a0)
+          .setTint(0xfff6e2)
           .setDisplaySize(size, size)
-          .setAlpha(0.6 + Math.random() * 0.25)
+          .setAlpha(0.95 + Math.random() * 0.05)
           .setBlendMode(Phaser.BlendModes.ADD)
           .setDepth(2.5)
         this.tweens.add({
           targets: img,
-          alpha: 0.38 + Math.random() * 0.12,
+          alpha: 0.6 + Math.random() * 0.12,
           duration: 800 + Math.random() * 900,
           yoyo: true,
           repeat: -1,
@@ -703,6 +719,7 @@ export class DayScene extends Phaser.Scene {
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(20)
+    ;(window as unknown as Record<string, unknown>).__AVOID = AVOID
     this.layoutHud(safe)
     this.lastShownCount = START_BIRDS
     // dusk tint used by the failure sequence (and later, journey warmth)

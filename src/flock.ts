@@ -46,7 +46,14 @@ import {
  *  - obstacles split the flock naturally; reunion is imperfect
  */
 
-export const TUNING = {
+export /** Above this the air thins and the flock sinks: the sky is a boundary, not a
+ * bypass. An audit found a lane at y=45-60 where only 1.7% of the level is
+ * blocked - a free corridor above the entire game. */
+const CEILING_Y = 210
+/** Only above THIS does altitude actually cost birds. */
+const CEILING_HARD = 90
+
+const TUNING = {
   viewRadius: 96,
   sepRadiusNeutral: 62,
   sepRadiusGather: 13,
@@ -843,7 +850,7 @@ export class Flock {
         // bleeds from its edges. Holding Gather commits the flock and shields
         // it completely — formation choice matters everywhere, every second.
         if (o.kind === 'solid' && res.urgency > 0.4 && gather < 0.3) {
-          b.danger += dt * (res.urgency - 0.4) * 2.4 * this.dangerScale
+          b.danger += dt * (res.urgency - 0.4) * 1.35 * this.dangerScale
           if (b.danger > 1) {
             b.danger = 0
             this.flungBirds.push(b)
@@ -862,6 +869,28 @@ export class Flock {
             const field = obstacleField(o, b.x, b.y)
             b.x += field.nx * (-field.dist + 2)
             b.y += field.ny * (-field.dist + 2)
+          }
+        }
+      }
+
+      // THE CEILING. An audit swept every altitude against every collider and
+      // found a lane at y=45-60 where only 1.7% of the level is blocked - a
+      // free corridor from the roost to the finish, above the entire game.
+      // Rather than hand-blocking 26,000px, the sky itself has a limit: up
+      // there the air is thin and cold, and a flock that hides in it bleeds
+      // through the danger clock the rest of the game already uses.
+      if (b.y < CEILING_Y) {
+        // Thin air PUSHES BACK rather than killing. A flock climbing out of
+        // the level visibly sinks - wings biting nothing - so the player reads
+        // a boundary instead of being deleted by an invisible rule. Only the
+        // truly absurd altitude costs birds, and slowly.
+        const high = Math.min(1, (CEILING_Y - b.y) / 110)
+        ay += high * high * 1500
+        if (b.y < CEILING_HARD) {
+          b.danger += dt * 0.5 * this.dangerScale
+          if (b.danger > 1) {
+            b.danger = 0
+            this.flungBirds.push(b)
           }
         }
       }
