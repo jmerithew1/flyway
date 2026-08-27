@@ -66,10 +66,25 @@ export function voice(size: number, color: string = INK.soft, tracking = 0): Tex
 export function safeArea(scene: Phaser.Scene): { x: number; y: number; w: number; h: number } {
   const gw = scene.scale.width
   const gh = scene.scale.height
-  const vw = scene.scale.parentSize.width || gw
-  const vh = scene.scale.parentSize.height || gh
-  const k = Math.max(vw / gw, vh / gh)
-  const w = Math.min(gw, vw / k)
-  const h = Math.min(gh, vh / k)
+  const canvas = scene.game.canvas
+  // MEASURE the crop rather than assuming it is symmetric: any stray centring
+  // (a flex parent, a margin) shifts it off-axis, and an assumed split then
+  // places the HUD outside the frame entirely.
+  if (canvas) {
+    const r = canvas.getBoundingClientRect()
+    const k = r.height / gh || 1
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const left = Math.max(0, -r.left) / k
+    const top = Math.max(0, -r.top) / k
+    const right = Math.max(0, r.right - vw) / k
+    const bottom = Math.max(0, r.bottom - vh) / k
+    const w = Math.max(200, gw - left - right)
+    const h = Math.max(200, gh - top - bottom)
+    return { x: left, y: top, w, h }
+  }
+  const k = Math.max((scene.scale.parentSize.width || gw) / gw, (scene.scale.parentSize.height || gh) / gh)
+  const w = Math.min(gw, (scene.scale.parentSize.width || gw) / k)
+  const h = Math.min(gh, (scene.scale.parentSize.height || gh) / k)
   return { x: (gw - w) / 2, y: (gh - h) / 2, w, h }
 }

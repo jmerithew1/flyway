@@ -311,8 +311,21 @@ export class Flock {
   /** Tap SPACE: the flock snaps tight and slingshots forward. Strained
    * flocks produce a ragged, weaker pulse — strain is the anti-spam. */
   surge(): void {
-    this.pulse = Math.max(this.pulse, 1 - this.gatherStrain * 0.6)
+    const strength = 1 - this.gatherStrain * 0.6
+    this.pulse = Math.max(this.pulse, strength)
     this.gatherTime += 0.5 * this.strainMult
+    // A raised speed CEILING alone produced no surge at all: accelerating
+    // toward the cursor shrinks `idist`, which collapses the `chase` term by
+    // almost exactly what the pulse added (measured 325 -> 326 px/s). So the
+    // slingshot has to be a real impulse in the world frame — velocity the
+    // steering has to catch up to, not a limit it never reaches.
+    const hx = this.meanVX, hy = this.meanVY
+    const hm = Math.hypot(hx, hy) || 1
+    const kick = 190 * strength
+    for (const b of this.birds) {
+      b.vx += (hx / hm) * kick
+      b.vy += (hy / hm) * kick
+    }
   }
 
   /** Tap SHIFT: wings flare, momentum dies — the overshoot panic button. */
@@ -834,11 +847,13 @@ export class Flock {
         (1 + this.pulse * 0.45 + this.draft * 0.25 + stooping + this.diveLift * DIVE_LIFT_SPEED) *
         (1 - this.flareAmt * 0.62)
       const sp = Math.hypot(b.vx, b.vy) || 1
-      const shepherd = this.flareAmt > 0.1 ? 5.2 : 2.2
+      // during a surge the shepherd only accelerates — otherwise it spends the
+      // whole pulse dragging the impulse back down to cruise
+      const shepherd = this.flareAmt > 0.1 ? 5.2 : this.pulse > 0.12 && sp > cruise ? 0.35 : 2.2
       const targetSp = clamp(
         sp + (cruise - sp) * (1 - Math.exp(-shepherd * dt)),
         TUNING.minSpeed * (1 - this.flareAmt * 0.55),
-        TUNING.maxSpeed * (1 + this.pulse * 0.18 + stooping + this.diveLift * DIVE_LIFT_SPEED * 0.5),
+        TUNING.maxSpeed * (1 + this.pulse * 0.5 + stooping + this.diveLift * DIVE_LIFT_SPEED * 0.5),
       )
       b.vx = (b.vx / sp) * targetSp
       b.vy = (b.vy / sp) * targetSp

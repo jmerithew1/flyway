@@ -44,6 +44,7 @@ export class FalconSystem {
   onStrikeResolved: ((taken: number, gathered: boolean, mobbed: boolean) => void) | null = null
   /** Flock size when the zone armed — mobbing needs ~70% of it intact. */
   private zoneArrivalCount = 120
+  private lastX = 0
 
   constructor(scene: Phaser.Scene, audio: GameAudio, zoneXs: number[]) {
     this.scene = scene
@@ -78,8 +79,18 @@ export class FalconSystem {
       this.falcon.setTexture(key)
       this.falcon.clearTint()
       const src = this.scene.textures.get(key).getSourceImage() as { width: number; height: number }
-      this.falcon.setScale(310 / src.width)
+      // the flock is 27px across; a 310px raptor read as ~11x their size.
+      // 210 keeps it clearly the biggest thing in the sky without absurdity.
+      this.falcon.setScale(210 / src.width)
     }
+  }
+
+  /** Point the bird where it is going. The poses are drawn facing left, so
+   * travelling right means flipping — otherwise it flies backwards through
+   * its own dive, which is exactly what the audit caught. */
+  private faceTravel(vx: number): void {
+    if (Math.abs(vx) < 1) return
+    this.falcon.setFlipX(vx > 0)
   }
 
   update(dt: number, flock: Flock, scrollX: number, viewW: number, obstacles: Obstacle[] = []): void {
@@ -131,7 +142,10 @@ export class FalconSystem {
       this.setPose('bank')
       this.falcon.setVisible(true)
       const wob = Math.sin(this.timer * 4.2)
-      this.falcon.setPosition(flock.centerX + 60 + wob * 30, 120 + wob * 16)
+      const bankX = flock.centerX + 60 + wob * 30
+      this.faceTravel(bankX - (this.lastX || bankX))
+      this.lastX = bankX
+      this.falcon.setPosition(bankX, 120 + wob * 16)
       this.falcon.setRotation(wob * 0.08)
       if (t > this.window) {
         this.phase = 'strike'
@@ -144,6 +158,8 @@ export class FalconSystem {
       this.setPose(p < 0.6 ? 'dive' : 'strike')
       const fx = this.strikeX + (p - 0.5) * 260
       const fy = -160 + p * (flock.centerY + 240)
+      this.faceTravel(fx - (this.lastX || fx))
+      this.lastX = fx
       this.falcon.setPosition(fx, fy)
       this.falcon.setRotation(0.9 - p * 0.5)
       // carried birds trail from the talons
@@ -158,9 +174,10 @@ export class FalconSystem {
       const p = Math.min(1, this.timer / 0.8)
       const fx = this.strikeX + 130 + p * 900
       const fy = flock.centerY + 80 - p * (flock.centerY + 500)
+      this.faceTravel(fx - (this.lastX || fx))
+      this.lastX = fx
       this.falcon.setPosition(fx, fy)
       this.falcon.setRotation(-0.4)
-      this.falcon.setFlipX(false)
       for (const c of this.carried) c.sprite.setPosition(fx + c.dx, fy + c.dy)
       if (p >= 1) {
         this.falcon.setVisible(false)
@@ -173,7 +190,7 @@ export class FalconSystem {
 
   /** Resolve the strike against the flock's CURRENT formation. */
   private beginStrike(flock: Flock): void {
-    this.falcon.setVisible(true).setFlipX(false)
+    this.falcon.setVisible(true)
     this.strikeX = flock.centerX
     const gathered = flock.form > 0.35
 
