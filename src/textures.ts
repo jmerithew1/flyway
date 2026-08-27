@@ -13,6 +13,7 @@ export function createCoreTextures(scene: Phaser.Scene): void {
   makeStreakTexture(scene)
   makeAlarmRing(scene)
   makeCageTexture(scene)
+  makeFogRoll(scene)
 }
 
 /** Load every curated piece from the manifest as a plain image. */
@@ -153,6 +154,42 @@ function makeCageTexture(scene: Phaser.Scene): void {
   ctx.beginPath()
   ctx.ellipse(cx, midY, rx, (bot - top) / 2, 0, 0, Math.PI * 2)
   ctx.fill()
+  canvas.refresh()
+}
+
+/**
+ * Tiling billow for the nightfall fog. Not a flat wash — clumped blobs of
+ * varying size so three layers scrolling at different rates read as churning
+ * cloud rather than a sliding curtain.
+ */
+function makeFogRoll(scene: Phaser.Scene): void {
+  if (scene.textures.exists('fogroll')) return
+  const size = 256
+  const canvas = scene.textures.createCanvas('fogroll', size, size)
+  if (!canvas) return
+  const ctx = canvas.context
+  ctx.clearRect(0, 0, size, size)
+  // seeded so the billow is identical every run
+  let seed = 20260827
+  const rnd = (): number => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296
+    return seed / 4294967296
+  }
+  for (let i = 0; i < 90; i++) {
+    const x = rnd() * size
+    const y = rnd() * size
+    const r = 18 + rnd() * 52
+    // draw each blob 4x wrapped so the tile has no visible seam
+    for (const [ox, oy] of [[0, 0], [size, 0], [0, size], [size, size], [-size, 0], [0, -size]]) {
+      const g = ctx.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r)
+      g.addColorStop(0, `rgba(18,12,30,${0.5 + rnd() * 0.34})`)
+      g.addColorStop(1, 'rgba(18,12,30,0)')
+      ctx.fillStyle = g
+      ctx.beginPath()
+      ctx.arc(x + ox, y + oy, r, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
   canvas.refresh()
 }
 

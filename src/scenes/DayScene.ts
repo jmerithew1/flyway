@@ -3,6 +3,7 @@ import { Flock, Bird } from '../flock'
 import { Obstacle, AVOID } from '../obstacles'
 import { StrayGroup } from '../strays'
 import { ScatterSystem } from '../scatter'
+import { Nightfall } from '../nightfall'
 import { GameAudio } from '../audio'
 import { scoreFeathers } from '../result'
 import { ScoreBook, MasteryEvent, NIGHTFALL_PAR } from '../score'
@@ -148,6 +149,11 @@ export class DayScene extends Phaser.Scene {
   private scatteredText!: Phaser.GameObjects.Text
   private recoveredText!: Phaser.GameObjects.Text
   private duskOverlay!: Phaser.GameObjects.Rectangle
+  /** the advancing dark, and the daylight that holds it off */
+  private night!: Nightfall
+  /** global dusk driven by the daylight level - the darker the world,
+   * the more the motes blaze, so light is most visible when most needed */
+  private nightVeil!: Phaser.GameObjects.Rectangle
   private failTexts: Phaser.GameObjects.Text[] = []
   private lastShownCount = START_BIRDS
   private prompt: ActivePrompt | null = null
@@ -729,6 +735,14 @@ export class DayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(48)
       .setAlpha(0)
+    this.nightVeil = this.add
+      .rectangle(0, 0, VIEW_W, VIEW_H, 0x0d0a1c)
+      .setOrigin(0)
+      .setScrollFactor(0)
+      .setDepth(10.9)
+      .setAlpha(0)
+    this.night = new Nightfall(this, VIEW_W, VIEW_H)
+    this.night.reset(this.flock.centerX)
     this.failTexts = []
 
     // ---- day intro: over live gameplay, no confirmation
@@ -1336,6 +1350,7 @@ export class DayScene extends Phaser.Scene {
     this.updateMovers(time)
     this.updateFlowGates()
     this.updateMotes()
+    this.updateNightfall(dt)
     // environmental progress storytelling: roost clarifies, light warms,
     // distant flocks appear late — never a progress bar
     const prog = Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1)
@@ -1666,6 +1681,36 @@ export class DayScene extends Phaser.Scene {
     this.tweens.add({ targets: ring, displayWidth: 560, displayHeight: 560, alpha: 0, duration: 900, onComplete: () => ring.destroy() })
   }
 
+  /**
+   * The dark advances, the light holds it off, and the world dims as daylight
+   * goes. The dimming is the point: motes blaze against a darker sky, so the
+   * thing you need is most visible exactly when you most need it.
+   */
+  private updateNightfall(dt: number): void {
+    if (this.finishing || this.failing) return
+    // later acts are hungrier - the chase tightens as the day runs out
+    this.night.setIntensity(1 + this.atmo.act * 0.16)
+    this.night.update(dt, this.flock, this.scrollX, VIEW_W, VIEW_H)
+
+    // global dusk from the daylight level
+    const dark = 1 - this.night.daylight
+    this.nightVeil.setAlpha(dark * 0.5)
+
+    // birds the dark took: they strobe and fall like any other loss, so the
+    // threat speaks the language the player already knows
+    for (const bird of this.night.takenThisFrame) {
+      const dx = bird.x - this.flock.centerX
+      const dy = bird.y - this.flock.centerY
+      if (!this.scatter.spawn(bird.x, bird.y, dx || -1, dy - 0.3)) this.stats.lost++
+      this.flock.removeBird(bird)
+      this.breakScoreStreak()
+    }
+    if (this.night.takenThisFrame.length > 0) {
+      this.lossCause('the dark took them — keep the flock together', this.flock.centerX, this.flock.centerY, this.simClock)
+      this.audio.falconHit()
+    }
+  }
+
   /** Wide rewards: golden motes; a spread flock sweeps far more of them. */
   private updateMotes(): void {
     const x0 = this.scrollX - 100
@@ -1679,8 +1724,11 @@ export class DayScene extends Phaser.Scene {
           m.img.setVisible(false)
           this.audio.collectBloom(1)
           this.awardScore('light', 1, { x: m.x, y: m.y })
-          // the old flyway's light steadies the flock
+          // the old flyway's light steadies the flock AND buys back daylight,
+          // which is what makes collecting worth the detour (the invariant the
+          // whole nightfall mechanic rests on)
           this.flock.relieveStrain(0.5)
+          this.night.feed()
           const spark = this.add
             .image(m.x, m.y, 'softdot').setTint(0xffd9a0)
             .setDisplaySize(40, 40)
@@ -2359,6 +2407,9 @@ export class DayScene extends Phaser.Scene {
       if (this.checkpoint.name) this.audio.landmarkTone(this.checkpoint.name)
       for (const t of this.failTexts) t.destroy()
       this.failTexts = []
+      // the dark is pushed back to its standoff on a checkpoint restore, so a
+      // retry is a real reprieve rather than resuming inside the fog
+      this.night.reset(this.flock.centerX)
       this.tweens.add({ targets: [this.fadeRect, this.duskOverlay], alpha: 0, duration: 1100, delay: 150 })
       this.audio.failureRecover()
       this.failing = false
