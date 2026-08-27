@@ -170,3 +170,11 @@ export const MOTE_CHAIN_WINDOW = 1.6
  * the 17-mote lanes reach BLAZING, and the top rung needs a genuine sweep.
  */
 export const MOTE_TIERS = ['', 'KINDLED', 'RUNNING', 'BLAZING', 'THE FLYWAY REMEMBERS'] as const
+
+
+// -- Echo Call's travelling wavefront ---------------------------------------
+/** How fast the cry spreads, px/s. Finite on purpose: a wave you can WATCH
+ * reach a bird reads as a rescue; an instant radius reads as a stat change. */
+export const CALL_WAVE_SPEED = 1500
+/** How far it carries before it dies. */
+export const CALL_WAVE_REACH = 1700

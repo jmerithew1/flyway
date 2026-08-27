@@ -304,10 +304,22 @@ export class Atmosphere {
       this.washB.setFillStyle(next.tint)
       this.plateBIdx = nextI
     }
-    this.plateA.setAlpha(cur.tintAlpha * (1 - t))
-    this.plateB.setAlpha(next.tintAlpha * t)
-    this.washA.setAlpha(cur.washAlpha * (1 - t))
-    this.washB.setAlpha(next.washAlpha * t)
+    // Six painted skies now carry each act's colour and light DIRECTION, so
+    // these full-screen rectangles are no longer identity - they are only
+    // atmosphere, and at their old strength they averaged the whole frame
+    // toward one lavender. An audit measured the result: every pixel inside a
+    // 25-75% band with no true black and no true white anywhere, which is the
+    // single largest reason the game read soft rather than dramatic.
+    //
+    // Kept at a fraction of their former weight purely to tie foreground art
+    // to the sky behind it. If the skies are ever missing, they carry the act
+    // alone again at full strength.
+    const painted = this.scene.textures.exists('sky_dawn_approach')
+    const k = painted ? 0.28 : 1
+    this.plateA.setAlpha(cur.tintAlpha * (1 - t) * k)
+    this.plateB.setAlpha(next.tintAlpha * t * k)
+    this.washA.setAlpha(cur.washAlpha * (1 - t) * k)
+    this.washB.setAlpha(next.washAlpha * t * k)
 
     // fog eases toward the act's haze rather than snapping
     const fogTarget = Phaser.Math.Clamp(cur.fogAlpha + (next.fogAlpha - cur.fogAlpha) * t, FOG_MIN, FOG_MAX)

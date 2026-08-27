@@ -36,6 +36,8 @@ import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS,
   MOTE_CHAIN_WINDOW,
   MOTE_TIERS,
+  CALL_WAVE_SPEED,
+  CALL_WAVE_REACH,
 } from '../config'
 import {
   BRACE_CHORD_DELAY,
@@ -1011,6 +1013,8 @@ export class DayScene extends Phaser.Scene {
   private shiftDownT = -10
   private callTimer = 0
   private callCooldown = 0
+  /** radius of the travelling call wavefront; -1 when no call is in flight */
+  private callWave = -1
   private callStrength = 1
   private mobLift = 0
   private draftTrailT = 0
@@ -1131,6 +1135,13 @@ export class DayScene extends Phaser.Scene {
     this.callTimer = 2.5
     this.callCooldown = 6
     this.audio.echoCall(this.callStrength)
+    // THE PING travels. Echo used to add to the same `spread01` scalar that
+    // SPREAD widens, so it was mechanically a duplicate of another verb and
+    // could only reach what was already close. Now a wavefront leaves the flock
+    // at a finite speed and everything lost that it crosses ANSWERS: its
+    // expiry clock stops and it turns for home under its own power.
+    this.callWave = 0
+    this.scatter.beginCall(this.flock.centerX, this.flock.centerY)
     // the cry propagates: three expanding rings, and birds flash warm as
     // the wave passes over them
     for (let i = 0; i < 3; i++) {
@@ -1496,6 +1507,18 @@ export class DayScene extends Phaser.Scene {
     this.updateMotes(dt)
     this.updateDecor(time)
     this.updateNightfall(dt)
+    // the call's wavefront sweeps outward, answering what it reaches
+    if (this.callWave >= 0) {
+      const prev = this.callWave
+      this.callWave += CALL_WAVE_SPEED * dt
+      if (prev < CALL_WAVE_REACH) {
+        const answered = this.scatter.answerCall(this.callWave)
+        if (answered > 0) this.showCallAnswer(answered)
+      } else {
+        this.callWave = -1
+        this.scatter.endCall()
+      }
+    }
     this.updateCards(dt)
     // environmental progress storytelling: roost clarifies, light warms,
     // distant flocks appear late — never a progress bar
@@ -2046,6 +2069,24 @@ export class DayScene extends Phaser.Scene {
     })
     this.camKick = Math.max(this.camKick, 1 + tier * 0.5)
     if (tier >= 3) this.hitStop = Math.max(this.hitStop, 0.05)
+  }
+
+  /** N birds have heard the call and turned for home. */
+  private showCallAnswer(n: number): void {
+    const at = this.floatAt(this.flock.centerX - this.scrollX, this.flock.centerY - 120)
+    const t = this.add
+      .text(at.x, at.y, n === 1 ? 'ONE ANSWERS' : `${n} ANSWER`, display(24, '#dff0ff', 8, 500))
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(30)
+    this.tweens.add({
+      targets: t,
+      y: at.y - 48,
+      alpha: { from: 1, to: 0 },
+      duration: 1100,
+      ease: 'Cubic.easeOut',
+      onComplete: () => t.destroy(),
+    })
   }
 
   /** The dark closes over light the player left behind. */
@@ -2639,7 +2680,11 @@ export class DayScene extends Phaser.Scene {
   /** Say WHY birds were lost, at the place it happened. Rate-limited so a
    * bad passage explains itself once instead of shouting every frame. */
   private lastCauseT = -10
+  /** The last thing that actually killed birds, so failure can name it. */
+  private lastLossSource = ''
+
   private lossCause(text: string, x: number, y: number, time: number): void {
+    this.lastLossSource = text
     if (time - this.lastCauseT < 2.4) return
     this.lastCauseT = time
     const at = this.floatAt(x - this.scrollX, y + 44)
@@ -3700,7 +3745,22 @@ export class DayScene extends Phaser.Scene {
     this.promptQueue.length = 0
     this.tweens.add({ targets: this.duskOverlay, alpha: 0.55, duration: 1400 })
     this.tweens.add({ targets: this.fadeRect, alpha: 0.85, duration: 1700, delay: 500 })
-    this.time.delayedCall(1500, () => {
+    // RETRY SPEED. Measured, this sequence was 1500ms before any text, then
+    // 4300ms before respawn, then 1150ms of forced pause - 5.45 seconds of
+    // non-interactive time ending in a teleport, which is the single biggest
+    // anti-retry feature in the build. Super Meat Boy restarts in ~0.5s and
+    // Celeste under 1s, and both credit that for failure feeling fair rather
+    // than punishing.
+    //
+    // The FIRST failure at a checkpoint keeps the full ceremony, because the
+    // first time you lose the flock should land. Every repeat at the SAME
+    // checkpoint is compressed hard: you already know what happened, and what
+    // you want is to be flying again.
+    const repeat = this.failsHere >= 1
+    const tText = repeat ? 300 : 1500
+    const tBack = repeat ? 1000 : 4300
+    const tHold = repeat ? 120 : 1150
+    this.time.delayedCall(tText, () => {
       const cx = VIEW_W / 2
       const name = this.checkpoint.name || 'the morning sky'
       const mk = (y: number, txt: string, size: number, color: string, ls = 0) =>
@@ -3712,18 +3772,24 @@ export class DayScene extends Phaser.Scene {
           .setDepth(52)
       this.failTexts = [
         mk(360, 'THE FLOCK SCATTERED', 34, '#f2e4d5', 8),
-        mk(414, 'Too few birds remained together.', 17, '#b9a8be'),
+        // NAME THE CAUSE. lossCause() already knew - 'the dark took them',
+        // 'struck the stone', 'the falcon struck' - and this screen threw it
+        // all away for a generic line, so players could not tell what had
+        // happened, or whether the game was even over. Attribution is the
+        // difference between difficulty that reads as fair and difficulty that
+        // reads as arbitrary.
+        mk(414, this.lastLossSource || 'Too few birds remained together.', 17, '#e8c9b8'),
         mk(478, `Returning to ${name}`, 20, '#dccce0', 2),
         mk(522, `${Math.max(this.checkpoint.count, 60)} BIRDS`, 24, '#f2e8f5', 3),
       ]
       this.tweens.add({ targets: this.failTexts, alpha: 0.95, duration: 700 })
     })
     // 3) restart from the landmark
-    this.time.delayedCall(4300, () => {
+    this.time.delayedCall(tBack, () => {
       this.respawnAtCheckpoint()
       // the world must be VISIBLE before it is dangerous again
       this.paused = true
-      this.time.delayedCall(1150, () => {
+      this.time.delayedCall(tHold, () => {
         this.paused = false
       })
       if (this.checkpoint.name) this.audio.landmarkTone(this.checkpoint.name)

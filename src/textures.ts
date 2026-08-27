@@ -69,13 +69,13 @@ export function loadArt(scene: Phaser.Scene): void {
     scene.load.image(piece.key, piece.file)
   }
   for (const key of FOG_PIECES) {
-    scene.load.image(key, `assets/processed/fog/${key}.png`)
+    scene.load.image(key, `assets/processed/fog/${key}.webp`)
   }
   for (const key of SKY_PIECES) {
-    scene.load.image(key, `assets/processed/sky2x/${key}.png`)
+    scene.load.image(key, `assets/processed/sky2x/${key}.webp`)
   }
   for (const key of PARALLAX_PIECES) {
-    scene.load.image(key, `assets/processed/parallax/${key}.png`)
+    scene.load.image(key, `assets/processed/parallax/${key}.webp`)
   }
 }
 
