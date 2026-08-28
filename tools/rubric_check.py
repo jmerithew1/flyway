@@ -277,6 +277,27 @@ def check_wired() -> tuple[bool, str]:
     return True, 'every built system has a live call site'
 
 
+def check_tests() -> tuple[bool, str]:
+    """R48: the unit suite passes.
+
+    For most of this project there was no suite at all — the only gates were
+    Python tools driving a browser, which cannot run in a second and cannot be
+    run on every edit. The suite covers the Phaser-free half: the obstacle
+    field's aliasing contract, the level as data, the reward chain, and the art
+    manifest's integrity. Every test in it corresponds to a defect that actually
+    shipped.
+    """
+    # `npx` is a .cmd shim on Windows and sh() runs without a shell, so the
+    # bare name is not resolvable. Call the local binary directly — it is also
+    # faster and cannot pick up a different vitest from the PATH.
+    vitest = os.path.join(ROOT, 'node_modules', '.bin', 'vitest.cmd' if os.name == 'nt' else 'vitest')
+    code, out = sh([vitest, 'run', '--reporter=dot'])
+    line = next((l.strip() for l in out.splitlines() if 'Tests' in l and ('passed' in l or 'failed' in l)), '')
+    import re as _re
+    line = _re.sub(r'\[[0-9;]*m', '', line)
+    return code == 0, line or out.strip()[:120]
+
+
 def check_borders() -> tuple[bool, str]:
     """R46: an opaque frame edge draws as a square the instant light hits it."""
     code, out = sh([sys.executable, 'tools/border_audit.py'])
@@ -314,6 +335,7 @@ CHECKS = [
     ('R45', 'terrain constrains the lane in both directions', check_lane),
     ('R46', 'no registered asset carries an opaque border', check_borders),
     ('R47', 'no system is built but never called', check_wired),
+    ('R48', 'the unit suite passes', check_tests),
     ('MAP', 'every plan section has a rubric line and an owner', check_coverage),
     ('--', 'types compile', check_types),
 ]

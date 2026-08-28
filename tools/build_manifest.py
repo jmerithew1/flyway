@@ -380,6 +380,47 @@ def resolve(rel: str) -> str:
     raise SystemExit(f'no shipped file for {rel} (looked for {stem}.webp)')
 
 
+def split_bands_around_openings(bands, openings):
+    """Cut a full-width band wherever the art paints a hole through it.
+
+    A band is a coverage mass, and the band pass is deliberately coarse — it
+    spans the piece's full width when most of that width is solid. On three
+    pieces (aqueduct_slope, arch_fragment, column_pair) that coarseness ran a
+    band straight across a painted opening, so the art advertised a gap the
+    physics refused.
+
+    That is the single defect this world cannot afford: the owner reported it as
+    "looks flyable but the angle doesn't allow", and it is what teaches a player
+    that shapes mean nothing. The opening is the authored intent, so the band
+    yields to it — split into the solid remainder on either side, and dropped
+    entirely where nothing is left.
+    """
+    if not openings:
+        return bands
+    out = []
+    for b in bands:
+        segments = [(b['x'], b['x'] + b['w'])]
+        for o in openings:
+            oy0, oy1 = o['y'], o['y'] + o['h']
+            if oy1 <= b['y'] or oy0 >= b['y'] + b['h']:
+                continue  # the opening does not reach this band vertically
+            ox0, ox1 = o['x'], o['x'] + o['w']
+            nxt = []
+            for x0, x1 in segments:
+                if ox1 <= x0 or ox0 >= x1:
+                    nxt.append((x0, x1))
+                    continue
+                if ox0 > x0:
+                    nxt.append((x0, ox0))
+                if ox1 < x1:
+                    nxt.append((ox1, x1))
+            segments = nxt
+        for x0, x1 in segments:
+            if x1 - x0 >= 8:  # a sliver is not a wall
+                out.append({'x': x0, 'y': b['y'], 'w': x1 - x0, 'h': b['h']})
+    return out
+
+
 def geometry(file_rel: str, family: str, w: int, h: int, draft_entry: dict | None = None):
     """Colliders + openings for one piece, derived from its own alpha.
 
@@ -412,7 +453,8 @@ def geometry(file_rel: str, family: str, w: int, h: int, draft_entry: dict | Non
     if draft_entry:
         bands = draft_entry.get('bands') or draft_entry.get('bands40')
         if bands:
-            return bands, draft_entry.get('openings') or []
+            openings = draft_entry.get('openings') or []
+            return split_bands_around_openings(bands, openings), openings
     rects, openings = silhouette_colliders(os.path.join(PUBLIC, file_rel))
     if not rects:
         # filigree and rings can vanish under the speck filter; a solid-looking

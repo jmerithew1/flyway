@@ -68,7 +68,7 @@ Status: `DONE` shipped and verified · `ACTIVE` being worked now · `QUEUED` nex
 | 15 | World and story framing | R12 | level | QUEUED |
 | 16 | Quality settings | R15 | main | QUEUED |
 | cinematic | Cinematic architecture | R17 | vfx | ACTIVE |
-| 17 | Repository and codebase hygiene | R32 R33 R34 | main | QUEUED |
+| 17 | Repository and codebase hygiene | R32 R33 R34 R48 | main | DONE |
 | 18 | Continuous QA, desktop and mobile | R41 R42 | qa-desktop, qa-mobile | ACTIVE |
 | 18b | Review loop: QA finds, design decides, owners fix | R43 | design-lead | ACTIVE |
 

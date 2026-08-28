@@ -221,7 +221,7 @@ export const FEATURES: PieceFeature[] = [
   // ~380 a top piece is not an obstacle at all, whatever it looks like, and
   // eighteen of them in this file were sitting under that line at once.
   top(1600, 'root_tangle', 560, { motion: { kind: 'bob', amp: 40, period: 5.0 } }),
-  gnd(1600, 'wall_double_arch', 330), // wide low wall + hang above = 2 easy routes
+  gnd(1600, 'wall_double_arch', 330, { decor: true }), // wide low wall + hang above = 2 easy routes
 
   // ===== EARLY RUINS (2100-4600): route choices =============================
   // three-route ruin: hang piece / open middle / low arcade
@@ -230,7 +230,7 @@ export const FEATURES: PieceFeature[] = [
   // soft, still unfailable, but the flock now has to come down to a line it can
   // be pushed off; develop the reading before anything charges for it.
   top(2600, 'root_tangle', 420, { motion: { kind: 'bob', amp: 52, period: 4.6 } }),
-  gnd(2600, 'triple_arcade', 400),
+  gnd(2600, 'triple_arcade', 400, { decor: true }),
   gnd(3150, 'obelisk_a', 600), // split obelisk
   // The Surge lesson used to sit at x=3150 - the SAME x as the solid obelisk on
   // line above - and mounted at the top of the frame, so the flock never met the
@@ -247,7 +247,7 @@ export const FEATURES: PieceFeature[] = [
   // lives out at 4620 — see below — where it has 470px of empty air on both
   // sides and nothing to be confused with.
   gnd(3650, 'gothic_arch', 520, { flow: 'gather' }), // narrow: gather
-  gnd(4150, 'wall_multi_window', 520, { flow: 'spread' }), // spread through windows
+  gnd(4150, 'wall_multi_window', 520, { wide: true, flow: 'spread' }), // spread through windows
   // The descent and the Flow gate become ONE move: the strand shuts the top of
   // the frame down to 454, so the only way to reach the window bays this gate
   // is scored on is to drop into them. A gate that could be flown over was not
@@ -262,8 +262,8 @@ export const FEATURES: PieceFeature[] = [
   // the 4850 mote arc sits immediately behind it, so the reward for choosing
   // the veil is on screen while the choice is still being made.
   mid(4620, 470, 'curtain_beaded', 300, { brittle: true, motion: { kind: 'pendulum', amp: 34, period: 5.0 } }),
-  gnd(5100, 'double_arch_wall', 420), // divide or commit
-  top(5100, 'leaf_strand', 300, { motion: { kind: 'bob', amp: 40, period: 4.4 } }),
+  gnd(5100, 'double_arch_wall', 420, { decor: true }), // divide or commit
+  top(5100, 'leaf_strand', 500, { motion: { kind: 'bob', amp: 40, period: 4.4 } }),
   gnd(5700, 'column_ring', 560), // steering column, painted detail
   gnd(6150, 'column_broken', 520, { flipX: true }),
   // The drafting straight starts here and the level goes DELIBERATELY still
@@ -271,7 +271,7 @@ export const FEATURES: PieceFeature[] = [
   // nothing else. The 1300px lane of light at x=7000 is this flight's one held
   // note, and a busy sky would spend the quiet that makes the Overgrown's
   // five-mover peak land 3000px later.
-  top(6150, 'ceiling_pods', 280, { sway: true, motion: { kind: 'bob', amp: 46, period: 4.2 } }),
+  top(6150, 'ceiling_pods', 480, { sway: true, motion: { kind: 'bob', amp: 46, period: 4.2 } }),
   gnd(6650, 'tall_gate', 620), // tall narrow gate — vertical compression
 
   // ===== MID RUINS (7100-9600): architecture peaks ==========================
@@ -284,7 +284,7 @@ export const FEATURES: PieceFeature[] = [
   // everything asking for a descent up to this point is hanging matter that
   // only drags, and the very next piece is the first one made of stone.
   top(8950, 'leaf_strand', 400, { flipX: true, motion: { kind: 'bob', amp: 42, period: 3.8 } }),
-  gnd(9450, 'wall_two_window', 500), // window threading
+  gnd(9450, 'wall_two_window', 500, { decor: true }), // window threading
   // THE FIRST DESCENT MADE OF STONE. Everything overhead until now has been
   // vegetation the flock ploughs through; this is a shard off a collapsed vault
   // — it floats, which this world allows, and it collides like the ruins it
@@ -315,8 +315,8 @@ export const FEATURES: PieceFeature[] = [
   // single collider is a 21px band standing in 790px of open air, so "stone can
   // travel too" is taught by something that cannot be hit except on purpose.
   mid(10200, 380, 'thorn_ring', 360, { motion: { kind: 'bob', amp: 44, period: 4.4 } }), // drifting ring — clear lane beneath
-  gnd(10750, 'wall_circle_bite', 360),
-  gnd(11300, 'organic_arch', 380), // vine arch
+  gnd(10750, 'wall_circle_bite', 360, { decor: true }),
+  gnd(11300, 'organic_arch', 380, { decor: true }), // vine arch
   // The vine arch is CURTAINED rather than doubled. This veil used to be its
   // own encounter at x=11060, 310px behind the wall before it and 240px ahead
   // of the arch after it — two pacing violations for one piece, and three
@@ -327,7 +327,7 @@ export const FEATURES: PieceFeature[] = [
   // seed grove: brush through, pods rain seeds. Run against the veil below it
   // so the canopy lifts as the curtain swings out — the diagonal line through
   // the arch opens and closes rather than simply breathing.
-  top(11300, 'seed_pod_cluster_a', 340, { sway: true, motion: { kind: 'bob', amp: 56, period: 3.4, phase: Math.PI } }),
+  top(11300, 'seed_pod_cluster_a', 520, { sway: true, motion: { kind: 'bob', amp: 56, period: 3.4, phase: Math.PI } }),
   gnd(11800, 'lattice_gate', 400, { flow: 'spread', motion: { kind: 'bob', amp: 50, period: 4.4, phase: 0 } }), // drifting lattice
   // Floor and ceiling of the lattice gate share a period and run in ANTIPHASE,
   // so the Flow gate does not merely wobble — it opens and shuts on a beat that
@@ -342,7 +342,7 @@ export const FEATURES: PieceFeature[] = [
   top(11800, 'seed_pod_cluster_b', 440, { sway: true, motion: { kind: 'bob', amp: 48, period: 4.4, phase: Math.PI } }),
 
   // ===== WIND HEIGHTS (12000-14400): pressure + wind ========================
-  gnd(12300, 'colonnade_arch', 480),
+  gnd(12300, 'colonnade_arch', 480, { decor: true }),
   // The wind act thins back to two movers on purpose. The crosswind IS the
   // tempo through here, and a second rhythm laid over it would leave neither
   // legible — the player would be reading two clocks and trusting neither.
@@ -355,7 +355,7 @@ export const FEATURES: PieceFeature[] = [
   // sprite's rotation every frame — held together the piece fights itself and
   // the swing stutters. The swing is the better read, so it supersedes.
   mid(13500, 340, 'web_net', 360, { brittle: true, motion: { kind: 'pendulum', amp: 56, period: 4.0 } }),
-  gnd(13500, 'wall_four_arch', 380), // arch row low
+  gnd(13500, 'wall_four_arch', 380, { decor: true }), // arch row low
   gnd(14100, 'gate_double', 440),
   // The second stone shard, and the first one that costs something: 171px of
   // air under it against the 402px it was taught with, in the storm, where the
@@ -386,7 +386,7 @@ export const FEATURES: PieceFeature[] = [
   // pair anywhere in the cycle with no route through it — a misread beat costs
   // the player tempo, not birds.
   mid(14700, 280, 'bridge_span', 124, { motion: { kind: 'bob', amp: 52, period: 3.0 } }),
-  gnd(15300, 'wall_multi_window', 560, { flow: 'spread' }),
+  gnd(15300, 'wall_multi_window', 560, { wide: true, flow: 'spread' }),
   // drop-window: the sky is shut — flare and thread the bays. That line has been
   // in this file for a long time and was simply UNTRUE: at h=250 the canopy
   // stopped at y=224, a hundred pixels above anywhere the flock flies, so the
@@ -399,8 +399,8 @@ export const FEATURES: PieceFeature[] = [
   // is the right price for the act's opening beat rather than its hardest.
   top(15300, 'ceiling_pods', 500, { flipX: true, motion: { kind: 'bob', amp: 58, period: 3.2 } }),
   gnd(15900, 'grand_arch', 460, { flipX: true }), // large-native, light stone: matches the act's palette
-  top(15900, 'root_tangle', 280, { flipX: true, motion: { kind: 'bob', amp: 50, period: 3.6 } }),
-  gnd(16500, 'triple_arcade', 480, { flipX: true }),
+  top(15900, 'root_tangle', 480, { flipX: true, motion: { kind: 'bob', amp: 50, period: 3.6 } }),
+  gnd(16500, 'triple_arcade', 480, { decor: true,  flipX: true }),
   // breathing gap: the canopy sinks toward the columns — another line that was
   // describing a piece which stopped 100px short of the lane. At 440 it sinks
   // to 466, into the band, and the gap over the arcade really does close.
@@ -417,7 +417,7 @@ export const FEATURES: PieceFeature[] = [
   // is a bonus for a player reading closely, never the route, which is why the
   // wide lane underneath is the part that is guaranteed.
   top(17000, 'thorn_arc', 440, { sway: true, motion: { kind: 'bob', amp: 48, period: 3.8, phase: 0 } }),
-  gnd(17000, 'wall_arch_window', 420),
+  gnd(17000, 'wall_arch_window', 420, { decor: true }),
 
   // ===== SECOND CHOICE CLUSTER (17400-20400) ================================
   // CONCLUDE both, 700px and three seconds later: the same stone ceiling coming
@@ -429,7 +429,7 @@ export const FEATURES: PieceFeature[] = [
   // stone and eight in vegetation, which is why it is allowed to be the only
   // place in the flight with no line over the top at any phase at all.
   top(17700, 'wisteria_arch', 440, { motion: { kind: 'bob', amp: 40, period: 3.2, phase: Math.PI } }),
-  gnd(17700, 'aqueduct_slope', 420), // slope + organic above: 3 lanes
+  gnd(17700, 'aqueduct_slope', 420, { decor: true }), // slope + organic above: 3 lanes
   gnd(18300, 'column_ring', 580, { flipX: true }),
   // burst the lace — light waits behind. Moved off x=18620, where it hung 320px
   // behind the column and 280px ahead of the window wall and so was never met
@@ -439,7 +439,7 @@ export const FEATURES: PieceFeature[] = [
   // hushes the composition is built around, and the one mover it is allowed is
   // spent on the branch cluster 600px on, not here.
   mid(18900, 430, 'curtain_ivy_lace', 380, { brittle: true }),
-  gnd(18900, 'oval_window_wall', 440),
+  gnd(18900, 'oval_window_wall', 440, { decor: true }),
   // AND HERE THE LEVEL GOES QUIET: one mover in 2000px, the sparsest stretch
   // after the opening. It is also the heaviest travelling mass in the flight —
   // the whole branch cluster slides bodily, carrying a lane above it and a lane
@@ -449,7 +449,7 @@ export const FEATURES: PieceFeature[] = [
   // still air is what buys the gauntlet's crescendo its impact 600px later; a
   // busy stretch here would spend that for nothing.
   mid(19500, 380, 'branch_cluster', 300, { sway: true, motion: { kind: 'bob', amp: 66, period: 3.4 } }),
-  gnd(19500, 'wall_double_arch', 340),
+  gnd(19500, 'wall_double_arch', 340, { decor: true }),
   gnd(20100, 'bent_arch', 500),
 
   // ===== GAUNTLET (20400-23200) =============================================
@@ -458,7 +458,7 @@ export const FEATURES: PieceFeature[] = [
   // Everything here has already been taught somewhere safer — this act only
   // asks for it faster and in worse air.
   gnd(20700, 'column_pair', 520),
-  top(20700, 'ceiling_pods', 260, { sway: true, flipX: true, motion: { kind: 'bob', amp: 62, period: 2.8 } }),
+  top(20700, 'ceiling_pods', 470, { sway: true, flipX: true, motion: { kind: 'bob', amp: 62, period: 2.8 } }),
   gnd(21300, 'gate_double', 460), // double gate split
   // The gate is CURTAINED. The veil moves off x=20420, where it sat 320px
   // behind the bent arch and 280px ahead of the column pair and so belonged to
@@ -477,8 +477,8 @@ export const FEATURES: PieceFeature[] = [
   // even though the collider model has since opened that pinch back up: the
   // reason for the number was the tempo, and the tempo has not changed.
   mid(21900, 320, 'wheel_diagonal', 235, { motion: { kind: 'bob', amp: 44, period: 2.8, phase: 0 } }), // diagonal wheel high
-  top(21900, 'leaf_strand', 260, { motion: { kind: 'bob', amp: 46, period: 2.8, phase: Math.PI } }),
-  gnd(21900, 'wall_arch_inset', 380, { flipX: true }),
+  top(21900, 'leaf_strand', 470, { motion: { kind: 'bob', amp: 46, period: 2.8, phase: Math.PI } }),
+  gnd(21900, 'wall_arch_inset', 380, { decor: true,  flipX: true }),
   gnd(22500, 'tall_gate', 580, { flipX: true }),
   // canopy cover for the falcon zone — and now low enough to BE cover: at 374,
   // riding to 428, it is a roof the flock can actually put between itself and a
@@ -489,7 +489,7 @@ export const FEATURES: PieceFeature[] = [
   // behind it, and the stray flock at x=23010 sits in the lane above it: the
   // reward for going over the top is on screen from the moment the curtain is.
   mid(23000, 400, 'wisteria_curtain', 360, { brittle: true, motion: { kind: 'pendulum', amp: 50, period: 3.8 } }),
-  gnd(23000, 'triple_window_wall', 420),
+  gnd(23000, 'triple_window_wall', 420, { decor: true }),
 
   // ===== FINAL FLOW (23200-25400) ===========================================
   gnd(23600, 'pointed_arch', 520, { flipX: true, flow: 'gather' }), // gather, thread
@@ -529,13 +529,13 @@ export const FEATURES: PieceFeature[] = [
   gnd(1250, 'statue_robed', 760, { wide: true, decor: true }),
   gnd(3450, 'colossus_foot', 700, { wide: true, decor: true }),
   gnd(4600, 'stair_broken', 640, { wide: true, decor: true }),
-  gnd(6300, 'colonnade_triple', 900, { wide: true, flow: 'gather' }), // two real bays — thread it
+  gnd(10750, 'colonnade_triple', 900, { wide: true, flow: 'gather' }), // two real bays — thread it
   mid(7900, 300, 'colossus_hand', 640, { wide: true, decor: true }),
-  gnd(9400, 'dome_broken', 820, { wide: true }), // the broken crown: one way through
+  gnd(9400, 'dome_broken', 820, { wide: true, decor: true }), // the broken crown: one way through
   gnd(11500, 'colossus_ribcage', 1000, { wide: true, decor: true }),
   gnd(13800, 'belltower_ruin', 1080, { wide: true, decor: true }),
   gnd(15900, 'lintel_fallen', 600, { wide: true }), // the fallen lintel leaves one gap
-  gnd(17300, 'arch_window_nest', 720, { wide: true, flow: 'spread' }), // fly the window
+  gnd(17300, 'arch_window_nest', 720, { wide: true, decor: true }), // fly the window
   // The head is the flight's single largest silhouette and it is placed where
   // it can be seen coming for several seconds — the shot the submission needs.
   gnd(19800, 'colossus_head', 1100, { wide: true, decor: true }),
@@ -680,6 +680,12 @@ export function pieceDisplay(f: PieceFeature): { s: number; w: number; h: number
 
 /** World-space colliders for a placed piece. */
 export function pieceObstacles(f: PieceFeature): Obstacle[] {
+  // The decor check belongs HERE, not only in buildObstacles. Putting it in the
+  // caller left every other caller — and there are several — still generating
+  // colliders for scenery, so "never collided with" was true of one code path
+  // and false of the rest. A rule enforced in one place is a rule waiting to be
+  // broken somewhere else.
+  if (f.decor) return []
   const art = ART[f.art]
   const { s, w, h, y } = pieceDisplay(f)
   const tlx = f.x - w / 2
@@ -739,8 +745,7 @@ export function buildObstacles(): { obstacles: Obstacle[]; byFeature: Map<PieceF
   const obstacles: Obstacle[] = []
   const byFeature = new Map<PieceFeature, Obstacle[]>()
   for (const f of FEATURES) {
-    if (f.decor) continue // scenery is drawn, never collided with
-    const obs = pieceObstacles(f)
+    const obs = pieceObstacles(f) // returns [] for scenery
     byFeature.set(f, obs)
     obstacles.push(...obs)
   }
@@ -883,7 +888,16 @@ export const BEAMS: Beam[] = buildBeams()
 
 /** Dev assertion: no obstacle event closer than the 2s reaction floor. */
 export function pacingReport(): { gaps: number[]; violations: string[] } {
-  const xs = [...new Set(FEATURES.map((f) => f.x))].sort((a, b) => a - b)
+  // ENCOUNTERS ARE PACED; SCENERY IS NOT. The rule this enforces is "one
+  // encounter at a time" — each hazard met, read and resolved on its own. A
+  // monument drawn behind the play plane with no colliders is not something the
+  // player resolves, so counting it as an encounter reports crowding where
+  // there is none, and would forbid composing scale into the world at all.
+  //
+  // The distinction matters both ways: it must NOT become a licence to hide a
+  // real hazard by marking it decor, which is why `decor` also strips colliders
+  // at source in pieceObstacles.
+  const xs = [...new Set(FEATURES.filter((f) => !f.decor).map((f) => f.x))].sort((a, b) => a - b)
   const gaps: number[] = []
   const violations: string[] = []
   for (let i = 1; i < xs.length; i++) {
