@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { qualitySpec } from './quality'
 import { Flock, Bird } from './flock'
 
 const FOG_ART = {
@@ -66,8 +67,13 @@ const LEAD_FULL = 1150
 const LEAD_EMPTY = -520
 /** How fast the fog edge eases toward its target (px/sec of correction). */
 const EDGE_LERP = 2.1
-/** How many soft blobs build the fog body. */
-const BLOBS = 26
+/** How many soft blobs build the fog body.
+ *
+ * Quality-driven: the fog's silhouette degrades gracefully, because fewer and
+ * larger blobs still billow and still lean. What a weak phone loses is the
+ * fineness of the churn, never the ability to see the dark coming — which is
+ * the one thing this object exists to communicate. */
+const BLOBS = qualitySpec().fogBlobs
 /**
  * The exact mean of ((1+sin)/2)^3 over a full cycle, which is 5/16.
  *

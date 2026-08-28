@@ -27,10 +27,10 @@ Status: `DONE` shipped and verified · `ACTIVE` being worked now · `QUEUED` nex
 | 8b | Real jobs for the three broken verbs | R7 | main | QUEUED |
 | 8b2 | Teaching: read slow, then practise slow | R6 | main | QUEUED |
 | 8b3 | What Echo can and cannot retrieve | R7 | main | QUEUED |
-| 8b3b | The recovery window must be visible | R6 | main | QUEUED |
-| 8b3c | What is permanently lost | R7 | main | QUEUED |
-| 8b4 | ONE loss law | R8 | main | QUEUED |
-| 8b5 | Costs on the HUD: cooldowns and strain | R6 R7 | main | QUEUED |
+| 8b3b | The recovery window must be visible | R6 | main | DONE |
+| 8b3c | What is permanently lost | R7 | main | DONE |
+| 8b4 | ONE loss law | R8 | main | DONE |
+| 8b5 | Costs on the HUD: cooldowns and strain | R6 R7 | main | DONE |
 | 8b6 | The hawk: presence, purpose, counters | R20 | art-wiring | ACTIVE |
 | 8b6b | How a flock fights | R7 | main | QUEUED |
 | 8b7 | Creatures of the flyway | R22 | creatures | DONE |
@@ -40,7 +40,7 @@ Status: `DONE` shipped and verified · `ACTIVE` being worked now · `QUEUED` nex
 | 8b0 | Gratification: streak, ruins that pay | R30 | reward | ACTIVE |
 | 8b8a | The light economy and its law | R6 | main | DONE |
 | 8b8b | The right fiction test | R7 | main | DONE |
-| 8b8c | THE TUNNEL | R16 R17 | main | QUEUED |
+| 8b8c | THE TUNNEL | R16 R17 | main | DONE |
 | 8b9 | Cohesion audit | R7 | main | DONE |
 | 8c | Manoeuvring feel (M4) | R31 | reward | ACTIVE |
 | 8d | Failure, in four named beats | R8 | main | DONE |
@@ -61,12 +61,12 @@ Status: `DONE` shipped and verified · `ACTIVE` being worked now · `QUEUED` nex
 | 11b | Composition: authored, not accumulated | R19 | level | ACTIVE |
 | 11c | THE WORLD MUST MOVE | R21 R22 R45 | level | ACTIVE |
 | 11d | Each act needs its own vocabulary | R35 | level | QUEUED |
-| 12 | Mobile must be equally fun | R15 | main | QUEUED |
+| 12 | Mobile must be equally fun | R15 | main | DONE |
 | 13 | Sound doing dramatic work | R28 R29 | audio | ACTIVE |
 | 14 | First impression and shipping | R18 R26 | title | ACTIVE |
 | 14b | Scope: extend flight one | R14 | main | DONE |
 | 15 | World and story framing | R12 | level | QUEUED |
-| 16 | Quality settings | R15 | main | QUEUED |
+| 16 | Quality settings | R15 R49 | main | DONE |
 | cinematic | Cinematic architecture | R17 | vfx | ACTIVE |
 | 17 | Repository and codebase hygiene | R32 R33 R34 R48 | main | DONE |
 | 18 | Continuous QA, desktop and mobile | R41 R42 | qa-desktop, qa-mobile | ACTIVE |

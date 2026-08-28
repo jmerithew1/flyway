@@ -37,6 +37,7 @@ import {
 import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { AbilityBar } from '../hud'
 import { VFXDirector, gateQuad } from '../vfx'
+import { loadQuality, nextQuality, qualitySpec, saveQuality, type QualitySpec } from '../quality'
 import { CameraDirector } from '../camera'
 import { TunnelSequence, TUNNELS } from '../tunnel'
 import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS,
@@ -245,6 +246,7 @@ export class DayScene extends Phaser.Scene {
   private vfx!: VFXDirector
   private camDir!: CameraDirector
   private tunnel!: TunnelSequence
+  private quality!: QualitySpec
   private ceilingT = 0
   private thiefCallT = 0
   private mothsWereOn = false
@@ -889,6 +891,15 @@ export class DayScene extends Phaser.Scene {
     this.touch.onCall = () => this.echoCall()
     this.touch.onPause = () => this.togglePause()
     kb.on('keydown-P', () => this.togglePause())
+    // Q cycles quality. Only while paused: a mid-flight change would rebuild
+    // the fog under the player's hands, and the setting is not urgent enough to
+    // justify that.
+    kb.on('keydown-Q', () => {
+      if (!this.paused) return
+      saveQuality(nextQuality(loadQuality()))
+      this.setPaused(false)
+      this.setPaused(true)
+    })
     kb.on('keydown-M', () => {
       this.muted = !this.muted
       this.audio.setMuted(this.muted)
@@ -1008,7 +1019,13 @@ export class DayScene extends Phaser.Scene {
     // it is a single pass rather than per-object work.
     //
     // Kept deliberately gentle: this is a painted dusk, not a neon one.
-    this.bloom = this.cameras.main.postFX.addBloom(0xffffff, 1, 1, 0.62, 0.34, 4)
+    // A full-screen post-FX pass is the single most expensive thing on a weak
+    // GPU, and the painted art survives without it — so LOW drops it entirely
+    // rather than thinning something the player needs to read.
+    this.quality = qualitySpec()
+    if (this.quality.bloom) {
+      this.bloom = this.cameras.main.postFX.addBloom(0xffffff, 1, 1, 0.62, 0.34, 4)
+    }
 
     this.night = new Nightfall(this, VIEW_W, VIEW_H)
     this.night.reset(this.checkpoint.x)
@@ -2213,8 +2230,12 @@ export class DayScene extends Phaser.Scene {
       // gentle: at full dark this reaches 0.5, not 2.5. The first pass blew
       // the whole frame to white - bloom should make lights bleed, not erase
       // the painting behind them.
-      this.bloom.blurStrength = 0.62 + dark * 0.3
-      this.bloom.strength = 0.34 + dark * 0.16
+      // ADDITIVE, or the director is clobbered on the very next frame. The
+      // VFX pass exposes `bloomLift` so a reward beat can bloom the frame, and
+      // writing these as plain assignments meant that value was computed every
+      // frame and never once used.
+      this.bloom.blurStrength = 0.62 + dark * 0.3 + this.vfx.bloomLift * 0.35
+      this.bloom.strength = 0.34 + dark * 0.16 + this.vfx.bloomLift * 0.22
     }
 
     // birds the dark took: they strobe and fall like any other loss, so the
@@ -4672,7 +4693,16 @@ export class DayScene extends Phaser.Scene {
         }
         mk(34, 'FLY ON', () => this.setPaused(false))
         mk(124, 'RESTART THE DAY', () => this.scene.restart())
-        mk(214, this.muted ? 'SOUND ON' : 'MUTE', () => {
+        mk(214, `QUALITY · ${loadQuality().toUpperCase()}`, () => {
+          // Lives in the pause menu on purpose: zero screen cost in play, and
+          // the right home for a setting nobody needs mid-flight. It takes
+          // effect on the next run rather than rebuilding the scene under the
+          // player's hands.
+          saveQuality(nextQuality(loadQuality()))
+          this.setPaused(false)
+          this.setPaused(true)
+        })
+        mk(304, this.muted ? 'SOUND ON' : 'MUTE', () => {
           this.muted = !this.muted
           this.audio.setMuted(true) // still paused, so it stays silent either way
           this.setPaused(false)
@@ -4681,7 +4711,7 @@ export class DayScene extends Phaser.Scene {
       } else {
         veil.add(
           this.add
-            .text(VIEW_W / 2, VIEW_H / 2 + 26, 'P to fly on · M mute · R restart the day', voice(18, INK.soft))
+            .text(VIEW_W / 2, VIEW_H / 2 + 26, `P to fly on · M mute · R restart the day · Q quality (${loadQuality()})`, voice(18, INK.soft))
             .setOrigin(0.5),
         )
       }
