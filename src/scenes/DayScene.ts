@@ -35,6 +35,10 @@ import {
   GROUND,
 } from '../level'
 import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
+import { AbilityBar } from '../hud'
+import { VFXDirector } from '../vfx'
+import { CameraDirector } from '../camera'
+import { TunnelSequence, TUNNELS } from '../tunnel'
 import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS,
   MOTE_CHAIN_WINDOW,
   MOTE_TIERS,
@@ -236,6 +240,10 @@ export class DayScene extends Phaser.Scene {
   private lastHit = new Map<Bird, number>()
   /** live mote chain: length, its remaining window, and the run's best */
   /** Overflow light banked toward a returned bird. */
+  private bar!: AbilityBar
+  private vfx!: VFXDirector
+  private camDir!: CameraDirector
+  private tunnel!: TunnelSequence
   private squeezeDrain: (() => void) | null = null
   /** Overflow light banked toward a returned bird. */
   private lightBank = 0
@@ -713,6 +721,31 @@ export class DayScene extends Phaser.Scene {
     // The ceiling is the run's start count: you are bringing YOUR flock home,
     // not farming a bigger one along the way.
     this.flock.maxBirds = START_BIRDS
+    this.bar = new AbilityBar(this)
+    this.vfx = new VFXDirector(this)
+    this.camDir = new CameraDirector(this)
+    this.tunnel = new TunnelSequence(this, TUNNELS)
+    // The tunnel never removes a bird itself: the loss law belongs to the
+    // scene, so a miss here costs exactly what a miss costs anywhere else.
+    this.tunnel.onPromptMiss = (verb, victims, x, y) => {
+      for (const b of victims) {
+        this.scatter.spawn(b.x, b.y, b.vx * 0.4, b.vy * 0.4 - 40)
+        this.flock.removeBird(b)
+      }
+      this.lastLossSource = `The ${verb.toUpperCase()} came too late — the walls took them.`
+      this.breakScoreStreak()
+      this.camDir.impact(0.8, -1, 0)
+      this.vfx.featherBurst(x, y, 6)
+    }
+    this.tunnel.onPromptHit = (_v, climax, x, y) => {
+      this.vfx.perfectMove(x, y, 0xffd9a0, climax ? 1 : 0.7)
+      this.awardScore('breakthrough', 1, { x, y })
+    }
+    this.tunnel.onSplit = () => this.camDir.pushIn(1.06, 500)
+    this.tunnel.onBreakout = (full) => {
+      this.camDir.pullBack(900)
+      if (full) this.vfx.shockwave(this.flock.centerX, this.flock.centerY, 520, 0xffe9c4, 1)
+    }
 
     // Strain squeezes birds out of the formation; they become recoverable, so
     // holding gather finally costs something and Echo finally has a supply to
@@ -1363,6 +1396,11 @@ export class DayScene extends Phaser.Scene {
     // flock keeps flying and the moment stays alive while you read.
     this.cardEase += ((this.card ? 1 : 0) - this.cardEase) * (1 - Math.exp(-7 * rawDt))
     dt *= 1 - this.cardEase * 0.82
+    // The tunnel's impact dip. This slows the WORLD, not the flock — DayScene
+    // already hands the flock its own rawDt, deliberately. The game may slow
+    // time to frame a moment; the flock may not, because a slowed flock would
+    // be a player power rather than a director's choice.
+    dt *= this.tunnel.timeScale
     // THE RECKONING crawls the world much harder than a card does — this is a
     // held breath, not a reading pause, and the slow motion IS the drama.
     if (this.card && this.cardAutoT > 0) {
@@ -1400,14 +1438,21 @@ export class DayScene extends Phaser.Scene {
       if (rel < VIEW_W * 0.3) this.mercyTime += dt
       else this.mercyTime = Math.max(0, this.mercyTime - dt * 2)
       const mercy = rel < VIEW_W * 0.3 && this.mercyTime < 6 ? 0.55 : 1
-      this.scrollX += baseSpeed * mercy * dt
+      this.scrollX += baseSpeed * mercy * this.tunnel.speedMult * dt
     } else if (this.finishing) {
       const targetScroll = ROOST_X - VIEW_W * 0.58
       this.scrollX += (targetScroll - this.scrollX) * Math.min(dt * 1.1, 1)
     }
     // decaying micro-kick on the 3 sanctioned impact events (never sustained)
     this.camKick *= Math.exp(-dt * 13)
-    cam.scrollX = this.scrollX + this.camKick * Math.sin(this.simClock * 70)
+    // The camera director produces an OFFSET; it never writes scrollX itself,
+    // so the authored scroll pacing is untouched. camKick is retired into
+    // camDir.impact(), which decays properly instead of ringing on a sine.
+    this.camDir.followFlock(dt, this.flock.centerX, this.flock.centerY, this.scrollX)
+    this.camDir.update(dt, rawDt)
+    this.vfx.update(dt, rawDt)
+    cam.scrollX = this.scrollX + this.camDir.offsetX
+    cam.scrollY = this.camDir.offsetY
 
     // I1 — THE SKY DIMS FOR THE DIVE. It slams shut (the falcon takes the
     // light with it) and opens slowly afterwards, so the beat has a shape.
@@ -1511,9 +1556,27 @@ export class DayScene extends Phaser.Scene {
       },
       this.visibleObstacles(),
     )
+    this.tunnel.update(rawDt, this.flock, this.scrollX, gather)
+
     // drain the squeeze immediately after the sim, before anything else can
     // read a flock count that is about to change
     if (this.squeezeDrain && this.flock.squeezedThisFrame.length > 0) this.squeezeDrain()
+
+    // THE COSTS BECOME VISIBLE. Gather and Spread run strain clocks that are
+    // central to the economy and were shown nowhere, and Echo's cooldown was
+    // invisible — calling into a dead one felt like a broken button.
+    this.bar.setStrain('gather', this.flock.gatherStrain)
+    this.bar.setStrain('spread', this.flock.spreadStrain)
+    this.bar.setCooldown('echo', Phaser.Math.Clamp(this.callCooldown / 6, 0, 1))
+    this.bar.setAvailable('echo', this.callCooldown <= 0)
+    // and the bar points at the answer: the verb that counters whatever has
+    // hold of you right now, taught wordlessly, every time.
+    this.bar.suggest('spread', this.moths.attachedCount > 0)
+    this.bar.suggest('flare', this.moths.attachedCount > 0)
+    this.bar.suggest('echo', this.scatter.recoverableCount > 0)
+    this.bar.suggest('gather', this.falcon.phase === 'window' || this.falcon.phase === 'strike')
+    this.bar.setAlpha(this.countText.alpha)
+    this.bar.update(dt)
 
     this.falcon.update(dt, this.flock, this.scrollX, VIEW_W, this.visibleObstacles())
     this.moths.update(dt, this.flock, this.scrollX)
