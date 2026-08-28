@@ -410,6 +410,34 @@ export class Flock {
    * flock itself rather than from a colour change you might miss.
    */
   shapeKind: 'arrow' | 'fan' | 'ring' | null = null
+
+  /**
+   * WHAT THE SHAPE DOES, not just what it looks like.
+   *
+   * The shape system was built, debugged and left entirely cosmetic — the flock
+   * threw a silhouette and the world did not care. A silhouette with a
+   * mechanical consequence is a REASON to use the move, and it is the whole
+   * argument for the shapes existing at all: the arrowhead pierces, the fan
+   * brakes, the ring sweeps.
+   *
+   * Each reads off the same envelope the visual uses, so the effect rises and
+   * falls exactly with the shape the player can see. A mechanical benefit that
+   * outlives its own picture is the kind of invisible rule this game keeps
+   * having to delete.
+   */
+  get pierce(): number {
+    return this.shapeKind === 'arrow' ? this.shapeEnvelope() : 0
+  }
+
+  /** The fan is a brake: a wall of wings turned flat to the wind. */
+  get brake(): number {
+    return this.shapeKind === 'fan' ? this.shapeEnvelope() : 0
+  }
+
+  /** The ring sweeps — a wider harvest reach while the wheel holds. */
+  get sweep(): number {
+    return this.shapeKind === 'ring' ? this.shapeEnvelope() : 0
+  }
   private shapeT = 0
   private shapeDur = SHAPE_DUR
   /** The current form, in flock-local space (x along the heading, y across it).
@@ -1226,7 +1254,14 @@ export class Flock {
       const targetSp = clamp(
         sp + (cruise - sp) * (1 - Math.exp(-shepherd * dt)),
         TUNING.minSpeed * (1 - this.flareAmt * 0.55),
-        TUNING.maxSpeed * (1 + this.pulse * 0.5 + stooping + this.diveLift * DIVE_LIFT_SPEED * 0.5),
+        // THE FAN BRAKES. A wall of wings turned flat to the wind is the one
+        // shape that should slow the flock hard, and flare already throws it —
+        // so the picture and the physics finally agree. Applied to the CEILING
+        // rather than the floor, so it caps how fast you may still be going
+        // instead of dragging a slow flock backwards.
+        TUNING.maxSpeed *
+          (1 + this.pulse * 0.5 + stooping + this.diveLift * DIVE_LIFT_SPEED * 0.5) *
+          (1 - this.brake * 0.3),
       )
       b.vx = (b.vx / sp) * targetSp
       b.vy = (b.vy / sp) * targetSp

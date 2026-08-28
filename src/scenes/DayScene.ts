@@ -2282,7 +2282,8 @@ export class DayScene extends Phaser.Scene {
     // spread widens the net, and a shrunken flock narrows it
     const spread01 = Math.max(0, -this.flock.form)
     const health = Phaser.Math.Clamp(this.flock.count / START_BIRDS, 0.35, 1)
-    const reach = (26 + 104 * spread01) * (0.55 + 0.45 * Math.pow(health, 0.7))
+    const reach =
+      (26 + 104 * spread01 + 70 * this.flock.sweep) * (0.55 + 0.45 * Math.pow(health, 0.7))
     const reach2 = reach * reach
 
     for (const m of this.motes) {
@@ -3450,7 +3451,11 @@ export class DayScene extends Phaser.Scene {
     const meanSpeed = Math.hypot(this.flock.meanVX, this.flock.meanVY)
     for (const { bird, obstacle } of this.flock.breakthroughHits) {
       if (obstacle.broken) continue
-      const charge = (this.brittleCharge.get(obstacle) ?? 0) + 1
+      // The arrowhead concentrates the whole flock into a point, so a shaped
+      // surge lands as a spike rather than a scatter of pecks. This is the
+      // shape system's first mechanical consequence: the silhouette the player
+      // can see IS the thing that breaks the wall.
+      const charge = (this.brittleCharge.get(obstacle) ?? 0) + 1 + this.flock.pierce * 1.6
       this.brittleCharge.set(obstacle, charge)
       // teach Surge the instant a curtain refuses to break: the problem is on
       // screen, and the answer is the next thing the player presses
