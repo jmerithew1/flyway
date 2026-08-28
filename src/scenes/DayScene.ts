@@ -236,6 +236,8 @@ export class DayScene extends Phaser.Scene {
   private lastHit = new Map<Bird, number>()
   /** live mote chain: length, its remaining window, and the run's best */
   /** Overflow light banked toward a returned bird. */
+  private squeezeDrain: (() => void) | null = null
+  /** Overflow light banked toward a returned bird. */
   private lightBank = 0
   private moteChain = 0
   private moteChainT = 0
@@ -708,6 +710,20 @@ export class DayScene extends Phaser.Scene {
     }
 
     this.flock = new Flock(this, 120, 300, 640)
+    // The ceiling is the run's start count: you are bringing YOUR flock home,
+    // not farming a bigger one along the way.
+    this.flock.maxBirds = START_BIRDS
+
+    // Strain squeezes birds out of the formation; they become recoverable, so
+    // holding gather finally costs something and Echo finally has a supply to
+    // rescue. Drained here rather than inside the sim so the scatter system
+    // stays the single owner of what a loose bird does.
+    this.squeezeDrain = () => {
+      for (const b of this.flock.squeezedThisFrame) {
+        this.scatter.spawn(b.x, b.y, b.vx * 0.35, b.vy * 0.35 - 30)
+        this.lastLossSource = 'The formation could not hold — they were squeezed loose.'
+      }
+    }
     this.flock.intentX = 600
     this.flock.intentY = 430
     this.scatter = new ScatterSystem(this)
@@ -1495,6 +1511,9 @@ export class DayScene extends Phaser.Scene {
       },
       this.visibleObstacles(),
     )
+    // drain the squeeze immediately after the sim, before anything else can
+    // read a flock count that is about to change
+    if (this.squeezeDrain && this.flock.squeezedThisFrame.length > 0) this.squeezeDrain()
 
     this.falcon.update(dt, this.flock, this.scrollX, VIEW_W, this.visibleObstacles())
     this.moths.update(dt, this.flock, this.scrollX)
@@ -3987,7 +4006,12 @@ export class DayScene extends Phaser.Scene {
     this.stuckTime.clear()
     const targetCount = Math.max(cp.count, 60 + (this.failsHere - 1) * 18)
     while (this.flock.count > targetCount) this.flock.removeBird(this.flock.birds[this.flock.birds.length - 1])
-    while (this.flock.count < targetCount) this.flock.spawnBird(cp.x + rand(-120, 120), 430 + rand(-80, 80))
+    // Bounded, not `while (count < target)`. spawnBird can now refuse at the
+    // flock ceiling, and a refusal inside an unbounded loop is an infinite one
+    // — the tab would hang on a checkpoint restore rather than fail visibly.
+    for (let i = this.flock.count; i < targetCount; i++) {
+      if (!this.flock.spawnBird(cp.x + rand(-120, 120), 430 + rand(-80, 80))) break
+    }
     // THE RETURN MUST FLY. Teleporting the flock into position is most of why
     // a restart read as a save-state reload rather than as the story
     // continuing: the birds simply existed again, in formation, facing right.

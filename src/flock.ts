@@ -302,7 +302,16 @@ export class Flock {
     for (let i = 0; i < count; i++) this.spawnBird(x + rand(-140, 140), y + rand(-90, 90))
   }
 
-  spawnBird(x: number, y: number, vx?: number, vy?: number): Bird {
+  spawnBird(x: number, y: number, vx?: number, vy?: number): Bird | null {
+    // THE FLOCK CANNOT GROW PAST WHAT IT STARTED WITH. Cages, rescues and the
+    // second wind each hand birds back, and with no ceiling every loss was
+    // refunded by the next reward: a probe finished with 224 birds from a start
+    // of 120. When no loss can stick, no loss lands — the arrival grade is
+    // decided before takeoff (its `held >= 0.7` test was being met at 1.84),
+    // and the whole fantasy of bringing your flock home has nothing at stake.
+    // Freeing a cage is now a rescue from the attrition you have already taken,
+    // which is what it always read as.
+    if (this.birds.length >= this.maxBirds) return null
     const sprite = this.scene.add.image(x, y, 'bird-mid')
     const depth = rand(0.75, 1.15)
     sprite.setScale(this.scale * depth)

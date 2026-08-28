@@ -26,12 +26,17 @@ PROCESSED = os.path.join(ROOT, 'public/assets/processed')
 
 # Families whose art must exist in a real range, with the rubric line each
 # serves. A single piece stretched across six acts is the defect these catch.
+# Each family lists the words the CODEBASE actually uses for it, not the word
+# the rubric line happens to use. An earlier version looked for 'breakable' and
+# reported 0/6 while six distinct breakables shipped — this project calls them
+# curtains and webs. A check that measures a vocabulary nobody writes in reports
+# a defect that does not exist, and teaches everyone to ignore it.
 VARIATION_MIN = {
-    'breakable': (6, 'R35 — one distinct breakable per act'),
-    'cage': (3, 'R24 — cages must vary by mount, height and size'),
-    'falcon': (4, 'R20/9a.7 — the hawk needs pose art, not one tinted image'),
-    'lamp': (4, 'R30/9f — relightable lamps need lit and unlit states'),
-    'moth': (6, 'R22 — a cluster of identical moths reads as one object'),
+    'breakable': (['curtain', 'web_', 'wisteria'], 6, 'R35 — one distinct breakable per act'),
+    'cage': (['cage'], 3, 'R24 — cages must vary by mount, height and size'),
+    'falcon': (['falcon'], 4, 'R20/9a.7 — the hawk needs pose art, not one tinted image'),
+    'lamp': (['lamp'], 4, 'R30/9f — relightable lamps need lit and unlit states'),
+    'moth': (['moth'], 6, 'R22 — a cluster of identical moths reads as one object'),
 }
 
 # Features KILLED by the economy law (S8b8a). Live code for a cut feature
@@ -139,13 +144,20 @@ def check_variation() -> tuple[bool, str]:
     man = io.open(os.path.join(ROOT, 'src/artManifest.ts'), encoding='utf-8').read()
     keys = set(re.findall(r"^  '([^']+)':", man, re.M))
     src = src_text()
+    # Procedural families register through factory helpers that take the key as
+    # a VARIABLE (`makeCageTexture(scene, 'cage_box', 'box')`), so a regex for
+    # createCanvas('literal') cannot see them and reported 1/3 while all three
+    # cages shipped. Scanning the quoted literals in textures.ts catches both.
+    tex = io.open(os.path.join(ROOT, 'src/textures.ts'), encoding='utf-8').read()
+    literals = set(re.findall(r"'([a-z0-9_]+)'", tex))
     fails = []
-    for word, (need, why) in VARIATION_MIN.items():
-        # count both registered art and procedurally generated textures
-        n = len({k for k in keys if word in k})
-        n += len({m for m in re.findall(rf"createCanvas\('([^']*{word}[^']*)'", src)})
-        if n < need:
-            fails.append(f'{word}: {n}/{need} ({why})')
+    for family, (words, need, why) in VARIATION_MIN.items():
+        found = set()
+        for word in words:
+            found |= {k for k in keys if word in k}
+            found |= {k for k in literals if word in k}
+        if len(found) < need:
+            fails.append(f'{family}: {len(found)}/{need} ({why})')
     return (not fails), '; '.join(fails) if fails else 'all families meet their variation minimum'
 
 
