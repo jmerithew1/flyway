@@ -4,3 +4,9 @@ shots/
 
 .claude/worktrees/
 art-source/
+
+# QA scratch: build copies, traces and captures. These are working artefacts
+# of a probe run, not source — 60MB of them landed in one commit by accident.
+# The reports themselves (qa/*.md) ARE tracked; everything else here is not.
+qa/*
+!qa/*.md
