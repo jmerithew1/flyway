@@ -514,19 +514,28 @@ export const FEATURES: PieceFeature[] = [
   // that road, made literal — a trail of light running the length of the
   // flight, and the thing the fog eats first.
   //
-  // All of it is `decor`: drawn, never collided with, seated behind the play
-  // plane. The level is already dense enough that the owner reported it as
-  // crowded, so these buy scale and story without buying another obstacle.
+  // WHICH OF THESE ARE SOLID IS DECIDED BY THE ART, not by convenience. A
+  // monument whose painting contains a real opening is a real encounter — you
+  // thread the colonnade's bays, the broken dome's crown, the window in the
+  // nested arch, the gap under the fallen lintel. Flying straight through one
+  // of those would waste the best obstacles in the game.
+  //
+  // The rest are pure silhouette with no painted way through — a head, a hand,
+  // a torso, a bell tower. Making those solid would be a wall the player can
+  // see no route past, which is the exact confusion the opening rule exists to
+  // prevent, and the level is already dense enough that the owner reported it
+  // as crowded. Those stay `decor`: drawn, never collided with, seated behind
+  // the play plane, bought for scale and story rather than as another wall.
   gnd(1250, 'statue_robed', 760, { wide: true, decor: true }),
   gnd(3450, 'colossus_foot', 700, { wide: true, decor: true }),
   gnd(4600, 'stair_broken', 640, { wide: true, decor: true }),
-  gnd(6300, 'colonnade_triple', 900, { wide: true, decor: true }),
+  gnd(6300, 'colonnade_triple', 900, { wide: true, flow: 'gather' }), // two real bays — thread it
   mid(7900, 300, 'colossus_hand', 640, { wide: true, decor: true }),
-  gnd(9400, 'dome_broken', 820, { wide: true, decor: true }),
+  gnd(9400, 'dome_broken', 820, { wide: true }), // the broken crown: one way through
   gnd(11500, 'colossus_ribcage', 1000, { wide: true, decor: true }),
   gnd(13800, 'belltower_ruin', 1080, { wide: true, decor: true }),
-  gnd(15900, 'lintel_fallen', 600, { wide: true, decor: true }),
-  gnd(17300, 'arch_window_nest', 720, { wide: true, decor: true }),
+  gnd(15900, 'lintel_fallen', 600, { wide: true }), // the fallen lintel leaves one gap
+  gnd(17300, 'arch_window_nest', 720, { wide: true, flow: 'spread' }), // fly the window
   // The head is the flight's single largest silhouette and it is placed where
   // it can be seen coming for several seconds — the shot the submission needs.
   gnd(19800, 'colossus_head', 1100, { wide: true, decor: true }),
