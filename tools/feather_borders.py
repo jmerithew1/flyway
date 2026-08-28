@@ -27,7 +27,7 @@ PROCESSED = os.path.join(ROOT, 'public/assets/processed')
 RAMP = 7  # px
 
 
-def feather(path: str) -> bool:
+def feather(path: str, axes: str = 'all') -> bool:
     try:
         im = Image.open(path)
         im.load()
@@ -63,29 +63,50 @@ def feather(path: str) -> bool:
                 if nv != v:
                     px[x, y] = nv
                     changed = True
-        for y in range(h):
-            for x in (i, w - 1 - i):
-                v = px[x, y]
-                nv = int(v * k)
-                if nv != v:
-                    px[x, y] = nv
-                    changed = True
+        # A TILEABLE strip must keep its left and right edges hard, or the seam
+        # between repeats becomes a visible gap — the opposite defect. Only its
+        # top and bottom are feathered.
+        if axes == 'all':
+            for y in range(h):
+                for x in (i, w - 1 - i):
+                    v = px[x, y]
+                    nv = int(v * k)
+                    if nv != v:
+                        px[x, y] = nv
+                        changed = True
     if not changed:
         return False
     im.putalpha(a)
+    # WRITE ATOMICALLY. Two runs of this tool overlapped and truncated
+    # roost_unlit.webp to zero bytes — an asset destroyed by the tool meant to
+    # repair it. Pillow writes in place, so a second writer opening the same
+    # path mid-write leaves nothing behind. Writing a sibling and renaming makes
+    # the replacement atomic on every platform this runs on.
+    tmp = path + '.tmp'
     # q92 for cutouts: lossy alpha below this frays soft feathered edges, and a
     # frayed edge is the very defect being repaired here.
-    im.save(path, 'WEBP', quality=92, method=6)
+    im.save(tmp, 'WEBP', quality=92, method=6)
+    os.replace(tmp, path)
     return True
 
 
 def main() -> int:
     man = io.open(os.path.join(ROOT, 'src/artManifest.ts'), encoding='utf-8').read()
     files = sorted(set(re.findall(r"file: 'assets/processed/([^']+)'", man)))
+    # Pattern-loaded groups are not in the manifest and were never feathered.
+    for group in ('fog', 'parallax', 'fogpieces', 'shafts'):
+        d = os.path.join(PROCESSED, group)
+        if os.path.isdir(d):
+            for fn in os.listdir(d):
+                if fn.lower().endswith('.webp'):
+                    files.append(f'{group}/{fn}')
+
     n = 0
-    for rel in files:
+    for rel in sorted(set(files)):
         p = os.path.join(PROCESSED, rel)
-        if os.path.exists(p) and feather(p):
+        # the parallax strips tile horizontally; their side edges must stay hard
+        axes = 'vertical' if rel.startswith('parallax/') else 'all'
+        if os.path.exists(p) and feather(p, axes):
             n += 1
     print(f'feathered {n} of {len(files)} registered pieces')
     return 0

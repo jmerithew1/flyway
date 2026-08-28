@@ -33,7 +33,7 @@ EDGE_ALPHA = 24
 EDGE_SHARE = 0.06
 
 
-def worst_edge(path: str) -> tuple[float, int]:
+def worst_edge(path: str, tiling: bool = False) -> tuple[float, int]:
     """Return (worst edge share, peak alpha) across the four borders."""
     im = Image.open(path)
     if im.mode not in ('RGBA', 'LA'):
@@ -43,12 +43,21 @@ def worst_edge(path: str) -> tuple[float, int]:
     w, h = im.size
     px = a.load()
     worst, peak = 0.0, 0
-    for name, coords in (
+    # A HORIZONTALLY TILING STRIP MUST KEEP ITS SIDE EDGES HARD, or the seam
+    # between repeats becomes a visible gap — the opposite defect. Only its top
+    # and bottom can give it away as a rectangle. Flagging edges that are
+    # required to be opaque makes the check unsatisfiable, and an unsatisfiable
+    # check is one everybody learns to ignore.
+    edges = (
+        ('top', [(x, 0) for x in range(w)]),
+        ('bottom', [(x, h - 1) for x in range(w)]),
+    ) if tiling else (
         ('top', [(x, 0) for x in range(w)]),
         ('bottom', [(x, h - 1) for x in range(w)]),
         ('left', [(0, y) for y in range(h)]),
         ('right', [(w - 1, y) for y in range(h)]),
-    ):
+    )
+    for name, coords in edges:
         lit = 0
         for c in coords:
             v = px[c]
@@ -64,14 +73,30 @@ def worst_edge(path: str) -> tuple[float, int]:
 
 def main() -> int:
     man = io.open(os.path.join(ROOT, 'src/artManifest.ts'), encoding='utf-8').read()
-    files = sorted(set(re.findall(r"file: 'assets/processed/([^']+)'", man)))
+    files = set(re.findall(r"file: 'assets/processed/([^']+)'", man))
+
+    # PATTERN-LOADED ART WAS NEVER AUDITED. textures.ts loads the fog, sky and
+    # parallax sets by directory rather than through the manifest, so they were
+    # invisible to this check — and the fog is the single most border-sensitive
+    # art in the game, because it is drawn large, additively, over everything.
+    # The owner reported "a white box around the fog cloud" in a screenshot that
+    # this tool had just declared clean, which is exactly what a check with a
+    # blind spot buys you.
+    for group in ('fog', 'sky2x', 'parallax', 'fogpieces', 'shafts'):
+        d = os.path.join(PROCESSED, group)
+        if not os.path.isdir(d):
+            continue
+        for fn in sorted(os.listdir(d)):
+            if fn.lower().endswith('.webp'):
+                files.add(f'{group}/{fn}')
+    files = sorted(files)
     bad = []
     for rel in files:
         p = os.path.join(PROCESSED, rel)
         if not os.path.exists(p):
             continue
         try:
-            share, peak = worst_edge(p)
+            share, peak = worst_edge(p, tiling=rel.startswith('parallax/'))
         except Exception as e:
             print(f'  ?? {rel}: {e}')
             continue

@@ -37,13 +37,13 @@ import Phaser from 'phaser'
 import { INK, display, safeArea } from './ui'
 import { isTouch, touchLayout } from './touch'
 
-export type Verb = 'gather' | 'spread' | 'surge' | 'flare' | 'echo' | 'dive'
+export type Verb = 'gather' | 'spread' | 'surge' | 'flare' | 'echo'
 
 /** Reading order of the row. GATHER/SPREAD first because they are held, and
  * their taps are the next two — the bar mirrors the grammar of the hands. */
-const INDEX: Record<Verb, number> = { gather: 0, spread: 1, surge: 2, flare: 3, echo: 4, dive: 5 }
-const LABELS = ['GATHER', 'SPREAD', 'SURGE', 'FLARE', 'ECHO', 'DIVE']
-const N = 6
+const INDEX: Record<Verb, number> = { gather: 0, spread: 1, surge: 2, flare: 3, echo: 4 }
+const LABELS = ['GATHER', 'SPREAD', 'SURGE', 'FLARE', 'ECHO']
+const N = 5
 
 /**
  * Which touch pad each verb lives on. SURGE is a tap on the GATHER pad and
@@ -52,7 +52,7 @@ const N = 6
  * actually presses. Drawing them their own icon there would invent a control
  * that does not exist.
  */
-const TOUCH_PAD = ['GATHER', 'SPREAD', 'GATHER', 'SPREAD', 'CALL', 'DIVE']
+const TOUCH_PAD = ['GATHER', 'SPREAD', 'GATHER', 'SPREAD', 'CALL']
 
 /**
  * The bar paints in the same ink as every other glyph, so the palette is READ
@@ -542,11 +542,6 @@ export class AbilityBar {
         break
       }
       default: {
-        // DIVE: a stoop — the line of the fall, and the head of it
-        g.lineBetween(cx, cy - m * 0.95, cx, cy + m * 0.3)
-        g.lineBetween(cx - m * 0.55, cy - m * 0.12, cx, cy + m * 0.6)
-        g.lineBetween(cx + m * 0.55, cy - m * 0.12, cx, cy + m * 0.6)
-        break
       }
     }
   }

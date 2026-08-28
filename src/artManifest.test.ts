@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { ART } from './artManifest'
 
@@ -21,6 +21,24 @@ describe('every entry resolves', () => {
   it('points at a file that exists on disk', () => {
     const dead = pieces.filter(([, p]) => !existsSync(join(PUBLIC, p.file))).map(([k, p]) => `${k} -> ${p.file}`)
     expect(dead).toEqual([])
+  })
+
+  it('is never a zero-byte file', () => {
+    // An asset-processing tool truncated two files to zero bytes when two of
+    // its runs overlapped: Pillow writes in place, so a second writer opening
+    // the same path mid-write leaves nothing behind. The file still EXISTED,
+    // so an existence check passed while the art was gone.
+    const empty = pieces
+      .filter(([, p]) => existsSync(join(PUBLIC, p.file)) && statSync(join(PUBLIC, p.file)).size === 0)
+      .map(([k]) => k)
+    expect(empty).toEqual([])
+  })
+
+  it('is large enough to be real art, not a stub', () => {
+    const tiny = pieces
+      .filter(([, p]) => existsSync(join(PUBLIC, p.file)) && statSync(join(PUBLIC, p.file)).size < 200)
+      .map(([k]) => k)
+    expect(tiny).toEqual([])
   })
 
   it('ships no .png references — everything was converted to WebP', () => {

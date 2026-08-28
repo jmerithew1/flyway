@@ -7,7 +7,7 @@
  * fixed ability cluster arranged along the right thumb's natural sweep:
  * GATHER and SPREAD are the two big held pads (a short tap on either fires
  * its ability — SURGE and FLARE, exactly mirroring the SPACE/SHIFT grammar),
- * with DIVE and CALL as smaller pads up the arc.
+ * with CALL as a smaller pad up the arc.
  *
  * STEERING — the one subtle part. DayScene steers from
  * `this.input.activePointer`, treating it as an *intention point on screen*:
@@ -78,7 +78,7 @@ const FACE_ALPHA = 0.82 // label / glyph at rest; +0.18 while held
  * inside that arc of the bottom-right corner (see the reach table in L3).
  */
 const PAD_R = 86 // big formation pads (~16 mm across)
-const MINI_R = 50 // dive / call
+const MINI_R = 50 // call
 const SMALL_R = 44
 const PAUSE_R = 38
 const TOUCH_SLOP = 20 // hit radius is forgivingly larger than the visual
@@ -451,7 +451,6 @@ export class TouchControls {
   private gatherPad?: Pad
   private spreadPad?: Pad
   private callPad?: Pad
-  private divePad?: Pad
   private pausePad?: Pad
   private stick?: Stick
   private scene?: Phaser.Scene
@@ -509,11 +508,10 @@ export class TouchControls {
     }
     this.gatherPad = mk('GATHER', { label: 'GATHER', sub: 'tap · SURGE' }, () => this.onSurge())
     this.spreadPad = mk('SPREAD', { label: 'SPREAD', sub: 'tap · FLARE' }, () => this.onFlare())
-    this.divePad = mk('DIVE', { label: 'DIVE' }, () => {})
     this.callPad = mk('CALL', { label: 'CALL' }, () => this.onCall())
     // PAUSE: small, out of the thumb arcs, top-right — touch had no chrome at all
     this.pausePad = mk('PAUSE', { label: 'II' }, () => this.onPause())
-    this.pads = [this.gatherPad, this.spreadPad, this.divePad, this.callPad, this.pausePad]
+    this.pads = [this.gatherPad, this.spreadPad, this.callPad, this.pausePad]
 
     // audit hook: the resolved geometry, so a probe can check reachability
     // and hit-testing against the real layout rather than a transcription
@@ -562,7 +560,7 @@ export class TouchControls {
 
   /** True while the DIVE pad is held (touch equivalent of the mouse hold). */
   get diving(): boolean {
-    return !!this.divePad?.held
+    return false // DIVE is cut; the pad is gone
   }
 
   /** True while the GATHER pad is held. */
@@ -639,7 +637,7 @@ export class TouchControls {
     this.pads = []
     this.stick?.destroy()
     this.stick = undefined
-    this.gatherPad = this.spreadPad = this.callPad = this.divePad = this.pausePad = undefined
+    this.gatherPad = this.spreadPad = this.callPad = this.pausePad = undefined
     this.padPointers.clear()
     this.scene = undefined
   }

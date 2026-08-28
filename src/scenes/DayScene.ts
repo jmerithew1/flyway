@@ -1573,18 +1573,16 @@ export class DayScene extends Phaser.Scene {
     if (gather) this.gatherHeld += dt
     if (spread) this.spreadHeld += dt
 
-    // ---- DIVE: hold to stoop, release to slingshot (the flock owns the impulse)
-    const diving = !this.finishing && !this.failing && (p.isDown || this.keyDive.isDown || this.touch.diving)
-    if (diving !== this.prevDive) {
-      this.flock.setDive(diving)
-      if (diving) this.audio.formSnap('gather')
-      else if (this.flock.diveLift > 0.05) {
-        this.audio.surgeWhoosh(0.6 + this.flock.diveLift * 0.5)
-        this.formFlourish(true)
-      }
-      this.prevDive = diving
-    }
-    if (diving) this.showPrompt('dive', '', () => !this.flock.dive)
+    // DIVE IS CUT. The plan's job for it was COMMIT: a held stoop shape, speed
+    // streaks, and deep light placed low that only a committed dive could
+    // reach. None of the deep light was ever placed, so the verb had nothing to
+    // reach FOR — it traded altitude for speed toward nothing, which is why the
+    // owner read it as not useful. A verb with no demand costs teaching
+    // capacity and buys nothing, and the flight already teaches six.
+    //
+    // The flock keeps setDive/diveLift: the falcon's reckoning still uses the
+    // stoop internally, and removing engine capability to remove a BINDING
+    // would be deleting more than was decided.
     this.detectVortexGesture(dt, untouched ? VIEW_W * 0.45 : p.x, untouched ? VIEW_H * 0.45 : p.y)
 
     // formation snap: every press/release is a felt, heard transient —
@@ -1873,7 +1871,6 @@ export class DayScene extends Phaser.Scene {
     }
     // Dive: taught on the long open descent before the mid-game
     if (this.scrollX > 6100 && this.scrollX < 7400) {
-      this.showPrompt('dive', '', () => this.flock.diveLift > 0.1)
     }
     // Vortex: taught where scattered birds are worth hoovering back
     if (this.scrollX > 10100 && this.scrollX < 11200 && this.scatter.recoverableCount >= 3) {
