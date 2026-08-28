@@ -196,6 +196,9 @@ export class Nightfall {
       })
     }
 
+    // The FALLBACK is 'smear', not 'vfade', for the same reason the layer below
+    // was deleted: if the painted edge art ever fails to load, a vfade would
+    // put the hard cut straight back.
     // NO GRADIENT LAYER. A 'vfade' is smooth along one axis and a HARD CUT
     // across the other, so however it is sized or rotated one of its edges is a
     // straight line — which is the "black boxes in the fog" reported repeatedly
@@ -206,7 +209,7 @@ export class Nightfall {
     // the boundary itself: a dark gradient that hides the tile's hard edge and
     // makes the fog dissolve into lit air instead of stopping at a ruled line
     this.edgeFade = scene.add
-      .image(0, viewH / 2, scene.textures.exists(FOG_ART.edge) ? FOG_ART.edge : 'vfade')
+      .image(0, viewH / 2, scene.textures.exists(FOG_ART.edge) ? FOG_ART.edge : 'smear')
       .setDisplaySize(viewH * 0.66, viewH * 1.32)
       .setTint(0xffffff)
       .setScrollFactor(0)
@@ -216,7 +219,7 @@ export class Nightfall {
     // a bright edge where the dark eats into lit air, so the boundary is
     // never ambiguous — this is the single most important pixel of the effect
     this.rim = scene.add
-      .image(0, viewH / 2, scene.textures.exists(FOG_ART.edge) ? FOG_ART.edge : 'vfade')
+      .image(0, viewH / 2, scene.textures.exists(FOG_ART.edge) ? FOG_ART.edge : 'smear')
       .setDisplaySize(viewH * 1.2, 130)
       .setRotation(Math.PI / 2)
       .setTint(0xffd0a8)

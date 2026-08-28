@@ -52,7 +52,7 @@ const N = 5
  * actually presses. Drawing them their own icon there would invent a control
  * that does not exist.
  */
-const TOUCH_PAD = ['GATHER', 'SPREAD', 'GATHER', 'SPREAD', 'CALL']
+const TOUCH_PAD = ['GATHER', 'SPREAD', 'GATHER', 'SPREAD', 'ECHO']
 
 /**
  * The bar paints in the same ink as every other glyph, so the palette is READ

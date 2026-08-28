@@ -10,6 +10,7 @@ export function createCoreTextures(scene: Phaser.Scene): void {
   makeLeafTexture(scene)
   makeFeatherTexture(scene)
   makeVerticalFade(scene)
+  makeSmearTexture(scene)
   makeStreakTexture(scene)
   makeAlarmRing(scene)
   makeCageTexture(scene, 'cage', 'dome')
@@ -156,6 +157,45 @@ function makeVerticalFade(scene: Phaser.Scene): void {
   grd.addColorStop(1, 'rgba(255,255,255,1)')
   ctx.fillStyle = grd
   ctx.fillRect(0, 0, 8, h)
+  canvas.refresh()
+}
+
+/**
+ * A vertical SMEAR that dies on every edge — the effect-safe sibling of
+ * `vfade`.
+ *
+ * `vfade` is a wash: it runs to full opacity at its bottom and across its full
+ * width, which is correct when it sinks into a scene with its hard edge off
+ * frame. The VFX pool was drawing it as a free-floating sprite, so every time
+ * that effect kind fired it flashed a solid-bottomed rectangle over the art —
+ * the owner reported it as "black boxes when things are flashing around
+ * objects", and it is the same one-axis-smooth/one-axis-hard defect that
+ * produced the boxes in the fog and the squares around the birds.
+ *
+ * This keeps the vertical shape an effect wants and feathers the horizontal,
+ * so it can be drawn anywhere without announcing its own quad.
+ */
+function makeSmearTexture(scene: Phaser.Scene): void {
+  if (scene.textures.exists('smear')) return
+  const w = 32
+  const h = 256
+  const canvas = scene.textures.createCanvas('smear', w, h)
+  if (!canvas) return
+  const ctx = canvas.context
+  const grd = ctx.createLinearGradient(0, 0, 0, h)
+  grd.addColorStop(0, 'rgba(255,255,255,0)')
+  grd.addColorStop(0.42, 'rgba(255,255,255,0.85)')
+  grd.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = grd
+  ctx.fillRect(0, 0, w, h)
+  const side = ctx.createLinearGradient(0, 0, w, 0)
+  side.addColorStop(0, 'rgba(0,0,0,0)')
+  side.addColorStop(0.5, 'rgba(0,0,0,1)')
+  side.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.globalCompositeOperation = 'destination-in'
+  ctx.fillStyle = side
+  ctx.fillRect(0, 0, w, h)
+  ctx.globalCompositeOperation = 'source-over'
   canvas.refresh()
 }
 

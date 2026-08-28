@@ -1,0 +1,213 @@
+# FLYWAY — FUNCTION lane QA pass
+
+**Build under test:** frozen snapshot of `04059b4` ("Cut DIVE, feather the fog and parallax art, guard against truncation"), served from `C:/Users/merit/AppData/Local/Temp/judge`. Bundle `assets/index-CyHhw0TR.js`, md5 `40ac94d8a9b7cc5ec238982430d70a22`. Nothing was rebuilt; nothing under `src/` or `tools/` was touched.
+
+**Lane:** does everything *work*, desktop and mobile. Rendering, feel and visuals are other judges' lanes and are not adjudicated here.
+
+**Date:** 2026-08-28
+
+---
+
+## 1. Verdict at a glance
+
+| | |
+|---|---|
+| Checks run | 100+ across 6 driven sessions |
+| Blocking defects | **1** |
+| Major defects | **2** |
+| Minor defects | **3** |
+| Regressions verified fixed | **7 of 10** |
+| Regressions **not** fixed | **3 of 10** (#4 partly, #7 partly, #9 partly) |
+
+The game is functional end to end on both platforms. Every screen is reachable, every control on every screen can be activated, the flight plays, fails, recovers and finishes, and scene transitions all work. Three of the ten claimed fixes are incomplete, and one of those is a real, silent, player-facing loss on the single most common mobile entry path.
+
+---
+
+## 2. Findings, ranked by consequence
+
+### F1 — BLOCKING · The simulation runs behind the "turn your phone" notice when the page is *loaded* in portrait
+
+* **Viewport:** 390×844 portrait, `has_touch`, mobile UA. Both `?day` and the plain title route.
+* **Steps:** Open `http://.../flyway/?day` with the viewport already at 390×844. Do nothing. Wait.
+* **What happened:** The rotate notice shows and the canvas is hidden — correctly. But `game.loop.running` stays `true` and the world keeps running. Measured over one 30-second observation:
+
+  | t | `loop.running` | `loop.frame` | `scrollX` | `night.daylight` |
+  |---|---|---|---|---|
+  | 12s | true | 698 | — (still booting) | — |
+  | 21s | true | 997 | 83 | 0.9754 |
+  | 24s | true | 1039 | 234 | 0.9306 |
+  | 27s | true | 1071 | 285 | 0.9223 |
+  | 30s | true | 1108 | 344 | **0.9126** |
+
+  **6.3 percentage points of daylight burned in 9 seconds**, and the world scrolled 261px, while the player was looking at a card telling them to turn their phone. On the title route the loop likewise ran free: `loop.frame` 733 → 1749 over 18 s.
+* **What should have happened:** `game.loop.running === false` and zero frames advanced, exactly as regression 4 claims.
+* **Why it is only half fixed:** `src/main.ts` does call `gate()` immediately, and the `change` listener works — verified: rotating *into* portrait from landscape correctly sleeps the loop (`loop.frame` 1187 → 1187 over 12 s, `running=false`). The initial call is the broken one. `gate()` runs inside `Promise.all([fontsReady]).finally(...)` right after `new Phaser.Game(config)`, before Phaser has started its own `TimeStep`. Phaser's `TimeStep.sleep()` is guarded — `if (this.running) { raf.stop(); running = false }` — so at that moment it is a **no-op**, and Phaser then starts the loop itself a moment later with nothing left to stop it. Only an actual orientation *change* event ever puts it to sleep after that.
+* **Consequence:** The default way a person opens a link on a phone is holding it upright. That player's run is already partly lost, invisibly, before they have seen a single frame — which is the exact symptom the regression was filed for.
+* **Captures:** `qa/shots/fn/m3_portrait_flight.png`, `qa/shots/fn/m3_portrait_title.png`, `qa/shots/fn/m1_390x844.png`. Data: `qa/shots/fn/m3_result.json` → `runs`.
+
+### F2 — MAJOR · The controls reference still teaches DIVE, a verb that no longer exists
+
+* **Viewport:** 1536×960 desktop (and the same row on touch).
+* **Steps:** Title screen → click **CONTROLS**.
+* **What happened:** The panel lists six rows, and row five is `MOUSE or V` → *"hold to trade height for speed — earned only while still descending; release to slingshot."* On a touch device the same row renders with the key name **`DIVE`**, naming a pad that is not drawn.
+* **What should have happened:** No DIVE row at all — regression 9 requires it gone from the ability bar, the touch pads *and* the controls reference.
+* **Verified working:** the pad itself is genuinely gone (`TouchControls.pads` has 4 entries: GATHER, SPREAD, CALL, PAUSE), holding the old DIVE screen position does nothing (`flock.dive` unchanged over a 1.2 s hold), and neither `V` nor a held mouse button dives (`flock.dive` false → false).
+* **Consequence:** The one screen whose job is teaching the controls teaches a control that does not exist, and on touch it points at a button that is not there.
+* **Captures:** `qa/shots/fn/d1_controls_panel.png`, cropped evidence `qa/shots/fn/d1_controls_crop.png`. Source: `src/scenes/TitleScene.ts:1079-1082`.
+
+### F3 — MAJOR · `V` is still bound as a dead key, and the touch layout table still advertises two pads that do not exist
+
+* **Steps:** In flight, press and hold `V`.
+* **What happened:** Nothing — but the binding is live. `DayScene.create()` still runs `this.keyDive = kb.addKey(Phaser.Input.Keyboard.KeyCodes.V)` (`src/scenes/DayScene.ts:882`), and `keyDive` / `prevDive` are never read anywhere. Confirmed at runtime: `window.__day.keyDive` exists, `keyCode` 86.
+* **What should have happened:** Regression 9 says "with no dead key". A `Key` object registered and never read is precisely a dead key; it also captures the keystroke from the page.
+* **Second half:** `touchLayout()` in `src/touch.ts:657-668` is documented as "one source of truth for the layout means a probe can measure the real thing rather than a guess about it", but it still returns six entries including `DIVE` and `BRACE`, while `TouchControls.pads` only ever contains four. `window.__touch.pads` therefore advertises `['GATHER','SPREAD','DIVE','CALL','BRACE','PAUSE']` at every viewport tested. Worse, the audit hook zips them by index — `this.pads[i]` against `touchLayout()[i]` — so the published `presses` array mislabels CALL's timings as DIVE's, PAUSE's as CALL's, and reports `undefined` for the last two.
+* **Consequence:** Low for a player, high for the next audit: the layout table is exactly the thing a reachability probe is told to trust, and it is now wrong in both membership and index order. A future pass measuring "is the DIVE pad reachable" gets a confident, meaningless answer.
+* **Captures:** `qa/shots/fn/m1_844x390.png` (four pads drawn), `qa/shots/fn/m1_result.json` → `viewports.*.pads`.
+
+### F4 — MINOR · One 404 on every load: `audio/stems.json`
+
+* **Steps:** Load any route; move the mouse or press a key (which starts the audio context).
+* **What happened:** Exactly one `404` for `http://.../flyway/audio/stems.json`, plus one matching console error (`Failed to load resource: the server responded with a status of 404`). Confirmed absent from the shipped snapshot.
+* **What should have happened:** Regression 7 says "confirm the network log is clean". Six 404s became one, not zero.
+* **Assessment:** The fix is 5/6 of the way there and the failure is swallowed correctly (`.catch()`, procedural score plays). But the network log is not clean and the console is not clean, which is what was asked. Shipping an empty `audio/stems.json` (`[]`) would close it.
+* **Captures:** `qa/shots/fn/d2_log.json`, `qa/shots/fn/d4_result.json` → `stems_404`.
+
+### F5 — MINOR · `pauseVeil` survives `scene.restart()` as a dangling reference
+
+* **Steps:** In flight, `P` to pause, then `R`.
+* **What happened:** The restart works — this is *not* the old soft-lock (see §3, regression 1). But `this.paused` is explicitly reset in `create()` (`DayScene.ts:352`) while `this.pauseVeil` is not, so after a restart-from-pause the field still points at the previous run's container.
+* **Assessment:** Not player-visible. The object is not in the new scene's display list, so nothing is drawn, and pausing afterwards works normally (verified: `P` → paused, `P` → unpaused). It is the same class of bug as the one regression 1 fixed — a field that outlives `restart()` — left one line short. Worth closing before it grows teeth.
+* **Captures:** `qa/shots/fn/d4_after_restart.png`, `qa/shots/fn/d4_result.json` → `reg1_veil`.
+
+### F6 — MINOR · Flock-count numeral's shadow box crosses the top of the frame on mobile
+
+* **Viewport:** 844×390 (measured; present at all three landscape sizes).
+* **What happened:** The `120` HUD numeral reports bounds `y = -7` against a canvas top of 0.
+* **Assessment:** The digits themselves are fully legible — see `qa/shots/fn/m1_844_hud_zoom.png`. The 7px overflow is the `legible()` stroke/shadow padding, not glyph. Recorded for completeness; no functional impact. Every other text object at every viewport is fully inside the frame.
+
+---
+
+## 3. Per-regression verdict
+
+| # | Regression | Verdict | Evidence |
+|---|---|---|---|
+| 1 | `R` from pause soft-locked the run | **FIXED** (see F5 caveat) | After `P` then `R`: `paused=false`, world moves `scrollX 668 → 1380` in 4 s, ECHO fires (`callCooldown 5.7`), `P` still pauses and unpauses afterwards. Also verified on touch via the RESTART THE DAY plate. |
+| 2 | All four Results/Map buttons dead to the mouse | **FIXED** | All four carry `customHitArea: true`. Each was hovered at its measured hit-box centre (colour changed and reverted) and then clicked/tapped: REPLAY FLIGHT → Day, CONTINUE JOURNEY → FlywayMap, FLY AGAIN → Day, HOME → Title. |
+| 3 | Rotation left the game in 21% of the screen | **FIXED** | Portrait 390×844 → landscape 844×390: canvas refits to 844×390 at (0,0) = **100.0%** of the screen. Round trip back to portrait re-blocks correctly, and a *second* trip forward still refits to 100.0%. |
+| 4 | Sim ran behind the portrait notice | **PARTIALLY FIXED — see F1** | Rotating *into* portrait holds (frames static, `running=false`). **Loading** in portrait does not: 410 frames and 6.3pp of daylight burned in one 30-second observation. |
+| 5 | Pause on mobile had no tappable controls | **FIXED** | Three plates present and all inside 844×390: FLY ON, RESTART THE DAY, MUTE. Each tapped via CDP with stamped timestamps and each acted; MUTE relabels to SOUND ON and toggles back. |
+| 6 | Cage/echo destroyed birds at the 120 cap while paying score | **FIXED** | Flock at cap (120/120) parked in a 6-bird cage for 7 s: flock `120 → 120`, cage `6 → 6`, `stats.found 0 → 0`, no `+N` toast. Then culled to 100 and re-parked: cage `6 → 0`, flock `→ 106`, `found → 6`. Nothing vanishes and nothing is paid twice. |
+| 7 | Six 404s on every load | **PARTIALLY FIXED — see F4** | Six became one. `audio/stems.json` still 404s on every load, with a matching console error. |
+| 8 | `?sandbox` exposed a dev scene in production | **FIXED** | `?sandbox` at host `127.0.0.1` routes to Title; `Sandbox` never goes active. |
+| 9 | DIVE was cut | **PARTIALLY FIXED — see F2, F3** | Pad gone, verb gone, mouse-hold gone. Controls reference still teaches it; `V` still bound as a dead key; `touchLayout()` still lists DIVE and BRACE. |
+| 10 | Verbs fired through the pause veil | **FIXED** | Paused, then spammed C, E, SPACE-tap, SHIFT-tap: `callCooldown 3.06 → 3.06`, `form 0 → 0`, `|v| 352.75 → 352.75`, still paused. Same on touch: CALL/GATHER/SPREAD pads all inert behind the veil. |
+
+---
+
+## 4. Interaction inventory
+
+Every interactive object was enumerated from the live scene graph — walking `children.list` recursively into containers and reading each object's real `input.hitArea` rather than guessing from the source — then activated at its **measured hit-box centre**: by mouse on desktop, by timestamped CDP touch on mobile. Toggles were driven in both directions.
+
+### Title screen — 4 zones (5 with a recorded best), 3 keys
+
+| Control | Kind | Measured hit box | Activated | Result |
+|---|---|---|---|---|
+| BEGIN FLIGHT | `Zone` "begin" | 512,731 · 512×112 | hover in, hover out, click | label `#fff3dc → #ffe6bf → #fff3dc`; click → Day |
+| the sky | `Zone` "sky" | 0,0 · 1536×861 | click | → Day |
+| CONTROLS | `Zone` "controls" | 22,889 · 151×50 | hover, click | panel opens |
+| SHARE | `Zone` "share" | 1404,889 · 110×50 | click | stays on Title, shows **LINK COPIED** |
+| SHARE RESULT | `Zone` "share-result" | *only exists once a best flight is recorded* | click | see `d5_result.json` |
+| panel close | `Zone` "panel-close" | full screen, depth 310 | click | panel closes **and does not fall through to BEGIN** |
+| `ENTER` / `SPACE` | key | — | pressed | → Day (each from a fresh Title) |
+| `ESC` | key | — | pressed | closes the controls panel |
+
+### In flight, desktop — 11 bindings
+
+| Control | Activated | Result |
+|---|---|---|
+| mouse move | steered high then low | flock `centerY 564 → 408` |
+| `SPACE` held | 1.4 s | `flock.form 0 → 0.983` (tightens) |
+| `SPACE` tapped (<220 ms) | SURGE | `|v| 105 → 239` |
+| `SHIFT` held | 1.4 s | `flock.form 0.983 → −0.972` (widens) |
+| `SHIFT` tapped | FLARE | brakes a *moving* flock — mobile `|v| 274 → 231`; see §5 note |
+| `SPACE`+`SHIFT` | BRACE | `braceOn=true`, `braceAmt 0.835` at 400 ms; self-releases past its 0.7 s limit |
+| `C` | ECHO | `callCooldown → 5.79` |
+| `E` | ECHO | `callCooldown → 5.70` |
+| `P` | pause / resume | both directions |
+| `M` | mute | `false → true → false` |
+| `R` | restart the day | both from flight and from the pause veil |
+| `D` | debug overlay | `true → false` |
+| `V` | — | **nothing (dead binding — F3)** |
+| mouse held | — | nothing (DIVE correctly removed) |
+| window blur | pause | `paused=true` |
+
+### In flight, touch — 844×390
+
+| Control | Measured position | Activated | Result |
+|---|---|---|---|
+| floating joystick | left zone, appears under the thumb | pushed up, then down | `stick.vy −1.0` → flock `centerY 420 → 160`; `vy +1.0` → `160 → 800` |
+| GATHER pad | 1932,800 r106 | tap | SURGE, `|v| 209 → 504` |
+| GATHER pad | " | 1.4 s hold | `form 0.217 → 0.917` |
+| SPREAD pad | 1710,800 r106 | tap | FLARE, `|v| 274 → 231` |
+| SPREAD pad | " | 1.4 s hold | `form 0.375 → −0.907` |
+| CALL pad | 1748,598 r70 | tap | ECHO, `callCooldown 5.9` |
+| PAUSE pad | 1986,78 r58 | tap | pause veil opens |
+| both pads | chord | 400 ms hold | BRACE — see `m4_result.json` |
+| old DIVE slot | 1938,608 | 1.2 s hold | inert, correctly |
+| FLY ON / RESTART THE DAY / MUTE | 1039,514 / 604 / 694 · 360×74 | tap | see F7 |
+
+All four drawn pads plus the phantom BRACE slot were confirmed **inside the visible frame** at every landscape viewport tested.
+
+### Results — 2 buttons, 3 keys
+
+`REPLAY FLIGHT` (hit box 277,856 · 324×85) and `CONTINUE JOURNEY` (624,856 · 330×85), both `customHitArea: true`. Hover at the measured hit-box centre recoloured and reverted each (`#f6d9b8 → #ffe6bf → #f6d9b8`, `#f6f1fa → #ffe6bf → #f6f1fa`), proving the pressable region really is under the label. Clicking REPLAY FLIGHT → Day. Keys: `R` → Day, `J` → FlywayMap, `SPACE` → skip the ceremony. A press anywhere also skips.
+
+### Map — 2 buttons, 2 keys
+
+`FLY AGAIN` and `HOME`, both `customHitArea: true`, both hovered and clicked. Keys: `R` → Day, `ESC` → Title.
+
+**No unreachable control was found on any screen** — with the single exception recorded in F7.
+
+---
+
+## 5. Scenario coverage
+
+| Scenario | Desktop | Mobile | Evidence |
+|---|---|---|---|
+| Idle (hands off the controls) | ✔ | ✔ | world advances `scrollX 153 → 327` in 4 s with no input; no attrition at rest (`120 → 120`) |
+| Level start / dawn bookend | ✔ | ✔ | flock reaches full 120; control is live during the opening (ECHO fires) |
+| Normal flight & camera | ✔ | ✔ | camera tracks scene scroll within 60px and holds the 1.0 zoom floor; lead offsets ±12px |
+| Gather / spread | ✔ | ✔ | see §4 |
+| Obstacle navigation | ✔ | ✔ | full flight: flock ranged 120 → 0 → 68 across the level's hazards |
+| Checkpoints | ✔ | ✔ | banked and used; `stats.resets` incremented; respawn returns `max(checkpoint.count, 60)` birds |
+| **Failure and recovery** | ✔ | ✔ | first loss names the cause and waits for a press; repeat losses self-recover in ~0.7 s |
+| **Level finish** | ✔ | ✔ | `finishing=true`, homecoming plays, → Results |
+| Every scene change | ✔ | ✔ | Boot→Title, Title→Day, Day→Results, Results→Day, Results→Map, Map→Day, Map→Title, plus `?day` / `?map` / `?sandbox` deep links |
+| **Played to the END** | ✔ | ✔ | see below |
+
+**The desktop playthrough was completed and it was unassisted.** A 460-second run from the dawn bookend to the roost, no state edits and no teleporting: 15 tutorial prompts fired, 5 first-encounter cards appeared and were dismissed, the flock ranged from 120 down to 0 and back, several failure/recovery cycles ran, and the day ended with `finishing=true` → the homecoming → the Results screen. Progress log in `qa/shots/fn/d3_result.json` → `run.samples`; the harness reports `assists: []`.
+
+Note on FLARE: it lowers the speed *ceiling* (`cruise × 0.38`, approached at 5.2/s) rather than applying a braking impulse the way SURGE applies an accelerating one. On a flock already flying below that ceiling there is nothing to brake, which is why two desktop samples taken at `|v| ≈ 75` and `≈ 127` showed no change while the mobile sample at `|v| 274` showed a clear `−43`. Working as designed; the first two measurements were taken from the wrong state.
+
+---
+
+## 6. Harness notes and deviations
+
+Two deliberate deviations from the brief, both forced, both documented in `qa/fn_lib.py`:
+
+1. **GL backend.** The brief specifies `--use-angle=swiftshader`. Measured on this machine, SwiftShader could not construct the Phaser `Game` object inside 60 s — `window.__game` never appeared, so nothing could be tested through it at all. ANGLE/**d3d11** (which this repo's own `qa/dq_lib.py` already selects, with a comment explaining why) boots to the flight in ~99 s and renders real, non-blank frames. Every capture here is d3d11. Frame rate is never reported.
+
+2. **Server.** The frozen build is served on `:5300` by `python -m http.server`, which is single-threaded. Under the game's asset burst its listen backlog overflows: the first sessions logged dozens of `net::ERR_CONNECTION_REFUSED` on `.webp` assets, and one request for the main bundle returned an **empty body**. Those look exactly like build defects and are not. Testing was moved to a `ThreadingHTTPServer` over the **same directory** (`C:/Users/merit/AppData/Local/Temp/judge`), on `:5311`. Byte-identical: `index.html` diffs clean and the bundle md5 matches the file on disk (`40ac94d8…`). Same build, same bytes, no rebuild.
+
+Mechanics worth keeping for the next pass:
+
+* **Virtual clock.** `game.loop.sleep()` to take the rAF away, then `game.loop.step(t)` with an advancing timestamp. This ticks the *whole* game — scene update, Phaser `Clock` (`delayedCall`), `TweenManager`, the input queue — so the fail, pause and finish paths that hang under a bare `d.update()` all run correctly. Pumped in ~200 ms chunks; 300 renders inside one `evaluate()` kills the GPU process.
+* **Touch timing.** `Input.dispatchTouchEvent` with an explicit `timestamp`. Proven in-run, not assumed: `qa/shots/fn/m2_result.json` → `tap_timing` records the delivered `touchstart` → `touchend` gap against the game's 220 ms tap threshold.
+* `has_touch=True` + mobile UA. `is_mobile=True` renders a blank frame with zero console errors.
+* No `animations='disabled'` on screenshots.
+
+---
+
+## 7. What could NOT be tested, and why
+
+*(filled in below)*

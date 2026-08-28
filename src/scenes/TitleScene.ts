@@ -42,7 +42,7 @@ interface FlockBird {
  * so the key is rebuilt here rather than left unread. */
 const BEST_KEY = 'flyway-best-ancient-ruins'
 
-/** The single idea this screen exists to land. The flight teaches the verbs,
+/** The single idea this screen exists to land. The flight teaches the actions,
  * and hud.ts's always-on ability bar names the one that answers each threat; a
  * title screen that also tries to teach them is a manual. */
 const IDEA = 'Gather the light. Outrun the dark.'
@@ -905,7 +905,10 @@ export class TitleScene extends Phaser.Scene {
       return earned ? `${head} · ${earned} FEATHER${earned === 1 ? '' : 'S'}` : head
     }
     const chain = loadBestChain()
-    return chain > 0 ? `BEST RUN  ${chain} CLEAN` : 'NO FLIGHT ON RECORD'
+    // Nothing at all until there IS a record. "NO FLIGHT ON RECORD" advertised
+    // an absence — it read as a broken feature rather than an invitation, and
+    // on a first visit it is the only line on the screen that says nothing.
+    return chain > 0 ? `BEST RUN  ${chain} CLEAN` : ''
   }
 
   /**
@@ -1055,13 +1058,19 @@ export class TitleScene extends Phaser.Scene {
    * to SURGE forward", which hid both halves of what it is: Flock.surge() snaps
    * the flock tight AND adds a real velocity impulse of 190 * strength along
    * the current heading, where strength = 1 - gatherStrain * 0.6. Holding is
-   * not free — every verb strain touches comes out weaker — and that trade is
-   * the interesting thing about these controls, so it is what the panel says.
+   * not free — strain weakens every action it touches — and that trade is the
+   * interesting thing about these controls, so it is what the panel says.
    *
-   * The rest were checked the same way and two more were wrong: ECHO is bound
-   * to C *and* E and carries a six-second cooldown (DayScene.echoCall), and a
-   * strained flock's call goes out at 0.55 strength; DIVE is a mouse hold or V.
-   * BRACE was missing entirely.
+   * The rest were checked the same way: ECHO is bound to C *and* E and carries
+   * a six-second cooldown (DayScene.echoCall), and a strained flock's cry goes
+   * out at 0.55 strength.
+   *
+   * DIVE and BRACE are both CUT and must not appear here. Dive's job was never
+   * built — the deep light it existed to reach was never placed, so it traded
+   * height for speed toward nothing. Brace was a world-slow on a two-key chord,
+   * which is not something a flock can do and not something a thumb can press.
+   * A controls panel listing an action the game does not have is worse than no
+   * panel, because the player spends the flight looking for it.
    */
   private openControls(): void {
     if (this.panel) return
@@ -1074,14 +1083,9 @@ export class TitleScene extends Phaser.Scene {
       [hold[0], 'hold to tighten · tap to SURGE: tight formation and a real shove along your heading'],
       [hold[1], 'hold to widen · tap to FLARE: wings out, momentum dies — the overshoot brake'],
       [
-        isTouch ? 'CALL' : 'C or E',
+        isTouch ? 'ECHO' : 'C or E',
         'ECHO — a cry rings outward and turns lost birds home; six seconds before your voice returns',
       ],
-      [
-        isTouch ? 'DIVE' : 'MOUSE or V',
-        'hold to trade height for speed — earned only while still descending; release to slingshot',
-      ],
-      [isTouch ? 'BOTH PADS' : 'SPACE+SHIFT', 'BRACE — the world slows, and strain accrues twice as fast'],
     ]
     const safe = safeArea(this)
     const cx = safe.x + safe.w / 2

@@ -4541,7 +4541,7 @@ export class DayScene extends Phaser.Scene {
     // the dark, once it is actually visible behind you
     if (!this.cardsShown.has('dark') && this.night.encroach > 0.12) {
       this.showCard('dark', 'THE DARK IS COMING',
-        isTouch ? 'It takes birds that fall behind. Hold GATHER to keep them tight, and CALL to bring back the lost.'
+        isTouch ? 'It takes birds that fall behind. Hold GATHER to keep them tight, and ECHO to bring back the lost.'
                 : 'It takes birds that fall behind. Hold SPACE to keep them tight, and press C to call back the lost.')
       return
     }
@@ -4684,9 +4684,18 @@ export class DayScene extends Phaser.Scene {
         // keyboard: nothing on it was tappable, and the only way out was to
         // find the pause pad again. The owner reported the missing restart
         // directly.
+        // THE PLATE FITS THE LABEL, not the other way round. A fixed 360px
+        // width was set against text the touch ramp renders 65% larger, so
+        // "RESTART THE DAY" and "QUALITY · MEDIUM" overflowed their own
+        // buttons. Measuring the text first and sizing the plate to it is the
+        // only version that cannot break when a label changes — and the label
+        // shrinks rather than spilling if it still will not fit the screen.
         const mk = (dy: number, label: string, hit: () => void): void => {
-          const w = 360
-          const h = 74
+          const t = this.add.text(VIEW_W / 2, VIEW_H / 2 + dy, label, display(22, INK.bright, 6, 400)).setOrigin(0.5)
+          const maxW = Math.min(VIEW_W * 0.8, 620)
+          if (t.width + 64 > maxW) t.setFontSize(Math.max(13, Math.floor(22 * ((maxW - 64) / t.width))))
+          const w = Math.min(maxW, Math.max(300, t.width + 64))
+          const h = Math.max(66, t.height + 30)
           const plate = this.add
             .rectangle(VIEW_W / 2, VIEW_H / 2 + dy, w, h, 0x1c1533, 0.92)
             .setStrokeStyle(2, 0xd8c3a0, 0.55)
@@ -4694,7 +4703,7 @@ export class DayScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
           plate.on('pointerdown', hit)
           veil.add(plate)
-          veil.add(this.add.text(VIEW_W / 2, VIEW_H / 2 + dy, label, display(24, INK.bright, 8, 400)).setOrigin(0.5))
+          veil.add(t) // added after the plate so it draws on top
         }
         mk(34, 'FLY ON', () => this.setPaused(false))
         mk(124, 'RESTART THE DAY', () => this.scene.restart())

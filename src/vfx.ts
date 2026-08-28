@@ -56,7 +56,10 @@ const K_SHAFT = 4
 const K_WASH = 5
 
 /** Texture per kind. All are white-drawn for runtime tinting (see textures.ts). */
-const KIND_TEX = ['softdot', 'alarmring', 'streak', 'feather', 'vfade', 'softdot']
+// 'smear', not 'vfade'. A vfade reaches full opacity at its bottom edge and
+// across its whole width — correct for a wash whose hard edge sits off frame,
+// and a flashing rectangle when drawn as a free sprite.
+const KIND_TEX = ['softdot', 'alarmring', 'streak', 'feather', 'smear', 'softdot']
 
 // ------------------------------------------------------------------ depths
 /** Just above the flock (formFlourish already lives at 6) and below the mood

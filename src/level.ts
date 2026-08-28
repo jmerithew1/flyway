@@ -639,7 +639,7 @@ export const PROMPT_TEXT: Record<string, { key: string; touch: string }> = {
   spread: { key: 'strays out there — hold SHIFT to reach them', touch: 'strays out there — hold SPREAD to reach them' },
   surge: { key: 'the curtain holds — tap SPACE to punch through', touch: 'the curtain holds — tap GATHER to punch through' },
   flare: { key: 'too fast for that gap — tap SHIFT to brake', touch: 'too fast for that gap — tap SPREAD to brake' },
-  call: { key: 'birds are adrift — press C to call them home', touch: 'birds are adrift — tap CALL to call them home' },
+  call: { key: 'birds are adrift — press C to ECHO them home', touch: 'birds are adrift — tap ECHO to bring them home' },
   regroup: { key: 'release — regroup', touch: 'let the pads go — regroup' },
   dive: { key: 'drop below it — hold the mouse button to dive', touch: 'drop below it — hold DIVE' },
   brace: { key: 'no time to read it — hold SPACE + SHIFT to slow the world', touch: 'no time to read it — hold BRACE to slow the world' },

@@ -508,7 +508,7 @@ export class TouchControls {
     }
     this.gatherPad = mk('GATHER', { label: 'GATHER', sub: 'tap · SURGE' }, () => this.onSurge())
     this.spreadPad = mk('SPREAD', { label: 'SPREAD', sub: 'tap · FLARE' }, () => this.onFlare())
-    this.callPad = mk('CALL', { label: 'CALL' }, () => this.onCall())
+    this.callPad = mk('ECHO', { label: 'ECHO' }, () => this.onCall())
     // PAUSE: small, out of the thumb arcs, top-right — touch had no chrome at all
     this.pausePad = mk('PAUSE', { label: 'II' }, () => this.onPause())
     this.pads = [this.gatherPad, this.spreadPad, this.callPad, this.pausePad]
@@ -660,7 +660,7 @@ export function touchLayout(safe: { x: number; y: number; w: number; h: number }
     { name: 'GATHER', x: R - 146, y: B - 160, r: PAD_R },
     { name: 'SPREAD', x: R - 368, y: B - 160, r: PAD_R },
     { name: 'DIVE', x: R - 140, y: B - 352, r: MINI_R },
-    { name: 'CALL', x: R - 330, y: B - 362, r: MINI_R },
+    { name: 'ECHO', x: R - 330, y: B - 362, r: MINI_R },
     { name: 'BRACE', x: R - 524, y: B - 250, r: SMALL_R },
     { name: 'PAUSE', x: R - 92, y: safe.y + 78, r: PAUSE_R },
   ]
