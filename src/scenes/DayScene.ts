@@ -36,7 +36,7 @@ import {
 } from '../level'
 import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { AbilityBar } from '../hud'
-import { VFXDirector } from '../vfx'
+import { VFXDirector, gateQuad } from '../vfx'
 import { CameraDirector } from '../camera'
 import { TunnelSequence, TUNNELS } from '../tunnel'
 import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS,
@@ -478,7 +478,19 @@ export class DayScene extends Phaser.Scene {
       .rectangle(0, 0, VIEW_W, VIEW_H, 0xff9a5c)
       .setOrigin(0)
       .setScrollFactor(0)
-      .setBlendMode(Phaser.BlendModes.OVERLAY)
+      // OVERLAY DOES NOT EXIST IN PHASER'S WebGL RENDERER. It is a Canvas-only
+      // mode, and WebGL silently falls back to NORMAL — so the dusk "warmth"
+      // was not a warm grade at all, it was a flat orange sheet laid over the
+      // frame at 16% and washing every value toward the middle. That is a
+      // direct contributor to the whole image sitting in a 25-75% band with no
+      // true black, which the art audit named as the single biggest reason it
+      // read as soft rather than dramatic.
+      //
+      // MULTIPLY is the mode that actually deepens: it darkens and warms
+      // together, leaving the highlights alone instead of lifting the shadows.
+      // atmosphere.ts already pairs a MULTIPLY plate with a NORMAL wash for
+      // exactly this reason; this follows that precedent.
+      .setBlendMode(Phaser.BlendModes.MULTIPLY)
       .setDepth(7.5)
       .setAlpha(0)
 
@@ -1824,7 +1836,7 @@ export class DayScene extends Phaser.Scene {
       const grow = 90 + t01 * 130
       this.roostHorizon.setDisplaySize(grow, grow * 0.72)
     }
-    this.warmth.setAlpha(prog * 0.16)
+    gateQuad(this.warmth, prog * 0.16)
     // act plates, sunbeams, wisps — the layer that gives each act its light.
     // (This call was silently dropped once; the audit caught six acts
     // measuring identical sky colour because of it.)
@@ -2186,7 +2198,7 @@ export class DayScene extends Phaser.Scene {
     if (this.finishing) {
       this.night.update(dt, this.flock, this.scrollX, VIEW_W, VIEW_H)
       this.night.takenThisFrame.length = 0
-      this.nightVeil.setAlpha((1 - this.night.daylight) * 0.5)
+      gateQuad(this.nightVeil, (1 - this.night.daylight) * 0.5)
       return
     }
     // later acts are hungrier - the chase tightens as the day runs out
@@ -2197,7 +2209,7 @@ export class DayScene extends Phaser.Scene {
 
     // global dusk from the daylight level
     const dark = 1 - this.night.daylight
-    this.nightVeil.setAlpha(dark * 0.5)
+    gateQuad(this.nightVeil, dark * 0.5)
     // and the darker it gets the harder the remaining light blooms, so the
     // game is at its most beautiful exactly when it is at its most desperate
     if (this.bloom) {

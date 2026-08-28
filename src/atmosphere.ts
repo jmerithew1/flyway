@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { gateQuad } from './vfx'
 import { ACT_PLATES, BEAMS, ActPlate } from './level'
 import { Flock, Bird } from './flock'
 import { W as VIEW_W, H as VIEW_H } from './backdrop'
@@ -316,10 +317,13 @@ export class Atmosphere {
     // alone again at full strength.
     const painted = this.scene.textures.exists('sky_dawn_approach')
     const k = painted ? 0.28 : 1
-    this.plateA.setAlpha(cur.tintAlpha * (1 - t) * k)
-    this.plateB.setAlpha(next.tintAlpha * t * k)
-    this.washA.setAlpha(cur.washAlpha * (1 - t) * k)
-    this.washB.setAlpha(next.washAlpha * t * k)
+    // Ten full-screen quads exist and nine were drawn every frame, six of them
+    // at alpha < 0.004 — invisible, and still costing a full-screen blend each.
+    // Measured at ~8.8 megapixels of pure waste per frame, on the phone.
+    gateQuad(this.plateA, cur.tintAlpha * (1 - t) * k)
+    gateQuad(this.plateB, next.tintAlpha * t * k)
+    gateQuad(this.washA, cur.washAlpha * (1 - t) * k)
+    gateQuad(this.washB, next.washAlpha * t * k)
 
     // fog eases toward the act's haze rather than snapping
     const fogTarget = Phaser.Math.Clamp(cur.fogAlpha + (next.fogAlpha - cur.fogAlpha) * t, FOG_MIN, FOG_MAX)
