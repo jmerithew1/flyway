@@ -42,8 +42,21 @@ they were actually measured; a carried verdict is never re-dated.
 - **`unhush` left unwired** — `hush` schedules its own restore; nothing opens a window of unknown length.
 - **10 art files left unregistered** — a warm-rim-lit hawk set that contradicts the light grammar, and a superseded low-res sky set.
 
+## RESOLVED SINCE THE FIRST SWEEP
+- **The AFK gate.** Two causes, both fixed. (1) The ceiling cost nothing, so an
+  idle flock rode the top of the screen while the authored scroll carried it
+  forward; thin air now sheds birds after a long, deliberately generous grace
+  that a climbing pilot never reaches. (2) The route carried ~4.7x more light
+  than the flight consumed, so the meter sat pinned at full and the fog was
+  never a threat — the pilot finished EVERY run at 100% daylight, which is the
+  measurement that exposed it. Drain raised 0.024 → 0.029, spending slack that
+  was measured rather than guessed. An idle pointer now dies in every run.
+- **Measurement contamination.** A large part of the apparent flakiness was
+  measuring the dev server while agents edited `src/`: a Vite HMR reload
+  destroys the page context mid-run. `tools/pilot.py` now documents the built-
+  bundle procedure and accepts `PILOT_URL`.
+
 ## KNOWN OPEN — not fixed
-- **The AFK gate is flaky.** Across runs a parked pointer died at 6,385 / 10,438 / 13,460 and survived twice. Cause identified: the world scrolls the flock forward whether or not anyone steers, and the ceiling costs nothing, so an idle run can ride the top of the screen the length of the flight. A ceiling penalty was written and **reverted** — it also punished a competent pilot (115 birds home → 0).
 - **C6: the QA driver runs a build where no Phaser timer or tween fires.** Two fail paths hang under it and the prompt system deadlocks after the first prompt. Some balance numbers quoted in comments were measured on that harness.
 - **C8: real stone (`aqueduct_run`, `root_tangle` at x=25000) sits inside the finale corridor**, and `ownsWorldX` / `checkpointX` are written but uncalled.
 - **Lane 2 (tests) and lane 7 (edge cases) did not run.**

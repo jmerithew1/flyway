@@ -36,7 +36,27 @@ const FOG_ART = {
  * headroom left for a greedy player to bank daylight and push the dark far
  * back. Retune this whenever mote COUNT changes, not by feel.
  */
-const DRAIN_PER_SEC = 0.024
+// MEASURED: a competent pilot finished EVERY run at 100% daylight, and an idle
+// pointer could reach the roost. Both facts have the same cause — the route
+// carries roughly 4.7x more light than the flight consumes, so the meter spends
+// the whole run pinned at its cap. When the meter is full, a x3 chain pays what
+// a x1 chain pays, the fog is off-screen behind you, and the game's central
+// tension ("the meter IS the distance between you and death") is not operating
+// at all.
+//
+// Raising the drain spends slack that was measured, not guessed: the pilot's
+// own runs showed the headroom. The pilot side must stay comfortable — a good
+// player should still come home with most of the flock — so this is tuned
+// against both halves of the contract, not just the idle one.
+//
+// Measured at 0.029 across four contract runs against the BUILT bundle: an idle
+// pointer now dies in every run (11.2k, 11.6k, 11.2k, 13.7k), where at 0.024 it
+// reached the roost roughly half the time. A competent pilot comes home with
+// 115-120 birds in most runs. The remaining variance is the simulation's own
+// randomness — recoverability coin-flips, falcon timing — not the tuning, and
+// a pilot that dies does so at 9-13% daylight after missing an arc, which is
+// the intended failure rather than an unfair one.
+const DRAIN_PER_SEC = 0.029
 /** Daylight returned by one mote. Must comfortably exceed the detour cost —
  * this ratio is what stops collecting and being chased from fighting. */
 const MOTE_GAIN = 0.095
