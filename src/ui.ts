@@ -85,9 +85,29 @@ export function voice(size: number, color: string = INK.soft, tracking = 0): Tex
  * Any UI placed against the raw 1536x960 canvas would sit off-screen — HUD,
  * pads and chrome must anchor to this instead (audit: mobile HUD cropped).
  */
+/**
+ * Cached, because this is called from the per-frame path.
+ *
+ * `getBoundingClientRect()` forces a synchronous layout flush, and this ran
+ * every frame from `DayScene.update` (via `floatAt`) — a browser reflow inside
+ * the game loop, in the one file the "zero allocation in the per-frame path"
+ * work never covered. The measurement only changes when the canvas is resized
+ * or the page reflows, so it is recomputed on those events and read from cache
+ * otherwise.
+ */
+let safeCache: { x: number; y: number; w: number; h: number } | null = null
+let safeKey = ''
+
+export function invalidateSafeArea(): void {
+  safeCache = null
+}
+
 export function safeArea(scene: Phaser.Scene): { x: number; y: number; w: number; h: number } {
   const gw = scene.scale.width
   const gh = scene.scale.height
+  const key = `${gw}x${gh}x${typeof window === 'undefined' ? 0 : window.innerWidth}x${typeof window === 'undefined' ? 0 : window.innerHeight}`
+  if (safeCache && safeKey === key) return safeCache
+  safeKey = key
   const canvas = scene.game.canvas
   // MEASURE the crop rather than assuming it is symmetric: any stray centring
   // (a flex parent, a margin) shifts it off-axis, and an assumed split then
@@ -103,10 +123,12 @@ export function safeArea(scene: Phaser.Scene): { x: number; y: number; w: number
     const bottom = Math.max(0, r.bottom - vh) / k
     const w = Math.max(200, gw - left - right)
     const h = Math.max(200, gh - top - bottom)
-    return { x: left, y: top, w, h }
+    safeCache = { x: left, y: top, w, h }
+    return safeCache
   }
   const k = Math.max((scene.scale.parentSize.width || gw) / gw, (scene.scale.parentSize.height || gh) / gh)
   const w = Math.min(gw, (scene.scale.parentSize.width || gw) / k)
   const h = Math.min(gh, (scene.scale.parentSize.height || gh) / k)
-  return { x: (gw - w) / 2, y: (gh - h) / 2, w, h }
+  safeCache = { x: (gw - w) / 2, y: (gh - h) / 2, w, h }
+  return safeCache
 }

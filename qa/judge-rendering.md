@@ -219,6 +219,9 @@ expensive part:
 - `src/quality.ts:40` — `medium: { fogBlobs: 18, bloom: true, vfxPool: 44, ambient: 0.6, lens: false, decor: 0.8 }`
 - `src/quality.ts:53` — `defaultQuality()` returns `medium` on touch
 
+(Those two are the only line references in this document that point at the **working tree** rather
+than at `04059b4`, for the obvious reason that the file does not exist in the judged build.)
+
 MEDIUM drops the impact lens (which A4 shows is already free), thins the fog and halves the VFX
 pool — and keeps the one thing the same file's doc comment names as the problem: *"The camera bloom
 pass. A full-screen post-FX pass is the single most expensive thing on a weak GPU"*
@@ -317,7 +320,7 @@ export function gateQuad(rect, alpha) {
   ...
 }
 ```
-Its docstring (`src/vfx.ts:993-997`) names the problem precisely: *"the ones in the act-plate stack
+Its docstring (`src/vfx.ts:990-1002`) names the problem precisely: *"the ones in the act-plate stack
 rewrite their alpha every frame and stay VISIBLE at values around **0.056** — a value no player can
 see, costing a full 1536×960 blend each, every frame."*
 
@@ -409,7 +412,7 @@ The six named files pass. I read every `update()` in them and the profiler agree
   friends allocate an arrow-function closure at the call site *before* the "already shown" guard
   inside `showPrompt` can reject it. Up to three closures per frame once the flock is past the
   trigger x.
-- `src/scenes/DayScene.ts:1785-1798` — while `flock.draft > 0.55` the scene creates a new `Image`
+- `src/scenes/DayScene.ts:1789-1802` — while `flock.draft > 0.55` the scene creates a new `Image`
   **and a new tween** every 0.1 s (`src/scenes/DayScene.ts:1792`), i.e. 10 GameObjects + 10 tweens a
   second, in a file whose sibling module opens with "WHY THERE IS NOT A SINGLE TWEEN IN HERE".
 
@@ -480,7 +483,7 @@ friends allocates an `arguments` object on every one of the 30–43 GL calls per
 
 ## A3 — `warmth` really is MULTIPLY at runtime
 
-`src/scenes/DayScene.ts:479` sets `Phaser.BlendModes.MULTIPLY`, and the live scene agrees — the quad
+`src/scenes/DayScene.ts:493` sets `Phaser.BlendModes.MULTIPLY` (the quad is built at `477`), and the live scene agrees — the quad
 at depth 7.5, fill `#ff9a5c`, reads back `MULTIPLY` in every phase (`qa/jr_out/desktop.json` →
 `phases.B_flying.quads`). The OVERLAY→NORMAL silent fallback the comment describes is genuine
 (Phaser's WebGL renderer implements NORMAL/ADD/MULTIPLY/SCREEN/ERASE only) and the fix took effect.
@@ -616,7 +619,8 @@ draws a bird; at the 3840×960 ceiling I confirmed boots, 40.6 Mpx.
 Two steps, because the judged build has no tier at all. First, ship the `src/quality.ts` work
 already sitting in the working tree — that is the fix for the "no escape hatch" half, and it is
 correctly designed. Second, when it lands, change `bloom: true` to `false` at MEDIUM
-(`src/quality.ts:40`), because MEDIUM is the touch default (`src/quality.ts:53`) and it currently
+(`src/quality.ts:40`, **working tree** — this file does not exist at `04059b4`), because
+MEDIUM is the touch default (`src/quality.ts:53`) and it currently
 keeps the exact cost its own doc comment identifies as the worst thing to give a weak GPU. If the
 look must be kept on phones, `steps: 4 → 2` at the `addBloom` call takes 11 passes to 7 for a
 difference I would not expect to survive a blind comparison at strength 0.62/0.34.

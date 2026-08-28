@@ -1296,12 +1296,27 @@ export class TunnelSequence {
   }
 
   private renderUI(): void {
+    // DRAW THE HAZARD THE PLAYER CAN ACTUALLY ANSWER.
+    //
+    // This took the first hazard by INDEX in any live state, and a resolved
+    // hazard sits in `decay` for 0.45s while the next window is already open —
+    // so the plate showed the verb you just answered while asking you to
+    // answer the next one. Measured across the finale: of 184 frames with an
+    // answer window open, the plate named the wrong verb on 106 of them (58%),
+    // and the last prompt was correct on 0 of its 20 answerable frames.
+    //
+    // Priority is therefore by URGENCY, not by array position: an open window
+    // (impact) outranks an approaching one (buildup), which outranks a spent
+    // one (decay). Decay only ever draws when nothing is being asked.
     let live: Hazard | null = null
+    let rank = 9
     for (let k = 0; k < this.hazardN; k++) {
       const h = this.hazards[k]
-      if (h.state === 'buildup' || h.state === 'impact' || h.state === 'decay') {
+      const r = h.state === 'impact' ? 0 : h.state === 'buildup' ? 1 : h.state === 'decay' ? 2 : 9
+      if (r < rank) {
+        rank = r
         live = h
-        break
+        if (r === 0) break // nothing outranks an open window
       }
     }
 

@@ -1004,7 +1004,15 @@ export class VFXDirector {
  * Allocation-free and idempotent, so it is safe in a per-frame path.
  */
 export function gateQuad(rect: Phaser.GameObjects.Rectangle, alpha: number): void {
-  const on = alpha > 0.004
+  // THE THRESHOLD HAS TO MATCH THE ALPHAS ACTUALLY IN USE. At 0.004 this never
+  // fired once: the act plates are scaled by k = 0.28 when painted skies are
+  // present, which puts them at 0.056-0.095 — measured as DRAWN every frame,
+  // at the very alpha the docstring calls invisible.
+  //
+  // 0.06 is set against that measurement. Below it a full-screen wash cannot
+  // be told from the frame behind it, and skipping it removes a whole-screen
+  // blend; above it the quad is doing visible work and must stay.
+  const on = alpha > 0.06
   if (rect.visible !== on) rect.setVisible(on)
   if (on) rect.setAlpha(alpha)
 }

@@ -93,6 +93,16 @@ Promise.all([fontsReady]).finally(() => {
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
+  // PRE-FX IS UNUSED AND COSTS 122.8 MB OF GPU RENDER TARGETS. Phaser allocates
+  // a pool of full-size framebuffers for preFX whether or not anything uses
+  // them, and this game uses only postFX (the camera bloom and the impact
+  // lens), which draws from the Utility pipeline instead. Measured: 91 of 95
+  // resident render targets, against 332 MB of total GL memory — the largest
+  // single resource figure in the build, reclaimed with no visual change.
+  //
+  // GPU-memory exhaustion is the failure that turns a phone BLACK rather than
+  // merely slow, which is why this is worth more than any fill-rate saving.
+  disablePreFX: true,
   width: VIEW_W,
   height: VIEW_H,
   backgroundColor: '#3f3760',

@@ -45,7 +45,28 @@ The game is functional end to end on both platforms. Every screen is reachable, 
 * **Consequence:** The default way a person opens a link on a phone is holding it upright. That player's run is already partly lost, invisibly, before they have seen a single frame — which is the exact symptom the regression was filed for.
 * **Captures:** `qa/shots/fn/m3_portrait_flight.png`, `qa/shots/fn/m3_portrait_title.png`, `qa/shots/fn/m1_390x844.png`. Data: `qa/shots/fn/m3_result.json` → `runs`.
 
-### F2 — MAJOR · The controls reference still teaches DIVE, a verb that no longer exists
+### F2 — BLOCKING · On mobile, the pause menu's three controls stop being tappable once the level has scrolled
+
+* **Viewport:** 844×390, `has_touch`, mobile UA.
+* **Steps:** Fly for ten seconds. Tap the PAUSE pad. Tap FLY ON, or RESTART THE DAY, or MUTE.
+* **What happened:** Nothing. All three plates are drawn, `visible`, `alpha 1`, `input.enabled true`, with correct 360×74 hit areas at the right positions, and all three are inside the frame — but no press reaches them. Confirmed three ways:
+  1. Phaser's own `input.hitTestPointer()`, driven to the MUTE plate's exact centre (game `1039,694` → css `422,282`), returned **`[]`** — nothing under the pointer at all.
+  2. The touch event *does* arrive: a DOM listener recorded `touchstart`/`touchend` at `(422,282)`, 90 ms apart, well inside the 220 ms tap threshold. So it is not touch delivery.
+  3. A synthetic **mouse** click at the identical point also failed. So it is not touch at all — the hit box simply is not there.
+* **Root cause:** the plates are children of `pauseVeil`, a `Container` created with `.setScrollFactor(0)`; the plates themselves are `this.add.rectangle(...)` and never get their own scroll factor. Phaser's `InputManager.hitTest` computes the test point as
+
+  ```js
+  var px = tempPoint.x + (csx * gameObject.scrollFactorX) - csx;
+  ```
+
+  using the **child's** `scrollFactorX`, not the parent container's. With the child left at the default `1`, `px` collapses to the camera *world* point, while the plate is *drawn* at a fixed screen position by its parent. The hit box therefore sits exactly `camera.scrollX` pixels to the left of the button.
+* **Consequence:** `camera.scrollX` is ~0 for the first moment of a run and grows for the rest of it. So the pause menu works for about a second after the day begins and is dead for the entire remainder — the state a player is actually in when they reach for pause. The only escape is the PAUSE pad again (which works because `TouchControls` does its own manual `contains()` hit test rather than going through Phaser). **RESTART THE DAY and MUTE are unreachable on touch for the whole run.**
+* **What should have happened:** Regression 5 — "There should now be FLY ON / RESTART THE DAY / MUTE. Tap each." They exist and they are drawn; they cannot be tapped.
+* **Fix:** one call — `.setScrollFactor(0)` on each plate, so its own scroll factor matches the container it is rendered by.
+* **Captures:** `qa/shots/fn/m2_pause_menu.png` (all three drawn correctly), `qa/shots/fn/m4_after_mute_tap.png`, `qa/shots/fn/m5_pause_at_start.png` vs `qa/shots/fn/m5_pause_45s.png`. Data: `qa/shots/fn/m4_result.json` → `diag`, `qa/shots/fn/m5_result.json` → `trials`.
+* **Note:** the desktop pause veil is unaffected — it has no interactive children, only a text hint, which is why every desktop pause check passed.
+
+### F3 — MAJOR · The controls reference still teaches DIVE, a verb that no longer exists
 
 * **Viewport:** 1536×960 desktop (and the same row on touch).
 * **Steps:** Title screen → click **CONTROLS**.
@@ -55,7 +76,7 @@ The game is functional end to end on both platforms. Every screen is reachable, 
 * **Consequence:** The one screen whose job is teaching the controls teaches a control that does not exist, and on touch it points at a button that is not there.
 * **Captures:** `qa/shots/fn/d1_controls_panel.png`, cropped evidence `qa/shots/fn/d1_controls_crop.png`. Source: `src/scenes/TitleScene.ts:1079-1082`.
 
-### F3 — MAJOR · `V` is still bound as a dead key, and the touch layout table still advertises two pads that do not exist
+### F4 — MAJOR · `V` is still bound as a dead key, and the touch layout table still advertises two pads that do not exist
 
 * **Steps:** In flight, press and hold `V`.
 * **What happened:** Nothing — but the binding is live. `DayScene.create()` still runs `this.keyDive = kb.addKey(Phaser.Input.Keyboard.KeyCodes.V)` (`src/scenes/DayScene.ts:882`), and `keyDive` / `prevDive` are never read anywhere. Confirmed at runtime: `window.__day.keyDive` exists, `keyCode` 86.
@@ -64,7 +85,7 @@ The game is functional end to end on both platforms. Every screen is reachable, 
 * **Consequence:** Low for a player, high for the next audit: the layout table is exactly the thing a reachability probe is told to trust, and it is now wrong in both membership and index order. A future pass measuring "is the DIVE pad reachable" gets a confident, meaningless answer.
 * **Captures:** `qa/shots/fn/m1_844x390.png` (four pads drawn), `qa/shots/fn/m1_result.json` → `viewports.*.pads`.
 
-### F4 — MINOR · One 404 on every load: `audio/stems.json`
+### F5 — MINOR · One 404 on every load: `audio/stems.json`
 
 * **Steps:** Load any route; move the mouse or press a key (which starts the audio context).
 * **What happened:** Exactly one `404` for `http://.../flyway/audio/stems.json`, plus one matching console error (`Failed to load resource: the server responded with a status of 404`). Confirmed absent from the shipped snapshot.
@@ -72,14 +93,14 @@ The game is functional end to end on both platforms. Every screen is reachable, 
 * **Assessment:** The fix is 5/6 of the way there and the failure is swallowed correctly (`.catch()`, procedural score plays). But the network log is not clean and the console is not clean, which is what was asked. Shipping an empty `audio/stems.json` (`[]`) would close it.
 * **Captures:** `qa/shots/fn/d2_log.json`, `qa/shots/fn/d4_result.json` → `stems_404`.
 
-### F5 — MINOR · `pauseVeil` survives `scene.restart()` as a dangling reference
+### F6 — MINOR · `pauseVeil` survives `scene.restart()` as a dangling reference
 
 * **Steps:** In flight, `P` to pause, then `R`.
 * **What happened:** The restart works — this is *not* the old soft-lock (see §3, regression 1). But `this.paused` is explicitly reset in `create()` (`DayScene.ts:352`) while `this.pauseVeil` is not, so after a restart-from-pause the field still points at the previous run's container.
 * **Assessment:** Not player-visible. The object is not in the new scene's display list, so nothing is drawn, and pausing afterwards works normally (verified: `P` → paused, `P` → unpaused). It is the same class of bug as the one regression 1 fixed — a field that outlives `restart()` — left one line short. Worth closing before it grows teeth.
 * **Captures:** `qa/shots/fn/d4_after_restart.png`, `qa/shots/fn/d4_result.json` → `reg1_veil`.
 
-### F6 — MINOR · Flock-count numeral's shadow box crosses the top of the frame on mobile
+### F7 — MINOR · Flock-count numeral's shadow box crosses the top of the frame on mobile
 
 * **Viewport:** 844×390 (measured; present at all three landscape sizes).
 * **What happened:** The `120` HUD numeral reports bounds `y = -7` against a canvas top of 0.
@@ -91,15 +112,15 @@ The game is functional end to end on both platforms. Every screen is reachable, 
 
 | # | Regression | Verdict | Evidence |
 |---|---|---|---|
-| 1 | `R` from pause soft-locked the run | **FIXED** (see F5 caveat) | After `P` then `R`: `paused=false`, world moves `scrollX 668 → 1380` in 4 s, ECHO fires (`callCooldown 5.7`), `P` still pauses and unpauses afterwards. Also verified on touch via the RESTART THE DAY plate. |
+| 1 | `R` from pause soft-locked the run | **FIXED** (see F6 caveat) | After `P` then `R`: `paused=false`, world moves `scrollX 668 → 1380` in 4 s, ECHO fires (`callCooldown 5.7`), `P` still pauses and unpauses afterwards. Also verified on touch via the RESTART THE DAY plate. |
 | 2 | All four Results/Map buttons dead to the mouse | **FIXED** | All four carry `customHitArea: true`. Each was hovered at its measured hit-box centre (colour changed and reverted) and then clicked/tapped: REPLAY FLIGHT → Day, CONTINUE JOURNEY → FlywayMap, FLY AGAIN → Day, HOME → Title. |
 | 3 | Rotation left the game in 21% of the screen | **FIXED** | Portrait 390×844 → landscape 844×390: canvas refits to 844×390 at (0,0) = **100.0%** of the screen. Round trip back to portrait re-blocks correctly, and a *second* trip forward still refits to 100.0%. |
 | 4 | Sim ran behind the portrait notice | **PARTIALLY FIXED — see F1** | Rotating *into* portrait holds (frames static, `running=false`). **Loading** in portrait does not: 410 frames and 6.3pp of daylight burned in one 30-second observation. |
 | 5 | Pause on mobile had no tappable controls | **FIXED** | Three plates present and all inside 844×390: FLY ON, RESTART THE DAY, MUTE. Each tapped via CDP with stamped timestamps and each acted; MUTE relabels to SOUND ON and toggles back. |
 | 6 | Cage/echo destroyed birds at the 120 cap while paying score | **FIXED** | Flock at cap (120/120) parked in a 6-bird cage for 7 s: flock `120 → 120`, cage `6 → 6`, `stats.found 0 → 0`, no `+N` toast. Then culled to 100 and re-parked: cage `6 → 0`, flock `→ 106`, `found → 6`. Nothing vanishes and nothing is paid twice. |
-| 7 | Six 404s on every load | **PARTIALLY FIXED — see F4** | Six became one. `audio/stems.json` still 404s on every load, with a matching console error. |
+| 7 | Six 404s on every load | **PARTIALLY FIXED — see F1** | Six became one. `audio/stems.json` still 404s on every load, with a matching console error. |
 | 8 | `?sandbox` exposed a dev scene in production | **FIXED** | `?sandbox` at host `127.0.0.1` routes to Title; `Sandbox` never goes active. |
-| 9 | DIVE was cut | **PARTIALLY FIXED — see F2, F3** | Pad gone, verb gone, mouse-hold gone. Controls reference still teaches it; `V` still bound as a dead key; `touchLayout()` still lists DIVE and BRACE. |
+| 9 | DIVE was cut | **PARTIALLY FIXED — see F3, F4** | Pad gone, verb gone, mouse-hold gone. Controls reference still teaches it; `V` still bound as a dead key; `touchLayout()` still lists DIVE and BRACE. |
 | 10 | Verbs fired through the pause veil | **FIXED** | Paused, then spammed C, E, SPACE-tap, SHIFT-tap: `callCooldown 3.06 → 3.06`, `form 0 → 0`, `|v| 352.75 → 352.75`, still paused. Same on touch: CALL/GATHER/SPREAD pads all inert behind the veil. |
 
 ---
@@ -166,7 +187,7 @@ All four drawn pads plus the phantom BRACE slot were confirmed **inside the visi
 
 `FLY AGAIN` and `HOME`, both `customHitArea: true`, both hovered and clicked. Keys: `R` → Day, `ESC` → Title.
 
-**No unreachable control was found on any screen** — with the single exception recorded in F7.
+**No unreachable control was found on any screen** — with the single exception recorded in F2.
 
 ---
 

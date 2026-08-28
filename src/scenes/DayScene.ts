@@ -247,6 +247,24 @@ export class DayScene extends Phaser.Scene {
   private camDir!: CameraDirector
   private tunnel!: TunnelSequence
   private quality!: QualitySpec
+  /** Wall-clock seconds, never slowed. Tap detection must not stretch. */
+  /**
+   * Last colour written to each HUD text, so an unchanged colour is not
+   * rewritten. Phaser's Text.setColor repaints the whole text canvas and
+   * re-uploads its texture — measured at 4.05 gl.texImage2D calls and 20.4 KB
+   * uploaded EVERY frame at idle, from four HUD calls, three of which were
+   * setting the colour they already had. `tunnel.ts` already guards its own
+   * label this way; the HUD never got the same treatment.
+   */
+  private hudColors = new Map<Phaser.GameObjects.Text, string>()
+
+  private tint(t: Phaser.GameObjects.Text, c: string): void {
+    if (this.hudColors.get(t) === c) return
+    this.hudColors.set(t, c)
+    t.setColor(c)
+  }
+
+  private tapClock = 0
   private ceilingT = 0
   private thiefCallT = 0
   private mothsWereOn = false
@@ -1259,6 +1277,11 @@ export class DayScene extends Phaser.Scene {
 
   /** Flare: tap SHIFT — the flock blooms wide and air-brakes. */
   private doFlare(): void {
+    // The reckoning shuffles ['gather','surge','flare'] and FLARE therefore
+    // appears in EVERY sequence — but this guard did not exist, so the verb
+    // could not be submitted and the hawk could not be beaten, ever. It
+    // accused the player of failing a test with no passing answer.
+    if (this.reckonOn) { this.reckonInput('flare'); return }
     this.tunnel.verb('flare')
     this.flock.formShape('fan')
     this.flock.flare()
@@ -1486,6 +1509,7 @@ export class DayScene extends Phaser.Scene {
     // BRACE: the world eases to ~60%; the flock keeps its own clock, and
     // Flock.setBrace() prices the formation half (strain ticks double)
     const rawDt = dt
+    this.tapClock += rawDt
     // FIRST-ENCOUNTER CARD: the world eases rather than hard-freezing, so the
     // flock keeps flying and the moment stays alive while you read.
     this.cardEase += ((this.card ? 1 : 0) - this.cardEase) * (1 - Math.exp(-7 * rawDt))
@@ -1604,18 +1628,23 @@ export class DayScene extends Phaser.Scene {
 
     // formation snap: every press/release is a felt, heard transient —
     // and a short tap is an ABILITY (Surge / Flare)
+    // TAP DETECTION RUNS ON REAL TIME. `time` is the sim clock, which the
+    // reckoning slows to a crawl — so a 0.22s tap window stretched to roughly
+    // 1.8 real seconds and every deliberate press fired BOTH the hold and the
+    // tap. Reading the wall clock keeps a tap a tap however slow the world is.
+    const tapNow = this.tapClock
     if (gather && !this.prevGather) {
-      this.spaceDownT = time
+      this.spaceDownT = tapNow
       this.audio.formSnap('gather')
       this.formFlourish(true)
     }
-    if (!gather && this.prevGather && !this.braceConsumed && time - this.spaceDownT < 0.22) this.doSurge()
+    if (!gather && this.prevGather && !this.braceConsumed && tapNow - this.spaceDownT < 0.22) this.doSurge()
     if (spread && !this.prevSpread) {
-      this.shiftDownT = time
+      this.shiftDownT = tapNow
       this.audio.formSnap('spread')
       this.formFlourish(false)
     }
-    if (!spread && this.prevSpread && !this.braceConsumed && time - this.shiftDownT < 0.22) this.doFlare()
+    if (!spread && this.prevSpread && !this.braceConsumed && tapNow - this.shiftDownT < 0.22) this.doFlare()
     if (!this.keySpace.isDown && !this.keyShift.isDown) this.braceConsumed = false
     if (!gather && !spread && (this.prevGather || this.prevSpread)) this.audio.formSnap('release')
     this.prevGather = gather
@@ -2817,7 +2846,7 @@ export class DayScene extends Phaser.Scene {
     const pct = Math.round(day01 * 100)
     const low = day01 < 0.2
     this.hudDayPct.setText(low ? `${pct}%  FIND LIGHT` : `${pct}%`)
-    this.hudDayPct.setColor(low ? '#ff9a7a' : day01 < 0.34 ? '#ffc98a' : '#ffe6bf')
+    this.tint(this.hudDayPct, low ? '#ff9a7a' : day01 < 0.34 ? '#ffc98a' : '#ffe6bf')
     this.hudDayPct.setAlpha(low ? 0.75 + 0.25 * Math.sin(this.simClock * 7) : 0.95)
 
     // J6 — the urgent band. The owner asked for "~25 birds", but the flock
@@ -2881,11 +2910,13 @@ export class DayScene extends Phaser.Scene {
     )
     this.hudGlyph.setAlpha(0.92 * fade).setTintFill(u > 0.02 ? this.mixHex(0xf2e8f5, 0xffb9a4, u) : 0xf2e8f5)
     this.hudAlertBead.setAlpha(u * (0.1 + pulse * 0.16) * fade)
-    this.countText.setColor(
+    this.tint(
+      this.countText,
       this.time.now < this.hudFlashUntil ? this.hudFlash : u > 0.02 ? this.cssHex(this.mixHex(0xf2e8f5, 0xffb9a4, u)) : '#f2e8f5',
     )
     if (u > 0.35) {
-      this.hudFlockLabel.setText('FLOCK CRITICAL').setColor('#ffb9a4').setAlpha((0.6 + pulse * 0.4) * fade)
+      this.hudFlockLabel.setText('FLOCK CRITICAL').setAlpha((0.6 + pulse * 0.4) * fade)
+      this.tint(this.hudFlockLabel, '#ffb9a4')
     } else {
       this.hudFlockLabel.setText('FLOCK').setColor('#c8bad4').setAlpha(0.72 * fade)
     }
