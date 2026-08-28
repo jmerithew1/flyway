@@ -1414,6 +1414,18 @@ export class DayScene extends Phaser.Scene {
       Phaser.Math.Clamp(at.x, safe.x + half, safe.x + safe.w - half),
       at.y,
     )
+    // DRAW THE PLATE. An instruction the player has under a second to act on
+    // cannot depend on whatever sky happens to be behind it, and a stroke alone
+    // was not enough — the owner reported these as hard to read, twice. The
+    // plate is redrawn in place rather than recreated, so it costs no
+    // allocation per frame.
+    const pw = this.promptText.width + 34
+    const ph = this.promptText.height + 18
+    this.promptPlate
+      .clear()
+      .fillStyle(0x140f26, 0.72)
+      .fillRoundedRect(this.promptText.x - pw / 2, this.promptText.y - ph / 2, pw, ph, 10)
+    this.promptPlate.setAlpha(this.promptText.alpha * 0.95)
     if (!this.prompt.fading && (this.prompt.done() || this.promptAge > 7)) {
       this.prompt.fading = true
       this.tweens.add({
@@ -4101,6 +4113,7 @@ export class DayScene extends Phaser.Scene {
     })
     // 2) colour drains toward dusk, then the message
     this.promptText.setAlpha(0)
+    this.promptPlate.setAlpha(0)
     this.landmarkText.setAlpha(0)
     this.prompt = null
     this.promptQueue.length = 0
@@ -4288,6 +4301,7 @@ export class DayScene extends Phaser.Scene {
     this.promptQueue.length = 0
     this.prompt = null
     this.promptText.setAlpha(0)
+    this.promptPlate.setAlpha(0)
     if (this.failsHere >= 2) {
       this.shownPrompts.delete('help')
       this.time.delayedCall(1200, () =>
@@ -5087,6 +5101,7 @@ export class DayScene extends Phaser.Scene {
     if (cx >= ROOST_X - 240) {
       this.finishing = true
       this.promptText.setAlpha(0)
+    this.promptPlate.setAlpha(0)
       this.prompt = null
       this.promptQueue.length = 0
       this.showPrompt('home', 'home', () => this.finishTimer > 3)
