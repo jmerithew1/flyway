@@ -90,6 +90,23 @@ export interface PieceFeature {
   sway?: boolean // gentle rotation tween (visual only)
   brittle?: boolean // all colliders become breakable
   wide?: boolean // opt out of the 520px display-width clamp (big set pieces)
+  /**
+   * Monumental SCENERY: drawn, never collided with, pushed behind the flock.
+   *
+   * The audit that mattered here found one silhouette register — nothing
+   * colossal, nothing intimate, every piece landing in the same mid-size band,
+   * so the eye read a wall of similar shapes. The fix is scale, but the level
+   * is already dense enough that the owner reported it as crowded, and adding
+   * thirteen more COLLIDING monuments would trade one defect for a worse one.
+   *
+   * So these are composed for the eye rather than the collider: seen
+   * approaching for seconds, giving the flight a sense of enormity, and asking
+   * nothing. §11b is explicit that negative space is content and that inert
+   * pieces are legitimate when they are DELIBERATE — what is not legitimate is
+   * a piece that merely looks like an obstacle. A monument at background depth
+   * and monumental size never reads as something you were meant to thread.
+   */
+  decor?: boolean
   alpha?: number
   /** Perfect Flow gate: pass cleanly in this formation for Flow credit. */
   flow?: 'spread' | 'gather'
@@ -484,6 +501,55 @@ export const FEATURES: PieceFeature[] = [
   // more thing to get past.
   top(25000, 'root_tangle', 420, { sway: true, motion: { kind: 'bob', amp: 46, period: 4.8 } }),
   // then open sky to the roost
+  // ===== MONUMENTS AND THE ROAD'S OWN LIGHT ================================
+  // Registered art that was loading and drawing nowhere: thirteen colossal
+  // pieces and the whole lamp family. Two defects at once — the frame had a
+  // single silhouette register (nothing colossal, nothing intimate, every
+  // piece in the same mid-size band, so the eye read a wall of similar
+  // shapes), and the world's central premise was invisible.
+  //
+  // THE PREMISE: a people built their civilisation around this migration and
+  // lit lamps along the road to hold the dark back for the one night a year
+  // the birds pass. They are gone and the lamps are out. The lamps below are
+  // that road, made literal — a trail of light running the length of the
+  // flight, and the thing the fog eats first.
+  //
+  // All of it is `decor`: drawn, never collided with, seated behind the play
+  // plane. The level is already dense enough that the owner reported it as
+  // crowded, so these buy scale and story without buying another obstacle.
+  gnd(1250, 'statue_robed', 760, { wide: true, decor: true }),
+  gnd(3450, 'colossus_foot', 700, { wide: true, decor: true }),
+  gnd(4600, 'stair_broken', 640, { wide: true, decor: true }),
+  gnd(6300, 'colonnade_triple', 900, { wide: true, decor: true }),
+  mid(7900, 300, 'colossus_hand', 640, { wide: true, decor: true }),
+  gnd(9400, 'dome_broken', 820, { wide: true, decor: true }),
+  gnd(11500, 'colossus_ribcage', 1000, { wide: true, decor: true }),
+  gnd(13800, 'belltower_ruin', 1080, { wide: true, decor: true }),
+  gnd(15900, 'lintel_fallen', 600, { wide: true, decor: true }),
+  gnd(17300, 'arch_window_nest', 720, { wide: true, decor: true }),
+  // The head is the flight's single largest silhouette and it is placed where
+  // it can be seen coming for several seconds — the shot the submission needs.
+  gnd(19800, 'colossus_head', 1100, { wide: true, decor: true }),
+  gnd(21600, 'colossus_torso_draped', 940, { wide: true, decor: true }),
+  gnd(23400, 'niche_nest', 560, { wide: true, decor: true }),
+
+  // The lamps. Unlit vessels are the only dark warm-metal objects in the
+  // world, which is what makes them readable before anything explains them.
+  gnd(2200, 'lamp_tall_unlit', 210, { decor: true }),
+  gnd(4100, 'lamp_tall_unlit', 210, { decor: true }),
+  gnd(5800, 'lamp_small_unlit', 150, { decor: true }),
+  top(7200, 'chandelier_unlit', 190, { decor: true }),
+  gnd(8800, 'lamp_tall_unlit', 210, { decor: true }),
+  gnd(10600, 'lamp_small_unlit', 150, { decor: true }),
+  top(12300, 'chandelier_unlit', 190, { decor: true }),
+  gnd(14200, 'lamp_tall_unlit', 210, { decor: true }),
+  gnd(16100, 'lamp_small_unlit', 150, { decor: true }),
+  gnd(18400, 'lamp_tall_unlit', 210, { decor: true }),
+  top(20200, 'chandelier_unlit', 190, { decor: true }),
+  gnd(22100, 'lamp_tall_unlit', 210, { decor: true }),
+  gnd(24000, 'lamp_small_unlit', 150, { decor: true }),
+  gnd(25600, 'lamp_tall_unlit', 210, { decor: true }),
+
 ]
 
 export const WIND_ZONES: WindZone[] = [
@@ -664,6 +730,7 @@ export function buildObstacles(): { obstacles: Obstacle[]; byFeature: Map<PieceF
   const obstacles: Obstacle[] = []
   const byFeature = new Map<PieceFeature, Obstacle[]>()
   for (const f of FEATURES) {
+    if (f.decor) continue // scenery is drawn, never collided with
     const obs = pieceObstacles(f)
     byFeature.set(f, obs)
     obstacles.push(...obs)

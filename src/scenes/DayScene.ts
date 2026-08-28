@@ -991,8 +991,12 @@ export class DayScene extends Phaser.Scene {
         .image(f.x, y, f.art)
         .setScale(s)
         .setFlipX(!!f.flipX)
-        .setDepth(3)
-        .setAlpha(f.alpha ?? 1)
+        // Scenery sits BEHIND the flock and behind every real obstacle, so its
+        // scale reads as distance rather than as something in the way. A
+        // monument drawn on the play plane would be indistinguishable from an
+        // encounter, which is the one thing it must never look like.
+        .setDepth(f.decor ? 1.2 : 3)
+        .setAlpha(f.alpha ?? (f.decor ? 0.88 : 1))
       // ---- dusk grade: the sheets were painted lit-from-above at noon
       // strength, which is what made stone read as pasted-on cards. Every
       // placed piece gets a warm multiply toward the sunset palette, keyed

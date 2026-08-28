@@ -36,6 +36,12 @@ def spans():
         m = PLACE.match(line)
         if not m:
             continue
+        # Scenery is drawn, never collided with, and seated behind the play
+        # plane. It asks nothing BY DESIGN, so counting it as an inert obstacle
+        # measures the opposite of the truth — it would punish composing scale
+        # into the world, which is the thing this level most needed.
+        if 'decor: true' in line:
+            continue
         mount, x, midy, key, h = m.group(1), int(m.group(2)), m.group(3), m.group(4), int(m.group(5))
         if mount == 'gnd':
             cy = GROUND - h / 2
