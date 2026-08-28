@@ -68,7 +68,7 @@ const C_BRIGHT = packed(INK.bright)
 const C_DIM = packed(INK.dim)
 const C_INK = 0x241a2e // the dark contact line ui.ts strokes every glyph with
 const C_PLATE = 0x140e22
-const LABEL_REST = '#c8bad4'
+const LABEL_REST = INK.soft
 const LABEL_LIT = '#ffe6c4'
 
 /** Linear channel mix, returned as a packed int — no colour object per frame. */
@@ -97,6 +97,7 @@ export class AbilityBar {
   private readonly fArc = new Float32Array(N)
   private readonly fSug = new Float32Array(N)
   private readonly fAvail = new Float32Array(N)
+  private readonly fCool = new Float32Array(N)
   /** Slot that owns the drawing for slot i (itself, unless folded onto a pad). */
   private readonly owner = new Int8Array(N)
 
@@ -221,9 +222,13 @@ export class AbilityBar {
         }
         this.px[i] = px
         this.py[i] = py
-        // just outside the pad's own hairline rim (drawn at r*0.92 in touch.ts)
-        // so the gauge reads as a ring around the button, not a second button
-        this.pr[i] = r * 0.92 + 7
+        // OUTSIDE the pad's bright body, not across it. The pads are painted
+        // near-white at up to 0.72 alpha, and a warm hairline drawn over that
+        // measured almost no contrast — the gauge was invisible on exactly the
+        // control it describes. Sitting it past the rim puts it on sky.
+        // 10px, not more: the GATHER/SPREAD pads carry a "tap · SURGE" caption
+        // 20px below them, and a wider ring printed across it
+        this.pr[i] = r * 0.92 + 10
       }
       // fold the tap verbs onto the pad the thumb actually presses
       this.owner[INDEX.surge] = INDEX.gather
@@ -232,11 +237,16 @@ export class AbilityBar {
       this.uiK = this.measureK()
       const k = this.uiK
       const r = 20 * k
-      const gap = 18 * k
+      // the gap has to clear the WIDEST label, not just the icons: at an 18px
+      // gap "GATHER" and "SPREAD" ran into each other and read as one word
+      const gap = 32 * k
       const step = r * 2 + gap
       const total = step * N - gap
-      const labelH = this.labels.length > 0 ? this.labels[0].height : 14 * k
       const pad = 12 * k
+      // measure AFTER resizing, or the plate is sized around the old metrics
+      // and clips the descenders of the row it is supposed to be backing
+      for (let i = 0; i < this.labels.length; i++) this.labels[i].setFontSize(Math.round(10 * k))
+      const labelH = this.labels.length > 0 ? this.labels[0].height : 14 * k
       // low on the screen, centred, clear of the bottom edge on a phone-shaped
       // desktop window as well as a 16:10 one
       const bottom = safe.y + safe.h - 20 * k
@@ -251,11 +261,10 @@ export class AbilityBar {
       this.plateX = x0 - r - pad
       this.plateY = cy - r - pad * 0.8
       this.plateW = total + pad * 2
-      this.plateH = r * 2 + pad * 1.8 + labelH + 4 * k
+      this.plateH = r * 2 + pad * 1.7 + labelH + 5 * k
       for (let i = 0; i < N; i++) {
         const t = this.labels[i]
         if (!t) continue
-        t.setFontSize(Math.round(11 * k))
         t.setPosition(this.px[i], cy + r + 5 * k)
       }
     }
@@ -301,12 +310,14 @@ export class AbilityBar {
       this.fArc[i] = 1
       this.fSug[i] = 0
       this.fAvail[i] = 0
+      this.fCool[i] = 0
     }
     for (let i = 0; i < N; i++) {
       const o = this.owner[i]
       if (this.arcT[i] < this.fArc[o]) this.fArc[o] = this.arcT[i]
       if (this.sugT[i] > this.fSug[o]) this.fSug[o] = this.sugT[i]
       if (this.availT[i] > this.fAvail[o]) this.fAvail[o] = this.availT[i]
+      if (this.cool[i] > this.fCool[o]) this.fCool[o] = this.cool[i]
     }
     this.draw()
   }
@@ -337,9 +348,9 @@ export class AbilityBar {
       // The owner has repeatedly reported UI as hard to read. Small glyphs over
       // a bright dusk sky measured near 1.1:1; a dark plate under them is cheap,
       // never fails, and costs one fill.
-      g.fillStyle(C_PLATE, 0.46)
+      g.fillStyle(C_PLATE, 0.56)
       g.fillRoundedRect(this.plateX, this.plateY, this.plateW, this.plateH, 14 * this.uiK)
-      g.lineStyle(1.5, 0xd6cae2, 0.13)
+      g.lineStyle(1.5, 0xd6cae2, 0.14)
       g.strokeRoundedRect(this.plateX, this.plateY, this.plateW, this.plateH, 14 * this.uiK)
     }
 
@@ -372,6 +383,16 @@ export class AbilityBar {
     // dim is not decoration: a dead cooldown has to LOOK dead, or the player
     // reads an unresponsive button as a broken one
     const life = 0.34 + 0.66 * av
+    // ...but the GAUGE is exempt from the dim. Dimming it too made Echo's
+    // countdown fade out at exactly the moment the player wants to read it —
+    // "is it nearly back?" is the only question a dead button raises, and the
+    // filling ring is the answer. Cooling keeps it bright; merely unavailable
+    // does not, because a full ring on a disabled verb would be a lie.
+    const gauge = Math.max(life, this.fCool[i])
+    // Every stroke scales with the icon. A fixed 3px hairline is right at a
+    // 20px desktop icon and a thread at an 86px thumb pad — the touch gauge
+    // read as smudge until the weight followed the radius.
+    const sw = Phaser.Math.Clamp(r / 20, 1, 2.8)
 
     // ---- the seat. On touch the pad already is one; here it separates the
     // icon from whatever the sky is doing behind it.
@@ -382,9 +403,9 @@ export class AbilityBar {
 
     // ---- engraved track: a dark contact line under a pale one, cut into the
     // sky rather than painted on it — the same treatment as the flock dial
-    g.lineStyle(3.5, C_INK, 0.45 * life)
-    g.strokeCircle(cx, cy + 1, r)
-    g.lineStyle(1.6, C_DIM, 0.26 * life)
+    g.lineStyle(3.5 * sw, C_INK, 0.45 * life)
+    g.strokeCircle(cx, cy + 1 * sw, r)
+    g.lineStyle(1.6 * sw, C_DIM, 0.26 * life)
     g.strokeCircle(cx, cy, r)
 
     // ---- the depleting arc. It shows what is LEFT, so watching it drain is
@@ -395,24 +416,39 @@ export class AbilityBar {
       // it goes coral as it runs out, so "nearly gone" is legible without a
       // number and without reading the arc's length precisely
       const col = spent > 0.55 ? mixHex(C_WARM, C_ALERT, Math.min(1, (spent - 0.55) / 0.45)) : C_WARM
-      g.lineStyle(3.2, col, (0.55 + 0.35 * remain) * life)
+      const end = A0 + Math.PI * 2 * remain
+      // the arc carries its own dark liner, the way the joystick rim in
+      // touch.ts does — a warm line alone dies over a bright dusk sky
+      g.lineStyle(5.4 * sw, C_INK, 0.42 * gauge)
       g.beginPath()
-      g.arc(cx, cy, r, A0, A0 + Math.PI * 2 * remain, false)
+      g.arc(cx, cy, r, A0, end, false)
+      g.strokePath()
+      g.lineStyle(3.2 * sw, col, (0.6 + 0.32 * remain) * gauge)
+      g.beginPath()
+      g.arc(cx, cy, r, A0, end, false)
       g.strokePath()
       // a tick at the head of the fill, so the drain has an edge to watch
-      const ha = A0 + Math.PI * 2 * remain
-      const hc = Math.cos(ha)
-      const hs = Math.sin(ha)
-      g.lineStyle(2, 0xfff0dc, 0.85 * life)
-      g.lineBetween(cx + hc * (r - 4), cy + hs * (r - 4), cx + hc * (r + 4), cy + hs * (r + 4))
+      const hc = Math.cos(end)
+      const hs = Math.sin(end)
+      // the tick's LENGTH is deliberately capped below the stroke scale: at a
+      // thumb pad's radius a proportional tick grew long enough to print over
+      // the pad's own "tap · SURGE" caption
+      const tl = 4 * Math.min(sw, 1.9)
+      g.lineStyle(2 * sw, 0xfff0dc, 0.85 * gauge)
+      g.lineBetween(cx + hc * (r - tl), cy + hs * (r - tl), cx + hc * (r + tl), cy + hs * (r + tl))
     }
 
-    // ---- the verb's own mark, engraved twice: dark shadow, then light
-    const m = r * (isTouch ? 0.42 : 0.5)
-    g.lineStyle(3.4, C_INK, 0.5 * life)
-    this.markPath(i, cx, cy + 1.5, m)
-    g.lineStyle(2, lit > 0.02 ? mixHex(C_BRIGHT, 0xfff3e2, lit) : C_BRIGHT, (0.5 + 0.42 * av + lit * 0.3) * life)
-    this.markPath(i, cx, cy, m)
+    // ---- the verb's own mark, engraved twice: dark shadow, then light.
+    // NOT on touch: the pad already carries its own word in the middle, and a
+    // mark drawn there would print straight over it. On a phone this class adds
+    // the gauge to an existing control; it does not redecorate it.
+    if (!isTouch) {
+      const m = r * 0.5
+      g.lineStyle(3.4 * sw, C_INK, 0.5 * life)
+      this.markPath(i, cx, cy + 1.5 * sw, m)
+      g.lineStyle(2 * sw, lit > 0.02 ? mixHex(C_BRIGHT, 0xfff3e2, lit) : C_BRIGHT, (0.5 + 0.42 * av + lit * 0.3) * life)
+      this.markPath(i, cx, cy, m)
+    }
 
     // ---- unavailable: a scrim over the seat. Dimming alone can be mistaken
     // for a dark sky behind the icon; a scrim cannot.
@@ -425,9 +461,9 @@ export class AbilityBar {
     // whichever verb beats what is on you right now, pulsing until it is dealt
     // with. This is the bar's reason to exist.
     if (lit > 0.01) {
-      g.lineStyle(2.4, 0xffd9a0, lit * (0.3 + pulse * 0.5))
+      g.lineStyle(2.4 * sw, 0xffd9a0, lit * (0.3 + pulse * 0.5))
       g.strokeCircle(cx, cy, r * 1.26 + pulse * r * 0.06)
-      g.lineStyle(1.4, 0xffd9a0, lit * (0.14 + pulse * 0.22))
+      g.lineStyle(1.4 * sw, 0xffd9a0, lit * (0.14 + pulse * 0.22))
       g.strokeCircle(cx, cy, r * 1.42 + pulse * r * 0.1)
     }
     for (let j = 0; j < this.glows.length; j++) {
@@ -447,24 +483,32 @@ export class AbilityBar {
     const g = this.g
     switch (i) {
       case 0: {
-        // GATHER: three arrowheads converging on the centre
+        // GATHER: three arrowheads converging on a point that is actually
+        // there. Without the dot the same three strokes read as a star, which
+        // is a shape, not an instruction.
         for (let k = 0; k < 3; k++) {
           const ang = -Math.PI / 2 + (k * Math.PI * 2) / 3
-          const tx = cx + Math.cos(ang) * m * 0.28
-          const ty = cy + Math.sin(ang) * m * 0.28
-          g.lineBetween(tx, ty, cx + Math.cos(ang - 0.55) * m, cy + Math.sin(ang - 0.55) * m)
-          g.lineBetween(tx, ty, cx + Math.cos(ang + 0.55) * m, cy + Math.sin(ang + 0.55) * m)
+          const tx = cx + Math.cos(ang) * m * 0.42
+          const ty = cy + Math.sin(ang) * m * 0.42
+          g.lineBetween(tx, ty, cx + Math.cos(ang - 0.5) * m * 0.95, cy + Math.sin(ang - 0.5) * m * 0.95)
+          g.lineBetween(tx, ty, cx + Math.cos(ang + 0.5) * m * 0.95, cy + Math.sin(ang + 0.5) * m * 0.95)
         }
+        g.beginPath()
+        g.arc(cx, cy, m * 0.15, 0, Math.PI * 2)
+        g.strokePath()
         break
       }
       case 1: {
-        // SPREAD: the same three arrowheads, turned outward
+        // SPREAD: the same three arrowheads turned outward, with the arms kept
+        // short and wide. Longer arms closed into a triangle, and a triangle
+        // beside GATHER's star was two shapes rather than one idea reversed.
         for (let k = 0; k < 3; k++) {
           const ang = -Math.PI / 2 + (k * Math.PI * 2) / 3
           const tx = cx + Math.cos(ang) * m
           const ty = cy + Math.sin(ang) * m
-          g.lineBetween(tx, ty, cx + Math.cos(ang - 0.62) * m * 0.44, cy + Math.sin(ang - 0.62) * m * 0.44)
-          g.lineBetween(tx, ty, cx + Math.cos(ang + 0.62) * m * 0.44, cy + Math.sin(ang + 0.62) * m * 0.44)
+          g.lineBetween(tx, ty, cx + Math.cos(ang - 0.85) * m * 0.62, cy + Math.sin(ang - 0.85) * m * 0.62)
+          g.lineBetween(tx, ty, cx + Math.cos(ang + 0.85) * m * 0.62, cy + Math.sin(ang + 0.85) * m * 0.62)
+          g.lineBetween(cx + Math.cos(ang) * m * 0.2, cy + Math.sin(ang) * m * 0.2, tx, ty)
         }
         break
       }

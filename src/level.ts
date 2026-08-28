@@ -560,7 +560,7 @@ export interface PromptDef {
 /** Prompt copy per input device — a phone must never be told to press SPACE. */
 export const PROMPT_TEXT: Record<string, { key: string; touch: string }> = {
   steer: { key: 'move the mouse — steer the flock', touch: 'left thumb anywhere — the stick comes to you' },
-  gather: { key: 'birds glowing are about to be lost — hold SPACE to gather', touch: 'birds glowing are about to be lost — hold GATHER' },
+  gather: { key: 'a bird is BLINKING OUT — hold SPACE to pull it back in', touch: 'a bird is BLINKING OUT — hold GATHER to pull it back in' },
   spread: { key: 'strays out there — hold SHIFT to reach them', touch: 'strays out there — hold SPREAD to reach them' },
   surge: { key: 'the curtain holds — tap SPACE to punch through', touch: 'the curtain holds — tap GATHER to punch through' },
   flare: { key: 'too fast for that gap — tap SHIFT to brake', touch: 'too fast for that gap — tap SPREAD to brake' },

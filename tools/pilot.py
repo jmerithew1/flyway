@@ -28,7 +28,7 @@ END = 25400
 
 PILOT = """(cfg) => {
   const d = window.__day, dt = 16.667;
-  let steps = 0, gf = 0, calls = 0, surges = 0;
+  let steps = 0, gf = 0, calls = 0, surges = 0, formPeak = 0;
   let aim = 500, gatherT = 0, callT = 0;
 
   const clearAt = (x, y) => {
@@ -97,8 +97,9 @@ PILOT = """(cfg) => {
     }
     if (near < cfg.gatherAt) gatherT = 0.5;
     gatherT = Math.max(0, gatherT - dt / 1000);
-    d.touch.gather = gatherT > 0;
+    d.debugHold.gather = gatherT > 0;
     if (gatherT > 0) gf++;
+    if (Math.abs(f.form) > Math.abs(formPeak)) formPeak = f.form;
 
     // --- SPREAD to harvest light when nothing is close (the new mechanic's
     //     central trade: wide when safe, tight when not)
@@ -111,7 +112,7 @@ PILOT = """(cfg) => {
       const mdx = m.x - f.centerX;
       if (mdx > -40 && mdx < 900 && Math.abs(m.y - f.centerY) < 300) { lightNear = true; break; }
     }
-    d.touch.spread = gatherT <= 0 && near > cfg.spreadAt && lightNear;
+    d.debugHold.spread = gatherT <= 0 && near > cfg.spreadAt && lightNear;
 
     // --- ECHO CALL to recover scattered birds. This is the verb the old probe
     //     ignored entirely, and it is where a large part of the loss went.
@@ -130,6 +131,7 @@ PILOT = """(cfg) => {
     birds: d.flock ? d.flock.count : 0,
     x: Math.round(d.scrollX),
     collisions: d.stats ? d.stats.collisionEvents : -1,
+    formPeak: Math.round(formPeak * 100) / 100,
     lost: d.stats ? d.stats.lost : -1,
     daylight: d.night ? Math.round(d.night.daylight * 100) : -1,
     gatherPct: Math.round(gf / Math.max(1, steps) * 100),
@@ -178,12 +180,18 @@ def main():
             pg.evaluate("(c) => { window.__AVOID.lookahead = c.l; window.__AVOID.margin = c.m; }",
                         {'l': look, 'm': margin})
             sk = pg.evaluate(PILOT, cfg)
+            # A probe that cannot press the buttons proves nothing. `form` is
+            # +1 fully gathered and -1 fully spread; if it never leaves 0 the
+            # hold override is broken and every number here is meaningless.
+            if abs(sk.get('formPeak', 0)) < 0.2:
+                print('  !! the pilot never formed up — the hold override is inert, numbers are void')
+                failed = True
             sk_ok = sk['x'] >= END and sk['birds'] > 0
             verdict = 'PASS' if (afk_ok and sk_ok) else 'fail'
             if not (afk_ok and sk_ok):
                 failed = True
             print(f"{look:.2f}/{margin:<4} AFK {'dies@'+str(afk['x']) if afk_ok else 'SURVIVES!!':>12} | "
-                  f"pilot x={sk['x']:>5} birds={sk['birds']:>3} col={sk['collisions']:>3} "
+                  f"pilot x={sk['x']:>5} birds={sk['birds']:>3} col={sk['collisions']:>3} form={sk.get('formPeak', 0):>5} "
                   f"day={sk['daylight']:>3}% {verdict}")
         b.close()
     return 1 if failed else 0

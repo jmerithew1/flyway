@@ -88,6 +88,24 @@ def check_conversion() -> tuple[bool, str]:
     return True, 'all processed art is WebP'
 
 
+# Deliberately unregistered, with the reason, so the check keeps its teeth
+# without crying wolf. A standing failure everyone has learned to scroll past
+# is worse than no check at all.
+EXEMPT_ART = {
+    # A second, smaller hawk set with a hot gold rim-light on every feather.
+    # Warm gold in motion is this world's word for life and fuel; a predator
+    # wearing it says the opposite of the truth. The `final/` set is the same
+    # poses at ~2x resolution in cool violet.
+    'flock/falcon_bank.webp', 'flock/falcon_dive.webp',
+    'flock/falcon_glide.webp', 'flock/falcon_turn.webp',
+    # The 760x333 first cut of the six act skies. textures.ts loads the
+    # 2048x897 sky2x/ set over the top, so shipping both is dead weight.
+    'sky/sky_dawn_approach.webp', 'sky/sky_sun_gate.webp',
+    'sky/sky_overgrown.webp', 'sky/sky_wind_heights.webp',
+    'sky/sky_gauntlet.webp', 'sky/sky_homeward.webp',
+}
+
+
 def check_registration() -> tuple[bool, str]:
     """R36b: every named piece either loads or is deliberately excluded.
 
@@ -101,7 +119,7 @@ def check_registration() -> tuple[bool, str]:
         for fn in fns:
             rel = os.path.relpath(os.path.join(dp, fn), PROCESSED).replace(os.sep, '/')
             top = rel.split('/')[0]
-            if rel in used or top in ('fog', 'sky2x', 'parallax'):
+            if rel in used or rel in EXEMPT_ART or top in ('fog', 'sky2x', 'parallax'):
                 continue
             stem = rel.rsplit('/', 1)[-1].rsplit('.', 1)[0]
             if re.search(r'__\d+$', stem):  # a numbered slice of a sheet
@@ -198,6 +216,13 @@ def check_motion() -> tuple[bool, str]:
     return code == 0, line
 
 
+def check_borders() -> tuple[bool, str]:
+    """R46: an opaque frame edge draws as a square the instant light hits it."""
+    code, out = sh([sys.executable, 'tools/border_audit.py'])
+    line = next((l for l in out.splitlines() if 'PASS' in l or 'hard edge' in l), out.strip()[:120])
+    return code == 0, line
+
+
 def check_lane() -> tuple[bool, str]:
     """R45: does the terrain actually constrain the lane, in both directions?"""
     code, out = sh([sys.executable, 'tools/lane_census.py'])
@@ -226,6 +251,7 @@ CHECKS = [
     ('R32b', 'no stale player-facing copy', check_stale_copy),
     ('R21', 'the world moves', check_motion),
     ('R45', 'terrain constrains the lane in both directions', check_lane),
+    ('R46', 'no registered asset carries an opaque border', check_borders),
     ('MAP', 'every plan section has a rubric line and an owner', check_coverage),
     ('--', 'types compile', check_types),
 ]

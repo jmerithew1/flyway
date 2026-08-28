@@ -7,35 +7,24 @@ import { display, voice, INK, safeArea } from '../ui'
 import { GameAudio } from '../audio'
 import type { FlightResult } from '../result'
 
-/** One bird of the demonstration murmuration. */
-interface DemoBird {
+/**
+ * One bird of the flight threading the frame.
+ *
+ * `s` is its position ALONG the composed path, not an orbit angle. An earlier
+ * version drifted birds around an ellipse and read as a screensaver; a flock
+ * has somewhere it is going, and every bird here is going there.
+ */
+interface PathBird {
   img: Phaser.GameObjects.Image
-  /** stable per-bird phase; drives orbit angle, flap and shape lag */
+  /** 0..1 along the flight line */
+  s: number
+  /** per-bird speed, so the line never marches in step */
+  sp: number
+  /** signed offset across the line, in path-widths */
+  off: number
+  /** wander phase, and the flap phase */
   ph: number
-  /** how far out in the flock body this bird sits, 0..1 */
-  rad: number
-  /** how strongly it answers a shape change — a flock does not turn as one */
-  lag: number
-}
-
-/** A mote of light streaming past the flock, and whether it is still uncollected. */
-interface DemoMote {
-  img: Phaser.GameObjects.Image
-  x: number
-  y: number
-  live: boolean
-}
-
-/** The flock verbs the demonstration performs, in the order it performs them. */
-type DemoPhase = 'cruise' | 'gather' | 'surge' | 'spread'
-
-const PHASE_ORDER: DemoPhase[] = ['cruise', 'gather', 'surge', 'cruise', 'spread']
-const PHASE_SECONDS: Record<DemoPhase, number> = { cruise: 3.4, gather: 3.0, surge: 2.2, spread: 3.2 }
-/** Only the verbs get named; naming "cruise" would turn the demo into a legend. */
-const PHASE_CAPTION: Partial<Record<DemoPhase, string>> = {
-  gather: 'GATHER',
-  surge: 'SURGE',
-  spread: 'SPREAD',
+  scale: number
 }
 
 /** The one flight the game currently ships. DayScene stamps this id onto its
@@ -50,6 +39,7 @@ interface Layout {
   bot: number
   h: number
   chromeY: number
+  chromeRowTop: number
   hintY: number
   buttonY: number
   plateW: number
@@ -59,18 +49,18 @@ interface Layout {
   wordY: number
   wordW: number
   wordH: number
-  laneY: number
-  laneRy: number
 }
 
 /**
- * The title screen is the game's best frame, not a menu.
+ * The title screen is one composed frame of the game, not a menu and not a
+ * demo loop.
  *
- * The whole identity is light: the dark presses in from the left, a lane of
- * gold motes streams past, and a live murmuration sweeps them up and pushes
- * the dark back. Everything a player needs before flying is shown happening
- * rather than listed — the full control reference lives one press away, where
- * it costs the hero frame nothing.
+ * It is built the way the poster would be: near-black painted foreground in the
+ * corners and along the bottom-left, one genuinely hot light falling from the
+ * right, and between them the flock — streaming out of the dark and into the
+ * light along a single composed line. That picture IS the idea the screen has
+ * to land, so the copy stays to one sentence and the control reference lives
+ * behind a press, where it costs the frame nothing.
  */
 export class TitleScene extends Phaser.Scene {
   private audio = new GameAudio()
@@ -79,45 +69,32 @@ export class TitleScene extends Phaser.Scene {
   private loaderFill?: Phaser.GameObjects.Rectangle
   private loaderRailW = 300
 
-  private birds: DemoBird[] = []
-  private motes: DemoMote[] = []
-  private fogPieces: { img: Phaser.GameObjects.Image; base: number; drift: number }[] = []
-  private murkWash: Phaser.GameObjects.Image[] = []
-  private daylight = 0.72
-  private railFill?: Phaser.GameObjects.Rectangle
-  private railW = 260
-  private caption?: Phaser.GameObjects.Text
-  private phaseIdx = 0
-  private phaseT = 0
-  /** 0 = tight ribbon, 1 = open bloom; eased so the flock never snaps */
-  private spreadNow = 0.55
-  private surgeNow = 0
-  private flockX = 0
-  private flockY = 0
-  private laneY = 0
-  private laneRy = 100
+  private birds: PathBird[] = []
+  /** cubic control points of the flight line, in world space */
+  private path: Array<{ x: number; y: number }> = []
+  private breathers: { img: Phaser.GameObjects.Image; base: number; amp: number; ph: number }[] = []
   private started = false
   private toast?: Phaser.GameObjects.Text
   private toastTween?: Phaser.Tweens.Tween
   private panel?: Phaser.GameObjects.Container
+  /** device-corrected multiplier for the small labels; see measureTypeBoost */
+  private boost = 1
 
   constructor() {
     super('Title')
   }
 
   /**
-   * The painted title plate, wordmark and roost ship in the asset kit but are
-   * absent from the generated manifest, so this screen was falling back to the
-   * procedural day plate and a letter-spaced text title. Pulling them in here
-   * keeps the fix inside this scene instead of waiting on a manifest rebuild.
+   * The painted title plate and wordmark ship in the asset kit; they were once
+   * missing from the generated manifest and this screen silently fell back to
+   * the procedural day plate and a letter-spaced text title. The manifest has
+   * since been regenerated, so these loads are normally no-ops — they stay as
+   * the guard against that regressing again, and cost nothing when it has not.
    */
   preload(): void {
     const extra: Array<[string, string]> = [
       ['title_bg', 'assets/processed/final/title_bg.webp'],
       ['wordmark', 'assets/processed/final/wordmark.webp'],
-      ['roost_lit', 'assets/processed/roost/roost_lit.webp'],
-      ['perched_a', 'assets/processed/final/perched_a.webp'],
-      ['perched_sleep', 'assets/processed/final/perched_sleep.webp'],
     ]
     for (const [key, file] of extra) {
       if (!this.textures.exists(key)) this.load.image(key, file)
@@ -130,23 +107,23 @@ export class TitleScene extends Phaser.Scene {
   }
 
   /**
-   * The boot veil in index.html hands over to Phaser's flat #3f3760 clear
-   * colour with nothing drawn on it, so the brand dissolves into a lighter,
-   * emptier field before the title appears — the loudest reason the load reads
-   * as broken. Painting this scene's own near-black plate during preload means
-   * the canvas is never that empty grey, and the rail below reports REAL byte
-   * progress rather than index.html's endless CSS sweep, which looks identical
-   * at one percent and at a hang.
+   * The boot veil in index.html hands over to Phaser's flat clear colour with
+   * nothing drawn on it, so the brand dissolves into a lighter, emptier field
+   * before the title appears — the loudest reason the load reads as broken.
+   * Painting this scene's own near-black plate during preload means the canvas
+   * is never that empty grey, and the rail below reports REAL byte progress
+   * rather than index.html's endless CSS sweep, which looks identical at one
+   * percent and at a hang.
    */
   private buildLoaderCard(): void {
     const kids: Phaser.GameObjects.GameObject[] = [
-      this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x0a0716, 1).setOrigin(0),
+      this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x08060f, 1).setOrigin(0),
     ]
     if (this.textures.exists('softdot')) {
       kids.push(
         this.add
           .image(VIEW_W / 2, VIEW_H * 0.46, 'softdot')
-          .setTint(0x2a2148)
+          .setTint(0x241d3e)
           .setDisplaySize(1100, 700)
           .setAlpha(0.5),
       )
@@ -169,29 +146,16 @@ export class TitleScene extends Phaser.Scene {
   create(): void {
     this.started = false
     this.birds = []
-    this.motes = []
-    this.fogPieces = []
-    this.murkWash = []
-    this.daylight = 0.72
-    this.phaseIdx = 0
-    this.phaseT = 0
-    this.spreadNow = 0.55
-    this.surgeNow = 0
+    this.breathers = []
 
     const L = this.measureLayout()
-    this.laneY = L.laneY
-    this.laneRy = L.laneRy
-    this.flockX = VIEW_W * 0.4
-    this.flockY = L.laneY
 
     this.buildSky()
-    this.buildMurk(L)
-    this.buildDestination(L)
-    this.buildMotes()
-    this.buildFlock()
-    this.buildForeground(L)
+    this.buildDark(L)
+    this.buildLight(L)
+    this.buildFlightLine(L)
+    this.buildNearBlackFrame(L)
     this.buildTypeGround(L)
-    this.buildRail(L)
     this.buildWords(L)
     this.buildStart(L)
     this.buildChrome(L)
@@ -213,14 +177,15 @@ export class TitleScene extends Phaser.Scene {
    * Resolve every band against the VISIBLE rect, stacking the lower block from
    * the bottom edge upwards.
    *
-   * Two things make a fixed y-table wrong here. Scale.ENVELOP crops ~125
-   * logical px off the top and bottom on a landscape phone, and the type ramp
-   * in ui.ts scales every string by 1.65 on touch — so the same table that
-   * breathes on desktop has the button, the hint and the chrome row sitting on
-   * top of each other on a phone. Measuring the button first and stacking
-   * upward from a known bottom is what keeps them apart at both sizes.
+   * A fixed y-table cannot survive this game's scaling. The canvas width now
+   * follows the device aspect (backdrop.ts), and the type ramp in ui.ts scales
+   * every string by 1.65 on touch — so the same table that breathes on desktop
+   * has the button, the hint and the chrome row on top of each other on a
+   * phone. Measuring the button first and stacking upward from a known bottom
+   * is what keeps them apart at every size.
    */
   private measureLayout(): Layout {
+    this.boost = this.measureTypeBoost()
     const safe = safeArea(this)
     const cx = safe.x + safe.w / 2
     const top = safe.y
@@ -237,10 +202,10 @@ export class TitleScene extends Phaser.Scene {
     const plateH = Math.round(ink.h + padY * 2)
 
     const chromeY = bot - (isTouch ? 36 : 46)
-    // the keyboard hint has no audience on touch, and on a cropped phone the
-    // space it wants is the space the chrome row needs
+    // the keyboard hint has no audience on touch, and the space it wants is
+    // the space the chrome row needs
     const hintY = isTouch ? chromeY : chromeY - 46
-    const buttonY = (isTouch ? chromeY - 40 : hintY - 26) - plateH / 2
+    const buttonY = (isTouch ? chromeY - 56 : hintY - 26) - plateH / 2
     const ideaY = buttonY - plateH / 2 - (isTouch ? 30 : 38)
     const tagY = ideaY - (isTouch ? 44 : 52)
 
@@ -250,33 +215,98 @@ export class TitleScene extends Phaser.Scene {
       const f = this.frameSize('wordmark')
       wordH = (f.h / f.w) * wordW
     }
-    const wordY = top + h * 0.185 + wordH / 2 - h * 0.06
+    const wordY = top + h * 0.16 + wordH / 2
 
-    // the flock owns the whole gap between the wordmark and the type block,
-    // and is sized to fit it rather than being allowed to grow into the words
-    const gapTop = wordY + wordH / 2 - h * 0.05
-    const gapBot = tagY - (isTouch ? 26 : 34)
-    const laneY = (gapTop + gapBot) / 2
-    const laneRy = Math.max(52, Math.min(104, (gapBot - gapTop) / 2 - 44))
+    // the row is as tall as its own boosted label needs, so the sky zone above
+    // it never creeps back over the share controls
+    const chromeRowTop = chromeY - Math.round((isTouch ? 60 : 48) * this.boost) / 2
 
-    return { cx, top, bot, h, chromeY, hintY, buttonY, plateW, plateH, ideaY, tagY, wordY, wordW, wordH, laneY, laneRy }
+    return { cx, top, bot, h, chromeY, chromeRowTop, hintY, buttonY, plateW, plateH, ideaY, tagY, wordY, wordW, wordH }
   }
 
   private beginStyle(): Phaser.Types.GameObjects.Text.TextStyle {
     return display(isTouch ? 28 : 34, '#fff3dc', 10, 400)
   }
 
+  /**
+   * Extra type scale for the small labels on THIS screen.
+   *
+   * ui.ts ramps every string by a flat 1.65 on touch. That was calibrated when
+   * the canvas was a fixed 1536 wide, so a phone drew it at about 0.55 and a
+   * 13px label landed near 12 device px. The canvas width now follows the
+   * device aspect, so a 3:1 phone gets a ~2880-wide canvas drawn at ~0.29 — and
+   * the same ramp puts that label at six device px. Measuring what a probe
+   * actually resolves to on THIS device and topping it up keeps the bottom row
+   * readable, and collapses to 1.0 wherever the ramp is already enough, so it
+   * can never double-apply.
+   */
+  private measureTypeBoost(): number {
+    const probe = this.add.text(0, -4000, 'X', display(13))
+    const px = parseFloat(String(probe.style.fontSize)) || 13
+    probe.destroy()
+    const rect = this.game.canvas?.getBoundingClientRect()
+    const pxPerLogical = rect && rect.width ? rect.width / this.scale.width : 1
+    const FLOOR_DEVICE_PX = 12
+    return Phaser.Math.Clamp(FLOOR_DEVICE_PX / Math.max(1, px * pxPerLogical), 1, 1.9)
+  }
+
+  /** Small display type, corrected for how small this device actually draws it. */
+  private small(size: number, color: string, tracking = 0, weight: 300 | 400 | 500 = 400): Phaser.Types.GameObjects.Text.TextStyle {
+    return display(Math.round(size * this.boost), color, tracking, weight)
+  }
+
+  /** The spoken voice at the same correction, for the controls reference. */
+  private smallVoice(size: number, color: string): Phaser.Types.GameObjects.Text.TextStyle {
+    return voice(Math.round(size * this.boost), color)
+  }
+
   // ---------------------------------------------------------------- painting
 
-  /** Native pixel size of a loaded texture, for art that is not in the manifest. */
+  /** Native pixel size of a loaded texture. */
   private frameSize(key: string): { w: number; h: number } {
     const f = this.textures.get(key).get()
     return { w: f.width, h: f.height }
   }
 
+  /**
+   * Place a painted piece by its height, anchored anywhere, guarded by key.
+   * Every art call on this screen goes through here so a missing piece is a
+   * missing piece and never a crash or a green placeholder.
+   */
+  private piece(
+    key: string,
+    x: number,
+    y: number,
+    h: number,
+    opts: {
+      ox?: number
+      oy?: number
+      tint?: number
+      alpha?: number
+      depth?: number
+      flipX?: boolean
+      angle?: number
+      add?: boolean
+    } = {},
+  ): Phaser.GameObjects.Image | null {
+    if (!this.textures.exists(key)) return null
+    const f = this.frameSize(key)
+    const img = this.add
+      .image(x, y, key)
+      .setOrigin(opts.ox ?? 0.5, opts.oy ?? 0.5)
+      .setDisplaySize((f.w / f.h) * h, h)
+      .setDepth(opts.depth ?? 0)
+      .setAlpha(opts.alpha ?? 1)
+    if (opts.tint !== undefined) img.setTint(opts.tint)
+    if (opts.flipX) img.setFlipX(true)
+    if (opts.angle) img.setAngle(opts.angle)
+    // ADD, never OVERLAY — Phaser's WebGL renderer implements only
+    // NORMAL/ADD/MULTIPLY/SCREEN, and OVERLAY silently renders wrong.
+    if (opts.add) img.setBlendMode(Phaser.BlendModes.ADD)
+    return img
+  }
+
   private buildSky(): void {
-    // title_bg already carries a near-black arch on the left and a hot sun on
-    // the right, which is the value range the procedural bg_plate never had.
     const key = this.textures.exists('title_bg')
       ? 'title_bg'
       : this.textures.exists('sky_homeward')
@@ -285,198 +315,236 @@ export class TitleScene extends Phaser.Scene {
     if (this.textures.exists(key)) {
       const { w, h } = this.frameSize(key)
       const cover = Math.max(VIEW_W / w, VIEW_H / h)
-      this.add
-        .image(VIEW_W / 2, VIEW_H / 2, key)
-        .setDisplaySize(w * cover, h * cover)
-        .setDepth(-100)
+      this.add.image(VIEW_W / 2, VIEW_H / 2, key).setDisplaySize(w * cover, h * cover).setDepth(-100)
     }
     // one flat knock-down so the painted midtones sit below the type, not with it
-    this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x120c26, 0.2).setOrigin(0).setDepth(-99)
+    this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x120c26, 0.24).setOrigin(0).setDepth(-99)
   }
 
   /**
-   * The dark, pressing in from the left. Every frame in this game needs a
-   * near-black; the painting alone sits in a 25-75% band and reads soft, so
-   * the murk is what makes the light on the right mean anything.
+   * The dark the flock is outrunning, on the left.
+   *
+   * Deliberately NOT the nightfall fog. That system (src/nightfall.ts) is a
+   * gameplay object driven by a live Flock and a scroll position, and the
+   * hand-tinted fog cutouts this screen used instead read as smoke scribbled
+   * over the painting. Depth of value carries the dark far better than smoke
+   * does, and a monumental ruin sinking into it says the same thing without a
+   * single wisp.
    */
-  private buildMurk(L: Layout): void {
+  private buildDark(L: Layout): void {
     if (this.textures.exists('softdot')) {
       const blobs: Array<[number, number, number, number]> = [
-        [-160, VIEW_H / 2, 1400, 0.92],
-        [30, L.top + L.h * 0.28, 900, 0.62],
-        [110, L.top + L.h * 0.8, 1000, 0.55],
+        [-VIEW_W * 0.06, VIEW_H * 0.5, VIEW_W * 0.72, 0.95],
+        [VIEW_W * 0.06, L.top + L.h * 0.86, VIEW_W * 0.5, 0.8],
       ]
       for (const [x, y, size, a] of blobs) {
-        this.murkWash.push(
-          this.add
-            .image(x, y, 'softdot')
-            .setTint(0x05030d)
-            .setDisplaySize(size, size * 1.15)
-            .setAlpha(a)
-            .setDepth(-70),
-        )
+        this.add
+          .image(x, y, 'softdot')
+          .setTint(0x04030b)
+          .setDisplaySize(size, size * 1.4)
+          .setAlpha(a)
+          .setDepth(-80)
       }
     }
-    // the painted nightfall itself, so the dark has tendrils and not just a gradient
-    const pieces = ['fog_wall_00', 'fog_wall_02', 'fog_edge_00'].filter((k) => this.textures.exists(k))
-    pieces.forEach((key, i) => {
-      const { w, h } = this.frameSize(key)
-      const dh = L.h * (0.8 - i * 0.06)
-      const img = this.add
-        .image(0, L.top + L.h * (0.44 + i * 0.08), key)
-        .setDisplaySize((w / h) * dh, dh)
-        .setTint(0x241b3d)
-        .setAlpha(0.58 - i * 0.1)
-        .setDepth(-68 + i)
-      this.fogPieces.push({ img, base: -110 + i * 80, drift: 0.55 + i * 0.35 })
+    // a broken belltower far back on the dark side, for scale and for a
+    // silhouette the eye can measure the flock against
+    this.piece('belltower_ruin', VIEW_W * 0.17, L.top + L.h * 0.7, L.h * 0.26, {
+      oy: 1,
+      tint: 0x16112a,
+      alpha: 0.9,
+      depth: -78,
     })
   }
 
-  /** Where the flock is going: a lit roost on the right, and its glow. */
-  private buildDestination(L: Layout): void {
-    const gx = VIEW_W * 0.845
+  /**
+   * The hot value, on the right: one shaft of late light falling to a lit
+   * roost. Every frame in this game needs a near-black and one genuinely hot
+   * value; the painting alone sits in a 25-75% mid-tone band and reads soft.
+   */
+  private buildLight(L: Layout): void {
+    const gx = VIEW_W * 0.8
+    // A shaft has EDGES. The first pass scaled this to 0.72 of the frame height
+    // and let a wide warm blob sit under it, and the two together stopped being
+    // a beam and became a pale wash over the whole right third — read as a lens
+    // flare, and drowned the roost it was supposed to light.
+    const shaft =
+      this.piece('shaft_diag_05', VIEW_W * 0.845, L.top + L.h * 0.36, L.h * 0.46, {
+        add: true,
+        alpha: 0.55,
+        depth: -62,
+        flipX: true,
+      }) ?? this.piece('shaft_fan_wide_06', gx, L.top + L.h * 0.36, L.h * 0.46, { add: true, alpha: 0.52, depth: -62 })
+    if (shaft) this.breathers.push({ img: shaft, base: shaft.alpha, amp: 0.06, ph: 0 })
+
     if (this.textures.exists('softdot')) {
-      // ADD, not OVERLAY — Phaser's WebGL renderer implements only
-      // NORMAL/ADD/MULTIPLY/SCREEN, and OVERLAY silently renders wrong.
       this.add
-        .image(gx, L.top + L.h * 0.6, 'softdot')
+        .image(gx, L.top + L.h * 0.64, 'softdot')
         .setTint(0xffbe72)
-        .setDisplaySize(780, 640)
-        .setAlpha(0.46)
+        .setDisplaySize(VIEW_W * 0.2, L.h * 0.36)
+        .setAlpha(0.34)
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(-60)
+        .setDepth(-64)
     }
-    if (this.textures.exists('roost_lit')) {
-      const { w, h } = this.frameSize('roost_lit')
-      const dh = L.h * 0.34
-      this.add
-        .image(gx, L.top + L.h * 0.79, 'roost_lit')
-        .setOrigin(0.5, 1)
-        .setDisplaySize((w / h) * dh, dh)
-        .setAlpha(0.92)
-        .setDepth(-58)
+
+    // the destination, standing in its own light
+    this.piece('roost_lit', gx, L.top + L.h * 0.86, L.h * 0.4, { oy: 1, alpha: 0.96, depth: -60 })
+    // a hung lamp under the right-hand canopy: a second warm accent, and the
+    // reason there is light on this side at all
+    this.piece('lamp_tall_lit', VIEW_W * 0.945, L.top + L.h * 0.16, L.h * 0.17, { oy: 0, alpha: 0.95, depth: -59 })
+
+    // Painted light, PLACED. A procedural train of identical dots drifting past
+    // is what read as generic; these are composed along the beam the way a
+    // painter would put them there, and they only breathe.
+    const lights: Array<[string, number, number, number, number]> = [
+      ['mote_streak_long', VIEW_W * 0.7, L.top + L.h * 0.34, L.h * 0.12, 0.95],
+      ['mote_spiral_large', VIEW_W * 0.885, L.top + L.h * 0.46, L.h * 0.11, 0.9],
+      ['mote_curl_01', VIEW_W * 0.775, L.top + L.h * 0.5, L.h * 0.06, 0.85],
+      ['mote_curl_02', VIEW_W * 0.93, L.top + L.h * 0.3, L.h * 0.05, 0.75],
+      ['mote_tiny_01', VIEW_W * 0.66, L.top + L.h * 0.44, L.h * 0.026, 0.8],
+      ['mote_tiny_02', VIEW_W * 0.82, L.top + L.h * 0.26, L.h * 0.024, 0.75],
+      ['mote_tiny_03', VIEW_W * 0.74, L.top + L.h * 0.6, L.h * 0.026, 0.7],
+    ]
+    for (const [key, x, y, h, a] of lights) {
+      const img = this.piece(key, x, y, h, { add: true, alpha: a, depth: -58 })
+      if (img) this.breathers.push({ img, base: a, amp: 0.16, ph: Math.random() * 6.283 })
     }
   }
 
-  /** The road: a lane of gold motes streaming right to left past the flock. */
-  private buildMotes(): void {
-    if (!this.textures.exists('mote')) return
-    const n = isTouch ? 16 : 22
-    for (let i = 0; i < n; i++) {
-      const x = 200 + (i / n) * (VIEW_W + 900)
-      const img = this.add
-        .image(x, 0, 'mote')
-        .setDisplaySize(30, 30)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(-40)
-      this.motes.push({ img, x, y: 0, live: true })
-    }
-  }
+  /**
+   * The flock, threading from the dark into the light along ONE line.
+   *
+   * The previous version drifted birds around an ellipse. A flock orbiting in
+   * place is exactly what generic motion looks like — it has nowhere to be. So
+   * the birds here run along a composed cubic from the dark on the left up into
+   * the shaft on the right, tight where the dark is and blooming as they reach
+   * the light, fading in and out at the ends so the recycle never shows. The
+   * frame would still read as a poster with this frozen; the motion only says
+   * which way home is.
+   */
+  private buildFlightLine(L: Layout): void {
+    // The line runs THROUGH the middle of the frame, not across its top. Sitting
+    // it high left the whole mid band an empty mid-tone wash with nothing in it,
+    // which is a third of the picture doing no work.
+    this.path = [
+      { x: -VIEW_W * 0.06, y: L.top + L.h * 0.62 },
+      { x: VIEW_W * 0.26, y: L.top + L.h * 0.56 },
+      { x: VIEW_W * 0.6, y: L.top + L.h * 0.36 },
+      { x: VIEW_W * 1.02, y: L.top + L.h * 0.26 },
+    ]
+    // painted distant flocks, static, for depth the sprites cannot buy cheaply
+    this.piece('flock_decal_a', VIEW_W * 0.5, L.top + L.h * 0.2, L.h * 0.05, {
+      tint: 0x2a2244,
+      alpha: 0.5,
+      depth: -50,
+    })
+    this.piece('flock_swirl', VIEW_W * 0.33, L.top + L.h * 0.3, L.h * 0.1, {
+      tint: 0x2a2244,
+      alpha: 0.35,
+      depth: -50,
+    })
 
-  private buildFlock(): void {
     if (!this.textures.exists('bird-mid')) return
-    const n = isTouch ? 62 : 108
+    const n = isTouch ? 76 : 104
     for (let i = 0; i < n; i++) {
-      const img = this.add
-        .image(0, -400, 'bird-mid')
-        .setScale(0.14 + Math.random() * 0.07)
-        .setDepth(-30)
       this.birds.push({
-        img,
-        ph: Math.random() * Math.PI * 2,
-        rad: Math.sqrt(Math.random()),
-        lag: 0.35 + Math.random() * 0.65,
+        img: this.add.image(0, -600, 'bird-mid').setDepth(-46),
+        s: i / n,
+        sp: 0.026 + Math.random() * 0.016,
+        // clustered toward the line, not spread evenly across it: a flock has a
+        // dense core and stragglers, and an even band reads as a conveyor belt
+        off: (Math.random() - 0.5) * (Math.random() + 0.35) * 1.6,
+        ph: Math.random() * 6.283,
+        scale: 0.1 + Math.random() * 0.075,
       })
     }
   }
 
-  /** The near-black floor. Without it the bottom third floats and the type has
-   * nothing to sit on. */
-  private buildForeground(L: Layout): void {
+  /** Cubic Bezier point and tangent for the flight line. */
+  private onPath(s: number): { x: number; y: number; tx: number; ty: number } {
+    const [p0, p1, p2, p3] = this.path
+    const u = 1 - s
+    const x = u * u * u * p0.x + 3 * u * u * s * p1.x + 3 * u * s * s * p2.x + s * s * s * p3.x
+    const y = u * u * u * p0.y + 3 * u * u * s * p1.y + 3 * u * s * s * p2.y + s * s * s * p3.y
+    const d0 = 3 * u * u
+    const d1 = 6 * u * s
+    const d2 = 3 * s * s
+    const tx = d0 * (p1.x - p0.x) + d1 * (p2.x - p1.x) + d2 * (p3.x - p2.x)
+    const ty = d0 * (p1.y - p0.y) + d1 * (p2.y - p1.y) + d2 * (p3.y - p2.y)
+    return { x, y, tx, ty }
+  }
+
+  /**
+   * The near-black. Painted occluders in the corners and a fallen colossus in
+   * the lower left, so the darkest value in the frame is real art rather than a
+   * gradient — and so the frame has a foreground at all.
+   */
+  private buildNearBlackFrame(L: Layout): void {
+    const DARK = 0x100c20
+    this.piece('occluder_canopy_tl', 0, L.top, L.h * 0.34, { ox: 0, oy: 0, tint: DARK, alpha: 0.97, depth: -12 })
+    // The mirrored canopy, NOT occluder_wisteria_tr: that piece carries an
+    // opaque rectangle in its own corner, and mirroring it dragged that block
+    // into open sky as a hard-edged dark slab that read as a rendering fault.
+    this.piece('occluder_canopy_tl', VIEW_W, L.top, L.h * 0.26, {
+      ox: 0,
+      oy: 0,
+      tint: DARK,
+      alpha: 0.95,
+      depth: -12,
+      flipX: true,
+    })
+    this.piece('occluder_cypress_br', VIEW_W, L.bot, L.h * 0.4, { ox: 1, oy: 1, tint: DARK, alpha: 0.97, depth: -11 })
+    this.piece('occluder_column_foliage_l', 0, L.bot, L.h * 0.62, {
+      ox: 0,
+      oy: 1,
+      tint: 0x151030,
+      alpha: 0.95,
+      depth: -11,
+    })
+
+    // The colossus is the frame's darkest mass and its foreground. It keeps a
+    // faint rim rather than going flat black — a flat shape is a hole in a
+    // painting, while a dark one the sun still catches is a foreground — but it
+    // has to sit well below the mid-tone band or it stops being a silhouette
+    // and becomes a pale wall across the corner, which is what it was.
+    // Tint is a balance, not a floor: 0x39 read as a pale wall across the
+    // corner, 0x1b erased the face into a formless lump. This keeps the head
+    // legible as a monument while still sitting below every mid-tone in the
+    // frame, which is the whole job of a foreground.
+    this.piece('colossus_head', VIEW_W * 0.13, L.bot + L.h * 0.05, L.h * 0.4, {
+      oy: 1,
+      tint: 0x2b2450,
+      alpha: 0.98,
+      depth: -10,
+    })
+
     if (this.textures.exists('vfade')) {
       this.add
         .image(VIEW_W / 2, VIEW_H, 'vfade')
         .setOrigin(0.5, 1)
-        .setDisplaySize(VIEW_W, 340)
-        .setTint(0x06040e)
-        .setAlpha(0.88)
-        .setDepth(-22)
-    }
-    if (this.textures.exists('strip_near')) {
-      const { w, h } = this.frameSize('strip_near')
-      const dh = 116
-      this.add
-        .image(VIEW_W / 2, VIEW_H, 'strip_near')
-        .setOrigin(0.5, 1)
-        .setDisplaySize(Math.max(VIEW_W, (w / h) * dh), dh)
-        .setTint(0x06040e)
-        .setAlpha(0.95)
-        .setDepth(-20)
-    }
-    // the flock at rest, in silhouette, standing ON the dark floor rather than
-    // buried inside it
-    const perch: Array<[string, number, number]> = [
-      ['perched_a', VIEW_W * 0.075, 68],
-      ['perched_sleep', VIEW_W * 0.132, 50],
-    ]
-    for (const [key, x, dh] of perch) {
-      if (!this.textures.exists(key)) continue
-      const { w, h } = this.frameSize(key)
-      this.add
-        .image(x, Math.min(L.bot - 4, VIEW_H - 74), key)
-        .setOrigin(0.5, 1)
-        .setDisplaySize((w / h) * dh, dh)
-        .setTint(0x2b2244)
-        .setAlpha(0.95)
-        .setDepth(-19)
+        .setDisplaySize(VIEW_W, L.h * 0.3)
+        .setTint(0x05040c)
+        .setAlpha(0.82)
+        .setDepth(-9)
     }
   }
 
-  /** Ground for the type. Sampling the painted plate behind the words gave
-   * contrast ratios near 1.2:1 in the bright band; these are what buy the 3:1
-   * floor no matter what the sky happens to be doing behind them. */
+  /** Ground for the wordmark. Sampling the painted plate behind the words gave
+   * contrast ratios near 1.2:1 in the bright band; this is what buys the 3:1
+   * floor no matter what the sky happens to be doing behind it. */
   private buildTypeGround(L: Layout): void {
     if (!this.textures.exists('softdot')) return
-    const plates: Array<[number, number, number, number, number]> = [
-      [L.cx, L.wordY, L.wordW * 1.9, L.wordH * 3.2, 0.5],
-      [L.cx, (L.tagY + L.buttonY) / 2, 1180, L.h * 0.46, 0.62],
-      [L.cx, L.chromeY, VIEW_W * 1.1, 300, 0.5],
-    ]
-    for (const [x, y, w, hh, a] of plates) {
-      this.add.image(x, y, 'softdot').setTint(0x0a0716).setDisplaySize(w, hh).setAlpha(a).setDepth(-15)
-    }
-  }
-
-  /**
-   * The daylight rail. This is the marketing idea made literal: the gold you
-   * are holding is the gap between the flock and the dark, so the rail sits on
-   * the murk side of the frame and the fog answers it.
-   */
-  private buildRail(L: Layout): void {
-    const x = L.cx - VIEW_W / 2 + 54
-    const y = L.top + 42
-    this.railW = isTouch ? 200 : 250
     this.add
-      .text(x, y - 20, 'DAYLIGHT', display(11, '#e8caa0', 7, 400))
-      .setOrigin(0, 0.5)
-      .setDepth(31)
-      .setAlpha(0.92)
-    this.add.rectangle(x, y, this.railW, 4, 0x0a0716, 0.85).setOrigin(0, 0.5).setDepth(30)
-    this.railFill = this.add
-      .rectangle(x, y, this.railW * this.daylight, 4, 0xffd18a, 1)
-      .setOrigin(0, 0.5)
-      .setDepth(31)
+      .image(L.cx, L.wordY, 'softdot')
+      .setTint(0x08060f)
+      .setDisplaySize(L.wordW * 2, L.wordH * 3.4)
+      .setAlpha(0.42)
+      .setDepth(-8)
   }
 
   private buildWords(L: Layout): void {
-    // ---- the painted wordmark is the hero and the only large art
     let title: Phaser.GameObjects.GameObject
     if (this.textures.exists('wordmark')) {
-      title = this.add
-        .image(L.cx, L.wordY, 'wordmark')
-        .setDisplaySize(L.wordW, L.wordH)
-        .setAlpha(0)
-        .setDepth(40)
+      title = this.add.image(L.cx, L.wordY, 'wordmark').setDisplaySize(L.wordW, L.wordH).setAlpha(0).setDepth(40)
     } else {
       title = this.add
         .text(L.cx, L.wordY, 'FLYWAY', display(76, '#fff4e6', 24, 300))
@@ -485,23 +553,38 @@ export class TitleScene extends Phaser.Scene {
         .setDepth(40)
     }
 
-    const tag = this.add
-      .text(L.cx, L.tagY, TAGLINE, voice(25, '#f9ecdf'))
-      .setOrigin(0.5)
-      .setAlpha(0)
-      .setDepth(40)
+    const tag = this.add.text(L.cx, L.tagY, TAGLINE, voice(25, '#f9ecdf')).setOrigin(0.5).setAlpha(0).setDepth(40)
 
-    // The ONE idea, short enough to land in a glance. Everything else about how
-    // the flock flies is taught by the level, or lives behind CONTROLS.
+    // The ONE idea, short enough to land in a glance. How the flock actually
+    // flies is taught by the flight and by the ability bar in the HUD; a title
+    // screen that tries to teach it is a manual, and that has been rejected.
     const idea = this.add
-      .text(L.cx, L.ideaY, 'GATHER LIGHT · OUTRUN THE DARK', display(16, '#ffd9a2', 8, 400))
+      .text(L.cx, L.ideaY, 'GATHER THE LIGHT · OUTRUN THE DARK', this.small(16, '#ffd9a2', 8))
       .setOrigin(0.5)
       .setAlpha(0)
       .setDepth(40)
 
-    this.tweens.add({ targets: title, alpha: 1, duration: 1100 })
-    this.tweens.add({ targets: tag, alpha: 0.97, duration: 900, delay: 460 })
-    this.tweens.add({ targets: idea, alpha: 0.97, duration: 900, delay: 900 })
+    // Ground sized to the RUNS themselves. A single centred blob left the ends
+    // of these lines out in the gradient's falloff, where the brightest pixel of
+    // the mist band measured 1.8:1 behind the copy on a phone — the ends are
+    // exactly where wide type goes missing.
+    if (this.textures.exists('softdot')) {
+      const blockW = Math.max(tag.width, idea.width) + 240
+      const blockY = (L.tagY + L.ideaY) / 2
+      const blockH = (L.ideaY - L.tagY) * 2 + 220
+      for (const f of [-0.31, 0, 0.31]) {
+        this.add
+          .image(L.cx + f * blockW, blockY, 'softdot')
+          .setTint(0x06040e)
+          .setDisplaySize(blockW * 0.78, blockH)
+          .setAlpha(0.74)
+          .setDepth(30)
+      }
+    }
+
+    this.tweens.add({ targets: title, alpha: 1, duration: 1000 })
+    this.tweens.add({ targets: tag, alpha: 0.97, duration: 780, delay: 340 })
+    this.tweens.add({ targets: idea, alpha: 0.97, duration: 780, delay: 620 })
   }
 
   /**
@@ -562,12 +645,11 @@ export class TitleScene extends Phaser.Scene {
     )
 
     const plate = this.add.graphics().setAlpha(0).setDepth(50)
-    plate.fillStyle(0x0b0718, 0.93)
+    plate.fillStyle(0x0a0716, 0.95)
     plate.fillRoundedRect(L.cx - L.plateW / 2, L.buttonY - L.plateH / 2, L.plateW, L.plateH, L.plateH / 2)
     plate.lineStyle(2, 0xf0cf9a, 0.9)
     plate.strokeRoundedRect(L.cx - L.plateW / 2, L.buttonY - L.plateH / 2, L.plateW, L.plateH, L.plateH / 2)
 
-    // the hot value on the control itself, so the eye lands here first
     let glow: Phaser.GameObjects.Image | undefined
     if (this.textures.exists('softdot')) {
       glow = this.add
@@ -581,11 +663,11 @@ export class TitleScene extends Phaser.Scene {
 
     if (!isTouch) {
       const hint = this.add
-        .text(L.cx, L.hintY, 'or press SPACE', display(13, '#ddd0e8', 5, 300))
+        .text(L.cx, L.hintY, 'or press SPACE', this.small(13, '#ddd0e8', 5, 300))
         .setOrigin(0.5)
         .setAlpha(0)
         .setDepth(52)
-      this.tweens.add({ targets: hint, alpha: 0.9, duration: 760, delay: 1400 })
+      this.tweens.add({ targets: hint, alpha: 0.9, duration: 700, delay: 1000 })
     }
 
     /**
@@ -600,6 +682,10 @@ export class TitleScene extends Phaser.Scene {
      * button it was drawn on. Hover reported the button; the press missed it,
      * and only a scene-wide click-anywhere listener hid that. A Zone never
      * re-renders, so the target cannot drift.
+     *
+     * The reveal below is deliberately short for a related reason: the zone is
+     * live from create(), so a long fade would leave the primary control
+     * pressable while it is still invisible.
      */
     const zone = this.add
       .zone(L.cx, L.buttonY, L.plateW, L.plateH)
@@ -616,10 +702,11 @@ export class TitleScene extends Phaser.Scene {
     zone.on('pointerout', () => setLit(false))
     zone.on('pointerdown', () => this.beginFlight())
 
-    // Pressing the sky must still fly, but a press anywhere at all must not —
-    // the share and controls affordances live in the bottom band, outside this
-    // zone and above it in depth, so neither can swallow the other.
-    const skyBot = L.buttonY + L.plateH / 2 + (isTouch ? 14 : 18)
+    // Pressing the sky must still fly, but a press anywhere at all must not.
+    // The sky stops clear of the chrome row rather than merely sitting below it
+    // in depth: relying on depth sorting alone left a few pixels where the two
+    // targets genuinely overlapped, and that is the bug this screen is fixing.
+    const skyBot = Math.min(L.buttonY + L.plateH / 2 + (isTouch ? 14 : 18), L.chromeRowTop - 8)
     this.add
       .zone(VIEW_W / 2, (L.top + skyBot) / 2, VIEW_W, Math.max(120, skyBot - L.top))
       .setName('sky')
@@ -634,9 +721,9 @@ export class TitleScene extends Phaser.Scene {
     this.input.once('pointermove', () => this.audio.start())
     this.input.keyboard?.once('keydown', () => this.audio.start())
 
-    this.tweens.add({ targets: [plate, label], alpha: 1, duration: 760, delay: 1200 })
+    this.tweens.add({ targets: [plate, label], alpha: 1, duration: 620, delay: 760 })
     if (glow) {
-      this.tweens.add({ targets: glow, alpha: 0.17, duration: 900, delay: 1200 })
+      this.tweens.add({ targets: glow, alpha: 0.17, duration: 760, delay: 760 })
       // the pulse rides the GLOW, never the label: scaling the text moved the
       // glyphs inside a plate that stayed put, which is half of "not aligning"
       this.tweens.add({
@@ -644,7 +731,7 @@ export class TitleScene extends Phaser.Scene {
         scaleX: glow.scaleX * 1.1,
         scaleY: glow.scaleY * 1.14,
         duration: 1900,
-        delay: 2200,
+        delay: 1800,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -683,35 +770,31 @@ export class TitleScene extends Phaser.Scene {
         .filter(Boolean)
         .join('·')
       const line = `BEST — ${best.birdsArrived} HOME · ${Math.round(best.score ?? 0)} PTS${earned ? ` · ${earned}` : ''}`
-      this.add
-        .text(L.cx, L.chromeY, line, display(12, '#e8caa0', 4, 400))
-        .setOrigin(0.5)
-        .setDepth(70)
-        .setAlpha(0.9)
+      this.add.text(L.cx, L.chromeY, line, this.small(12, '#e8caa0', 4)).setOrigin(0.5).setDepth(70).setAlpha(0.9)
     }
 
     this.toast = this.add
-      .text(L.cx, L.chromeY - (isTouch ? 56 : 64), '', display(14, '#ffe6bf', 5, 400))
+      .text(L.cx, L.chromeY - (isTouch ? 56 : 64), '', this.small(14, '#ffe6bf', 5))
       .setOrigin(0.5)
       .setDepth(80)
       .setAlpha(0)
   }
 
   /**
-   * A label plus its own Zone, returning the label's outer edge so the next
-   * one can be packed against it. The zone is the ONLY interactive part, for
-   * the same reason BEGIN FLIGHT is a zone: a Text that ever re-renders
-   * silently resizes its own hit area.
+   * A label plus its own Zone, returning the label's outer edge so the next one
+   * can be packed against it. The zone is the ONLY interactive part, for the
+   * same reason BEGIN FLIGHT is a zone: a Text that ever re-renders silently
+   * resizes its own hit area.
    */
   private mkButton(x: number, y: number, labelText: string, originX: number, name: string, run: () => void): number {
     const t = this.add
-      .text(x, y, labelText, display(13, INK.soft, 5, 400))
+      .text(x, y, labelText, this.small(13, INK.soft, 5))
       .setOrigin(originX, 0.5)
       .setDepth(70)
       .setAlpha(0)
     const left = x - t.width * originX
     const w = t.width + (isTouch ? 22 : 26) * 2
-    const h = isTouch ? 60 : 48
+    const h = Math.round((isTouch ? 60 : 48) * this.boost)
     const zone = this.add
       .zone(left + t.width / 2, y, w, h)
       .setName(name)
@@ -721,7 +804,7 @@ export class TitleScene extends Phaser.Scene {
     zone.on('pointerover', () => t.setColor('#ffe6bf'))
     zone.on('pointerout', () => t.setColor(INK.soft))
     zone.on('pointerdown', () => run())
-    this.tweens.add({ targets: t, alpha: 0.9, duration: 700, delay: 1700 })
+    this.tweens.add({ targets: t, alpha: 0.9, duration: 700, delay: 1100 })
     return originX === 1 ? left : left + t.width
   }
 
@@ -799,43 +882,63 @@ export class TitleScene extends Phaser.Scene {
   }
 
   /**
-   * The full control reference, one press away. It belongs here and not on the
-   * hero frame: a static list of key names is what the title screen used to be,
-   * and it taught nothing the first thirty seconds of flight does not.
+   * The full control reference, one press away.
+   *
+   * Every line here is checked against src/flock.ts rather than written from
+   * memory. SURGE in particular was described as "tap to SURGE forward", which
+   * hid both halves of what it is: Flock.surge() snaps the flock tight AND adds
+   * a real velocity impulse of 190 * strength along the current heading, where
+   * strength = 1 - gatherStrain * 0.6. Holding is not free — every verb strain
+   * touches comes out weaker — and that trade is the interesting thing about
+   * these controls, so it is what the panel says.
    */
   private openControls(): void {
     if (this.panel) return
-    const lines: Array<[string, string]> = isTouch
-      ? [
-          ['STEER', 'left thumb anywhere — the stick appears where you touch'],
-          ['GATHER', 'hold to tighten the flock · tap to SURGE forward'],
-          ['SPREAD', 'hold to widen the flock · tap to FLARE and brake'],
-          ['CALL', 'brings scattered birds back to you'],
-          ['DIVE', 'trades height for speed'],
-        ]
-      : [
-          ['STEER', 'move the mouse — the flock follows your intention'],
-          ['SPACE', 'hold to tighten the flock · tap to SURGE forward'],
-          ['SHIFT', 'hold to widen the flock · tap to FLARE and brake'],
-          ['C', 'calls scattered birds back to you'],
-          ['MOUSE', 'hold the button to DIVE'],
-        ]
+    const hold = isTouch ? ['GATHER', 'SPREAD'] : ['SPACE', 'SHIFT']
+    const lines: Array<[string, string]> = [
+      [
+        'STEER',
+        isTouch ? 'left thumb anywhere — the stick appears where you touch' : 'move the mouse — the flock follows your intention',
+      ],
+      [hold[0], 'hold to tighten · tap to SURGE: tight formation and a real shove along your heading'],
+      [hold[1], 'hold to widen · tap to FLARE: wings out, momentum dies — the overshoot brake'],
+      [isTouch ? 'CALL' : 'C', 'a cry travels outward; every lost bird it reaches turns for home'],
+      [
+        isTouch ? 'DIVE' : 'MOUSE',
+        'hold to trade height for speed — earned only while still descending; release to slingshot',
+      ],
+    ]
     const safe = safeArea(this)
     const cx = safe.x + safe.w / 2
     const cy = safe.y + safe.h / 2
+    // Row pitch follows the TYPE, not the viewport. Spacing rows by a fraction
+    // of the safe height opened them to 100px apart on desktop, where the copy
+    // is 19px tall, and the list stopped reading as a list.
+    const step = Math.min(safe.h * 0.105, (isTouch ? 76 : 60) * this.boost)
+    const blockTop = cy - ((lines.length - 1) * step) / 2
     const kids: Phaser.GameObjects.GameObject[] = [
-      this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x07050f, 0.94).setOrigin(0),
-      this.add.text(cx, cy - safe.h * 0.34, 'CONTROLS', display(20, '#f0cf9a', 10, 400)).setOrigin(0.5),
+      this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x06050d, 0.96).setOrigin(0),
+      this.add.text(cx, blockTop - step * 1.35, 'CONTROLS', this.small(20, '#f0cf9a', 10)).setOrigin(0.5),
     ]
-    const step = safe.h * 0.105
     lines.forEach(([key, what], i) => {
-      const y = cy - safe.h * 0.17 + i * step
-      kids.push(this.add.text(cx - 28, y, key, display(15, '#ffe6bf', 5, 400)).setOrigin(1, 0.5))
-      kids.push(this.add.text(cx + 28, y, what, voice(19, '#ded2ea')).setOrigin(0, 0.5))
+      const y = blockTop + i * step
+      kids.push(this.add.text(cx - 28, y, key, this.small(15, '#ffe6bf', 5)).setOrigin(1, 0.5))
+      kids.push(this.add.text(cx + 28, y, what, this.smallVoice(18, '#ded2ea')).setOrigin(0, 0.5))
     })
+    const blockBot = blockTop + (lines.length - 1) * step
     kids.push(
       this.add
-        .text(cx, cy + safe.h * 0.4, isTouch ? 'TAP TO CLOSE' : 'CLICK OR PRESS ESC TO CLOSE', display(13, INK.dim, 6, 300))
+        .text(cx, blockBot + step * 1.15, 'HOLD TOO LONG AND EVERY VERB COMES OUT WEAKER', this.small(12, '#c9b2a0', 5, 300))
+        .setOrigin(0.5),
+    )
+    kids.push(
+      this.add
+        .text(
+          cx,
+          blockBot + step * 1.75,
+          isTouch ? 'TAP TO CLOSE' : 'CLICK OR PRESS ESC TO CLOSE',
+          this.small(12, INK.dim, 6, 300),
+        )
         .setOrigin(0.5),
     )
     const panel = this.add.container(0, 0, kids).setDepth(300).setAlpha(0)
@@ -866,7 +969,7 @@ export class TitleScene extends Phaser.Scene {
    */
   private buildRotateCard(): void {
     if (!isTouch) return
-    const scrim = this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x0a0716, 0.95).setOrigin(0)
+    const scrim = this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x08060f, 0.96).setOrigin(0)
     const line = this.add
       .text(VIEW_W / 2, VIEW_H / 2 - 14, 'turn your phone to fly', voice(38, INK.warm))
       .setOrigin(0.5)
@@ -899,114 +1002,35 @@ export class TitleScene extends Phaser.Scene {
     this.audio.musicTick(dt, 0.35, 0)
     this.audio.setJourney(0.2, 1, 0)
 
-    this.stepPhase(dt)
-    this.stepFlock(t)
-    this.stepMotes(dt)
-    this.stepDaylight(dt)
-  }
-
-  /** Walk the demonstration through its verbs, naming only the ones it does. */
-  private stepPhase(dt: number): void {
-    this.phaseT += dt
-    if (this.phaseT > PHASE_SECONDS[PHASE_ORDER[this.phaseIdx]]) {
-      this.phaseT = 0
-      this.phaseIdx = (this.phaseIdx + 1) % PHASE_ORDER.length
-      const caption = PHASE_CAPTION[PHASE_ORDER[this.phaseIdx]]
-      if (caption) this.showPhaseCaption(caption)
+    for (const b of this.breathers) {
+      b.img.setAlpha(b.base + Math.sin(t * 0.5 + b.ph) * b.amp)
     }
-    const now = PHASE_ORDER[this.phaseIdx]
-    const wantSpread = now === 'gather' ? 0.06 : now === 'spread' ? 1 : now === 'surge' ? 0.2 : 0.55
-    const wantSurge = now === 'surge' ? 1 : 0
-    // ease, never snap: a murmuration changes shape over a second, not a frame
-    this.spreadNow += (wantSpread - this.spreadNow) * Math.min(1, dt * 2.2)
-    this.surgeNow += (wantSurge - this.surgeNow) * Math.min(1, dt * (wantSurge > this.surgeNow ? 4 : 1.6))
+    this.stepFlightLine(t, dt)
   }
 
-  /** Name the verb beside the flock, as it happens — the difference between a
-   * demonstration and the key legend this screen used to be. It sits out on the
-   * dark side, where there is nothing for it to collide with. */
-  private showPhaseCaption(word: string): void {
-    if (!this.caption) {
-      this.caption = this.add
-        .text(0, 0, '', display(14, '#ffdca8', 9, 400))
-        .setOrigin(1, 0.5)
-        .setDepth(45)
-        .setAlpha(0)
-    }
-    const cap = this.caption
-    cap.setText(word).setPosition(Math.max(190, this.flockX - 330), this.flockY).setAlpha(0)
-    this.tweens.add({ targets: cap, alpha: 0.95, duration: 320, yoyo: true, hold: 1200 })
-  }
-
-  private stepFlock(t: number): void {
-    if (!this.birds.length) return
-    // the flock holds station and the world streams past it, exactly the way
-    // the flight reads, so the title frame and the game frame are the same shot
-    this.flockX = VIEW_W * 0.4 + Math.sin(t * 0.21) * VIEW_W * 0.045 + this.surgeNow * 120
-    this.flockY = this.laneY + Math.sin(t * 0.33) * 26 + Math.sin(t * 0.17 + 1.4) * 14
-
-    const open = this.spreadNow
-    // tight = a long thin ribbon, open = a round bloom: one number, both shapes
-    const rx = 105 + open * 190
-    const ry = this.laneRy * (0.22 + open * 0.78)
+  private stepFlightLine(t: number, dt: number): void {
+    if (!this.birds.length || this.path.length !== 4) return
     for (const b of this.birds) {
-      const shape = 1 - (1 - open) * b.lag * 0.55
-      const a = b.ph * 6.283 + t * (0.42 + b.rad * 0.5)
-      const r = b.rad * shape
-      b.img.x = this.flockX + Math.cos(a) * rx * r + Math.sin(t * 0.8 + b.ph) * 12
-      b.img.y = this.flockY + Math.sin(a) * ry * r + Math.cos(t * 0.9 + b.ph * 2) * 6
-      // a surging flock leans forward; a spreading one levels off
-      b.img.rotation = -0.16 * this.surgeNow + Math.sin(t * 0.6 + b.ph) * 0.07
-      const frame = birdFrameKey(t, b.ph, 6 + this.surgeNow * 4)
+      b.s += b.sp * dt
+      if (b.s > 1) b.s -= 1
+      const p = this.onPath(b.s)
+      const m = Math.hypot(p.tx, p.ty) || 1
+      // across the line, not around a centre
+      const nx = -p.ty / m
+      const ny = p.tx / m
+      // tight in the dark, blooming as it reaches the light: the whole game in
+      // one number, and the reason the line is worth animating at all
+      const bloom = 26 + b.s * b.s * 150
+      b.img.x = p.x + nx * b.off * bloom + Math.cos(t * 0.5 + b.ph) * 7
+      b.img.y = p.y + ny * b.off * bloom + Math.sin(t * 0.7 + b.ph) * 9
+      b.img.rotation = Math.atan2(p.ty, p.tx) + Math.sin(t * 0.6 + b.ph) * 0.06
+      // the far end of the line is further away, so it is smaller
+      b.img.setScale(b.scale * (1 - b.s * 0.34))
+      // fade in and out at the ends so the recycle is never a pop
+      const edge = Math.min(b.s, 1 - b.s)
+      b.img.setAlpha(Phaser.Math.Clamp(edge / 0.09, 0, 1) * 0.95)
+      const frame = birdFrameKey(t, b.ph, 6)
       if (frame !== b.img.texture.key) b.img.setTexture(frame)
-    }
-  }
-
-  private stepMotes(dt: number): void {
-    if (!this.motes.length) return
-    const speed = 168 + this.surgeNow * 90
-    for (const m of this.motes) {
-      m.x -= speed * dt
-      m.y = this.laneY + Math.sin(m.x * 0.0032) * this.laneRy * 0.9 + Math.sin(m.x * 0.0011 + 2) * this.laneRy * 0.5
-      if (m.x < -80) {
-        m.x = VIEW_W + 120 + Math.random() * 420
-        m.live = true
-        m.img.setVisible(true).setAlpha(1).setDisplaySize(30, 30)
-      }
-      if (!m.live) continue
-      m.img.setPosition(m.x, m.y)
-      // the pulse is what makes gold read as FUEL rather than decoration
-      m.img.setAlpha(0.72 + 0.28 * Math.sin(m.x * 0.02))
-      const dx = m.x - this.flockX
-      const dy = m.y - this.flockY
-      const reach = 84 + this.spreadNow * 96
-      if (dx * dx + dy * dy < reach * reach) {
-        m.live = false
-        this.daylight = Math.min(1, this.daylight + 0.055)
-        this.tweens.add({
-          targets: m.img,
-          alpha: 0,
-          displayWidth: 92,
-          displayHeight: 92,
-          duration: 340,
-          onComplete: () => m.img.setVisible(false),
-        })
-      }
-    }
-  }
-
-  /** The whole promise of the game in one loop: light gained pushes the dark
-   * back, light lost lets it in. The demonstration never actually loses. */
-  private stepDaylight(dt: number): void {
-    this.daylight = Math.max(0.34, this.daylight - dt * 0.05)
-    this.railFill?.setSize(Math.max(2, this.railW * this.daylight), 4)
-    const push = (1 - this.daylight) * 300
-    for (const f of this.fogPieces) {
-      f.img.x = f.base + push * f.drift
-      f.img.setAlpha(Phaser.Math.Clamp(0.3 + (1 - this.daylight) * 0.5, 0.22, 0.74))
-    }
-    for (const w of this.murkWash) {
-      w.setAlpha(Phaser.Math.Clamp(0.48 + (1 - this.daylight) * 0.5, 0.4, 0.95))
     }
   }
 }

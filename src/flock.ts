@@ -256,6 +256,25 @@ export class Flock {
   meanVY = 0
   /** hidden formation strain: 0 = healthy, 1 = at the OVER threshold */
   gatherStrain = 0
+  /**
+   * Birds squeezed out of the formation this frame by strain. The scene drains
+   * this and hands them to the scatter system.
+   *
+   * THE DOMINANT STRATEGY HAD NO COST. Measured on identical routes: holding
+   * gather ~73% of the flight finished with 200 birds and 3 loss events, while
+   * never pressing it died at x=20,756 with 65. `gatherStrain` sat pinned at
+   * 1.00 for a full minute and took nothing — its only teeth were a weaker
+   * surge and a voided flow award. So the game's central law, "you cannot hold
+   * it forever and you will lose birds", was simply not true in the code, and
+   * the whole difficulty curve collapsed to a binary: hold SPACE and you cannot
+   * lose. Strain now squeezes birds loose, which is both the cost of the hold
+   * and the supply of recoverables that gives Echo its promised job.
+   */
+  readonly squeezedThisFrame: Bird[] = []
+  /** Hard ceiling on the flock. Cages and rescues used to refund every loss,
+   * so no loss ever landed. Set by the scene to the run's start count. */
+  maxBirds = Infinity
+  private squeezeT = 0
   spreadStrain = 0
   gatherTime = 0
   private spreadTime = 0
@@ -756,6 +775,32 @@ export class Flock {
     // recruit a rotating subset of frayed birds while strain is high
     this.fraySelect -= dt
     const activeStrain = Math.max(gStrain, sStrain)
+
+    // AND PAST THE HEALTHY WINDOW, THE FORMATION ACTUALLY SHEDS. The squeeze
+    // is deliberately slow and it strictly takes the MOST frayed bird, so it
+    // reads as the formation failing at its edges rather than as a random tax —
+    // and every bird it takes is recoverable, so a player who is paying
+    // attention gets it back with a call. Holding is still the right answer to
+    // a threat; it is simply no longer free to hold forever.
+    this.squeezedThisFrame.length = 0
+    if (activeStrain > 0.82 && this.birds.length > 12) {
+      this.squeezeT -= dt
+      if (this.squeezeT <= 0) {
+        this.squeezeT = 1.15 - (activeStrain - 0.82) * 2.2
+        let worst: Bird | null = null
+        for (let i = 0; i < this.birds.length; i++) {
+          const b = this.birds[i]
+          if (b.perchT > 0) continue
+          if (!worst || b.fray > worst.fray) worst = b
+        }
+        if (worst) {
+          this.squeezedThisFrame.push(worst)
+          this.removeBird(worst)
+        }
+      }
+    } else {
+      this.squeezeT = 0.5
+    }
     if (activeStrain > 0.4 && this.fraySelect <= 0) {
       this.fraySelect = 0.35
       const want = Math.ceil(this.birds.length * (0.03 + activeStrain * 0.09))

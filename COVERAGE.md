@@ -50,7 +50,7 @@ Status: `DONE` shipped and verified · `ACTIVE` being worked now · `QUEUED` nex
 | 8f-bis | The reward IS the gameplay | R30 R31 | reward | ACTIVE |
 | 8g | Four missing owner requests | R24 R25 R26 R27 | main | ACTIVE |
 | 8 | Comprehension | R6 | main | QUEUED |
-| 9a | Why it reads "indie" | R11 R12 | title | ACTIVE |
+| 9a | Why it reads "indie" | R11 R12 R46 | art-wiring | ACTIVE |
 | 9b | The world as a universe | R12 | level | ACTIVE |
 | 9d | Rendering truths | R3 | vfx | ACTIVE |
 | 9e | Effects ranked by impact-to-cost | R38 R39 | vfx | ACTIVE |

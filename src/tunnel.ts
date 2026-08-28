@@ -88,9 +88,17 @@ const TAU = Math.PI * 2
 /** Corridor half-height at its most open / most squeezed, in px. */
 const HALF_OPEN = 268
 const HALF_TIGHT = 156
-/** Wavelength and amplitude of the corridor's vertical weave. */
-const WEAVE_PERIOD = 1150
-const WEAVE_MAX = 116
+/**
+ * Wavelength and amplitude of the corridor's vertical weave.
+ *
+ * The period is long relative to the amplitude on purpose. The wall is drawn as
+ * a run of overlapping segments, and the steeper the weave the more each segment
+ * has to be rotated away from its neighbour — past about half a radian of
+ * difference the band stops reading as one wall and starts reading as a stack of
+ * tilted cards, which is exactly what a first pass at this looked like.
+ */
+const WEAVE_PERIOD = 1600
+const WEAVE_MAX = 95
 /** Lane centre, as a fraction of the corridor half-height. */
 const LANE_FRACTION = 0.46
 /** How close to a wall the player's steering is allowed to push the streams. */

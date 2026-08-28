@@ -137,6 +137,15 @@ export class DayScene extends Phaser.Scene {
   /** Decoration that never animates but still gets a transform every frame. */
   private decorStatic: { img: Phaser.GameObjects.Image; pad: number }[] = []
   private audio = new GameAudio()
+  /**
+   * A hold override for automated probes. `tools/pilot.py` drove the two hold
+   * verbs by assigning to `touch.gather` / `touch.spread`, which are GETTERS
+   * with no setter — so the writes did nothing and the flock never formed up.
+   * Both halves of the difficulty contract were therefore being proven by a
+   * pilot that could not gather, which is to say they were not being proven at
+   * all. A plain field cannot fail the same way.
+   */
+  readonly debugHold = { gather: false, spread: false }
   private promptPlate!: Phaser.GameObjects.Graphics
   private falcon!: FalconSystem
   private moths!: MothSwarm
@@ -1417,8 +1426,10 @@ export class DayScene extends Phaser.Scene {
       this.lastPointer.y = p.y
     }
     const world = cam.getWorldPoint(untouched ? VIEW_W * 0.45 : p.x, untouched ? VIEW_H * 0.45 : p.y)
-    const gather = !this.finishing && !this.braceOn && (this.keySpace.isDown || this.touch.gather)
-    const spread = !this.finishing && !this.braceOn && (this.keyShift.isDown || this.touch.spread)
+    const gather =
+      !this.finishing && !this.braceOn && (this.keySpace.isDown || this.touch.gather || this.debugHold.gather)
+    const spread =
+      !this.finishing && !this.braceOn && (this.keyShift.isDown || this.touch.spread || this.debugHold.spread)
     if (gather && this.reckonOn && !this.prevGatherForReckon) this.reckonInput('gather')
     this.prevGatherForReckon = gather
     if (gather) this.gatherHeld += dt
