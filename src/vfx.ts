@@ -561,10 +561,17 @@ export class VFXDirector {
     if (pipe) pipe.amount = this.lens
   }
 
+  /** Cached across the decay. Phaser's getPostPipeline allocates a results
+   * array internally on every call, and this ran every frame the lens was
+   * decaying — in the module that documents itself as allocation-free. */
+  private lensCache: ImpactPipeline | null = null
+
   private lensPipe(): ImpactPipeline | null {
+    if (this.lensCache) return this.lensCache
     const got = this.cam.getPostPipeline(ImpactPipeline)
     if (!got) return null
-    return (Array.isArray(got) ? got[0] : got) as ImpactPipeline
+    this.lensCache = (Array.isArray(got) ? got[0] : got) as ImpactPipeline
+    return this.lensCache
   }
 
   /**
@@ -594,6 +601,7 @@ export class VFXDirector {
       // calibrated bloom lives on the same camera and would go with it
       const pipe = this.lensPipe()
       if (pipe) this.cam.removePostPipeline(pipe)
+      this.lensCache = null // the cache must not outlive the pipeline it points at
     } catch {
       /* the camera is being torn down; nothing to restore */
     }

@@ -228,6 +228,55 @@ def check_motion() -> tuple[bool, str]:
     return code == 0, line
 
 
+def check_wired() -> tuple[bool, str]:
+    """R47: a system that is built but never called is not shipped.
+
+    This defect has now hit FOUR systems in one build. `src/vfx.ts` (999 lines),
+    `src/camera.ts` (365), `src/hud.ts` (561) and `src/tunnel.ts` (1471) were
+    each written, typechecked, committed — and imported by nothing, so none of
+    them ran. `src/audio.ts` was worse: 21 public hooks defined and 21 unwired,
+    so the entire adaptive score, the pre-beat silence, the creature and tunnel
+    audio and every ceremony cue were dead code sitting in the bundle.
+
+    None of it failed a typecheck, a build or a lint, because unused exports
+    are perfectly legal. The only thing that catches it is asking whether
+    anything CALLS the thing — so that question is asked here, every run.
+    """
+    # Scan ALL of src/ except the defining file. An earlier version listed the
+    # scene files by hand and matched nothing at all, because a hand-kept list
+    # is exactly the kind of thing that goes stale — which is the same class of
+    # defect this check exists to catch.
+    import glob
+    dead = []
+    audio_path = os.path.join(ROOT, 'src/audio.ts')
+    callers = ''
+    for f in glob.glob(os.path.join(ROOT, 'src', '**', '*.ts'), recursive=True):
+        if os.path.abspath(f) == os.path.abspath(audio_path):
+            continue
+        callers += io.open(f, encoding='utf-8').read()
+
+    audio = io.open(audio_path, encoding='utf-8').read()
+    for m in sorted(set(re.findall(r'^  ([a-z][A-Za-z0-9]*)\(', audio, re.M))):
+        # `unhush` is the manual counterpart to `hush`, which schedules its own
+        # restore — it exists only for a window of unknown length, and nothing
+        # in the game currently opens one. Exempted with the reason rather than
+        # left as a standing failure everyone learns to scroll past.
+        if m in ('constructor', 'unhush'):
+            continue
+        if ('audio.' + m) not in callers:
+            dead.append('audio.' + m)
+
+    for mod, cls in (('vfx', 'VFXDirector'), ('camera', 'CameraDirector'),
+                     ('hud', 'AbilityBar'), ('tunnel', 'TunnelSequence'),
+                     ('creatures', 'MothSwarm')):
+        if os.path.exists(os.path.join(ROOT, 'src', mod + '.ts')) and cls not in callers:
+            dead.append(mod + '.ts (' + cls + ') imported by nothing')
+
+    if dead:
+        return False, str(len(dead)) + ' built but never called: ' + ', '.join(dead[:6])
+    return True, 'every built system has a live call site'
+
+
 def check_borders() -> tuple[bool, str]:
     """R46: an opaque frame edge draws as a square the instant light hits it."""
     code, out = sh([sys.executable, 'tools/border_audit.py'])
@@ -264,6 +313,7 @@ CHECKS = [
     ('R21', 'the world moves', check_motion),
     ('R45', 'terrain constrains the lane in both directions', check_lane),
     ('R46', 'no registered asset carries an opaque border', check_borders),
+    ('R47', 'no system is built but never called', check_wired),
     ('MAP', 'every plan section has a rubric line and an owner', check_coverage),
     ('--', 'types compile', check_types),
 ]

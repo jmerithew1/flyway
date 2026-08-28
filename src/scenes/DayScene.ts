@@ -244,6 +244,8 @@ export class DayScene extends Phaser.Scene {
   private vfx!: VFXDirector
   private camDir!: CameraDirector
   private tunnel!: TunnelSequence
+  private thiefCallT = 0
+  private mothsWereOn = false
   private squeezeDrain: (() => void) | null = null
   /** Overflow light banked toward a returned bird. */
   private lightBank = 0
@@ -488,10 +490,14 @@ export class DayScene extends Phaser.Scene {
     this.atmo.createWisps()
     this.drawRoost()
     this.flowGates.clear()
-    for (const f of FEATURES) if (f.flow) this.flowGates.set(f, { state: 'idle', clean: true, entryCount: 0 })
+    for (const f of FEATURES) if (f.flow && !f.decor) this.flowGates.set(f, { state: 'idle', clean: true, entryCount: 0 })
     // real openings (arch mouths, window bays) become clean-pass zones
     for (const f of FEATURES) {
       const art = ART[f.art]
+      // Scenery has no colliders, so an opening zone on one is a clean pass
+      // that cannot be failed — four of them, free, every run. "Never collided
+      // with" has to mean never INTERACTIVE, not merely never solid.
+      if (f.decor) continue
       if (!art.openings.length || f.brittle) continue
       const disp = pieceDisplay(f)
       const tlx = f.x - disp.w / 2
@@ -684,6 +690,9 @@ export class DayScene extends Phaser.Scene {
     // The thief waits on a ruin long before it matters, so it is seen, then
     // recognised, and only then does it cost anything.
     this.thief = new LightThief(this, 13400, 330, 4)
+    // You HEAR it take your light, and the meter falls by exactly what its
+    // chest gains — the loss has to be legible or the theft is just a number.
+    this.thief.onRobBegin = () => this.audio.thiefTheft?.(0.5)
     this.thief.onPanic = () => this.tierFlash?.(2)
     // the dive commits: the light goes before the bird arrives
     this.falcon.onDiveBegin = () => {
@@ -717,10 +726,11 @@ export class DayScene extends Phaser.Scene {
       this.time.delayedCall(240, () => this.cameras.main.zoomTo(1, 320, 'Sine.easeInOut', true))
     }
 
-    this.flock = new Flock(this, 120, 300, 640)
+    this.flock = new Flock(this, START_BIRDS, 300, 640) // start and cap must be the SAME constant, not two that happen to agree
     // The ceiling is the run's start count: you are bringing YOUR flock home,
     // not farming a bigger one along the way.
     this.flock.maxBirds = START_BIRDS
+    this.audio.resetRun?.()
     this.bar = new AbilityBar(this)
     this.vfx = new VFXDirector(this)
     this.camDir = new CameraDirector(this)
@@ -729,22 +739,30 @@ export class DayScene extends Phaser.Scene {
     // scene, so a miss here costs exactly what a miss costs anywhere else.
     this.tunnel.onPromptMiss = (verb, victims, x, y) => {
       for (const b of victims) {
-        this.scatter.spawn(b.x, b.y, b.vx * 0.4, b.vy * 0.4 - 40)
+        if (!this.scatter.spawn(b.x, b.y, b.vx * 0.4, b.vy * 0.4 - 40)) this.stats.lost++
         this.flock.removeBird(b)
       }
       this.lastLossSource = `The ${verb.toUpperCase()} came too late — the walls took them.`
       this.breakScoreStreak()
       this.camDir.impact(0.8, -1, 0)
       this.vfx.featherBurst(x, y, 6)
+      this.audio.tunnelPromptMiss?.()
     }
     this.tunnel.onPromptHit = (_v, climax, x, y) => {
       this.vfx.perfectMove(x, y, 0xffd9a0, climax ? 1 : 0.7)
       this.awardScore('breakthrough', 1, { x, y })
+      this.audio.tunnelPromptHit?.(1)
     }
     this.tunnel.onSplit = () => this.camDir.pushIn(1.06, 500)
+    this.tunnel.onEnter = () => this.audio.tunnelEnter?.()
+    this.tunnel.onPromptShow = () => this.audio.tunnelPrompt?.(0.5)
+    this.tunnel.onPromptImpact = () => this.audio.tunnelPrompt?.(1)
     this.tunnel.onBreakout = (full) => {
       this.camDir.pullBack(900)
-      if (full) this.vfx.shockwave(this.flock.centerX, this.flock.centerY, 520, 0xffe9c4, 1)
+      if (full) {
+        this.vfx.shockwave(this.flock.centerX, this.flock.centerY, 520, 0xffe9c4, 1)
+        this.audio.tunnelBreakthrough?.()
+      }
     }
 
     // Strain squeezes birds out of the formation; they become recoverable, so
@@ -753,7 +771,10 @@ export class DayScene extends Phaser.Scene {
     // stays the single owner of what a loose bird does.
     this.squeezeDrain = () => {
       for (const b of this.flock.squeezedThisFrame) {
-        this.scatter.spawn(b.x, b.y, b.vx * 0.35, b.vy * 0.35 - 30)
+        // scatter.spawn returns whether the bird is recoverable; an
+        // unrecoverable one is a permanent loss the caller must count, and
+        // stats.lost gates the clean-pass award.
+        if (!this.scatter.spawn(b.x, b.y, b.vx * 0.35, b.vy * 0.35 - 30)) this.stats.lost++
         this.lastLossSource = 'The formation could not hold — they were squeezed loose.'
       }
     }
@@ -1129,6 +1150,7 @@ export class DayScene extends Phaser.Scene {
   /** Surge: tap SPACE — whipcrack pulse. Weak and ragged when strained. */
   private doSurge(): void {
     if (this.reckonOn) { this.reckonInput('surge'); return }
+    this.tunnel.verb('surge')
     this.flock.formShape('arrow')
     this.flock.surge()
     this.audio.surgeWhoosh(1 - this.flock.gatherStrain * 0.5)
@@ -1186,6 +1208,7 @@ export class DayScene extends Phaser.Scene {
 
   /** Flare: tap SHIFT — the flock blooms wide and air-brakes. */
   private doFlare(): void {
+    this.tunnel.verb('flare')
     this.flock.formShape('fan')
     this.flock.flare()
     this.audio.formSnap('release')
@@ -1225,6 +1248,7 @@ export class DayScene extends Phaser.Scene {
   /** Echo Call: tap C — the flock cries out; the scattered and the stray
    * turn toward home. Hoarse (weak) while on its diegetic cooldown. */
   private echoCall(): void {
+    this.tunnel.verb('echo')
     this.flock.formShape('ring')
     if (this.finishing || this.failing) return
     const strained = Math.max(this.flock.gatherStrain, this.flock.spreadStrain) > 0.6
@@ -1569,6 +1593,17 @@ export class DayScene extends Phaser.Scene {
     // THE COSTS BECOME VISIBLE. Gather and Spread run strain clocks that are
     // central to the economy and were shown nowhere, and Echo's cooldown was
     // invisible — calling into a dead one felt like a broken button.
+    // THE SCORE FOLLOWS THE RUN. As daylight falls the music THINS toward a
+    // single held note rather than piling on tension layers — emptying out is
+    // far more frightening than adding, and it is the register this game is in.
+    this.audio.setRunState?.(
+      this.night.daylight,
+      Phaser.Math.Clamp(this.flock.count / START_BIRDS, 0, 1),
+      Phaser.Math.Clamp(Math.hypot(this.flock.meanVX, this.flock.meanVY) / 320, 0, 1),
+    )
+    this.audio.setRoostProximity?.(Phaser.Math.Clamp(this.flock.centerX / ROOST_X, 0, 1))
+    this.audio.setMothDrain?.(this.moths.drainPerSec > 0 ? 1 : 0)
+
     this.bar.setStrain('gather', this.flock.gatherStrain)
     this.bar.setStrain('spread', this.flock.spreadStrain)
     this.bar.setCooldown('echo', Phaser.Math.Clamp(this.callCooldown / 6, 0, 1))
@@ -1588,12 +1623,28 @@ export class DayScene extends Phaser.Scene {
     // visible on the meter the player is already watching.
     if (this.moths.drainPerSec > 0) {
       this.night.daylight = Math.max(0, this.night.daylight - this.moths.drainPerSec * dt)
+      if (!this.mothsWereOn) { this.audio.mothCling?.(this.moths.attachedCount); this.mothsWereOn = true }
+    } else if (this.mothsWereOn) {
+      this.audio.mothShed?.(1)
+      this.mothsWereOn = false
     }
     this.thief.update(dt, this.flock, this.scrollX)
+    // It calls while it paces you — interested, not hostile — so you know it is
+    // there long before it takes anything.
+    if (this.thief.state === 'shadowing') {
+      this.thiefCallT -= dt
+      if (this.thiefCallT <= 0) {
+        this.thiefCallT = 1.5
+        this.audio.thiefCall?.(1 - Phaser.Math.Clamp(Math.abs(this.thief.x - this.flock.centerX) / 900, 0, 1))
+      }
+    }
+    // and the tunnel's rush follows its own speed ramp
+    this.audio.setTunnelSpeed?.(Phaser.Math.Clamp((this.tunnel.speedMult - 1) / 0.6, 0, 1))
     if (this.thief.readyToDisgorge) {
       // it gives back MORE than it took, because it was already carrying what
       // it stole from others — that surplus is what makes the detour worth it
       const gift = this.thief.disgorge()
+      this.audio.thiefDisgorge?.(Math.max(1, Math.round(gift)))
       for (let i = 0; i < gift; i++) this.night.feed()
     }
     // The one warning that can cost the run: it preempts the queue, and it
@@ -1615,6 +1666,20 @@ export class DayScene extends Phaser.Scene {
       if (b.y < SKY_TOP) b.vy += (SKY_TOP - b.y) * 10 * dt
       if (b.y > SKY_BOTTOM) b.vy -= (b.y - SKY_BOTTOM) * 10 * dt
     }
+
+    // THE CEILING STILL COSTS NOTHING, and that is a known open defect.
+    // §8b4 requires every loss to announce itself, and this rule is silent: a
+    // flock held against the top is merely pushed back, so a parked pointer can
+    // ride the ceiling while the authored scroll carries it forward for free.
+    // That is why an idle run sometimes reaches the roost.
+    //
+    // A first attempt shed birds at the ceiling and was REVERTED: it also
+    // punished a competent pilot, who legitimately flies high to clear ground
+    // obstacles, taking a passing run from 115 birds home to 0. The rule needs
+    // to distinguish "pinned at the ceiling doing nothing" from "climbing to
+    // clear something", and until it does, shipping the blunt version trades a
+    // flaky gate for a broken game.
+
 
     this.processCollisions(time)
     this.processFlung(time)
@@ -1645,6 +1710,7 @@ export class DayScene extends Phaser.Scene {
         // invisible - the counter just ticks up and the cage means nothing.
         for (let i = 0; i < joined; i++) this.freedStreak(s.def.x, s.def.y)
       }
+      if (wasCaged && !s.group.depleted) this.audio.cageStrain?.(Phaser.Math.Clamp(1 - s.group.remaining / Math.max(1, s.def.count), 0, 1))
       if (wasCaged && s.group.depleted) this.cageFreed(s.def.x, s.def.y)
     }
 
@@ -2120,7 +2186,7 @@ export class DayScene extends Phaser.Scene {
 
     // the chain window: a live clock on the most frequent action in the game
     const lapsed = this.score.tickHarvest(dt)
-    if (lapsed >= 5) this.audio.formSnap('gather')
+    if (lapsed >= 5) this.audio.chainResolve?.(lapsed)
 
     // spread widens the net, and a shrunken flock narrows it
     const spread01 = Math.max(0, -this.flock.form)
@@ -2959,6 +3025,7 @@ export class DayScene extends Phaser.Scene {
   private breakScoreStreak(): void {
     const lostChain = this.score.breakHarvest()
     if (this.score.harvest.lastLossMatters) {
+      this.audio.chainBreak?.(lostChain)
       this.chainText.setText(`LIGHT CHAIN LOST  ${lostChain}`).setColor('#e0a898').setAlpha(1)
       this.tweens.killTweensOf(this.chainText)
       this.tweens.add({ targets: this.chainText, alpha: 0, duration: 900, delay: 900 })
@@ -3669,8 +3736,9 @@ export class DayScene extends Phaser.Scene {
    */
   private cageFreed(x: number, y: number): void {
     this.hitStop = Math.max(this.hitStop, 0.07)
-    this.camKick = 2.4
-    this.audio.celebrationSwell(0.7)
+    this.camDir.impact(0.45, -1, 0)
+    // the mount failing and the birds rising, rather than a generic swell
+    this.audio.cageBreak?.(8)
 
     const flash = this.add
       .image(x, y, 'softdot')
@@ -3739,6 +3807,7 @@ export class DayScene extends Phaser.Scene {
    * which is the whole run's discipline being paid out); landing it is skill.
    */
   private beginReckoning(): void {
+    this.audio.hush?.(0.35, 0.3, 'note')
     this.reckonOn = true
     this.reckonRealT = 0
     this.reckonStep = 0
@@ -3847,7 +3916,14 @@ export class DayScene extends Phaser.Scene {
       recovered: this.stats.recovered,
     }
     this.stats.resets++
+    if (this.tunnel.active) this.audio.tunnelAbort?.()
     this.audio.failureFade()
+    this.audio.lossToll?.(
+      /dark/i.test(this.lastLossSource) ? 'dark'
+        : /falcon|hawk/i.test(this.lastLossSource) ? 'falcon'
+          : /stone|curtain|wall/i.test(this.lastLossSource) ? 'stone'
+            : 'scatter',
+    )
 
     // ---- THE FLOCK IS LOST -------------------------------------------------
     // This was four particles per bird - a tasteful puff. It is the single most
@@ -4025,6 +4101,7 @@ export class DayScene extends Phaser.Scene {
       this.night.reset(this.checkpoint.x)
       this.tweens.add({ targets: [this.fadeRect, this.duskOverlay], alpha: 0, duration: 1100, delay: 150 })
       this.audio.failureRecover()
+      this.audio.flockReturns?.(Math.max(this.checkpoint.count, 60))
       this.failing = false
     }
     if (repeat) {
@@ -4144,6 +4221,14 @@ export class DayScene extends Phaser.Scene {
       if (s.def.x > cp.x) s.group.reset(s.def.count)
     }
     this.falcon.reset(cp.x)
+    // The three systems added today were not added to this list, so a retry
+    // flew an EMPTY corridor: hazards already spent, no split, no prompts, and
+    // a breakthrough meter still carrying the failed run's leftovers. The
+    // moths and the thief were likewise one-shot per session while everything
+    // around them rewound.
+    this.tunnel.reset(cp.x)
+    this.moths.reset()
+    this.thief.reset()
     this.predatorDimTarget = 0
     // un-break brittle features ahead of the checkpoint and restore their art
     for (const [f, sprite] of this.featureSprites) {
@@ -4637,6 +4722,7 @@ export class DayScene extends Phaser.Scene {
    * stillness, then one bird, then a cascade - not in effects.
    */
   private beginDeparture(): void {
+    this.audio.departureCeremony?.()
     const key = this.textures.exists('roost_unlit')
       ? 'roost_unlit'
       : this.textures.exists('roost_tree_hero')
@@ -4712,6 +4798,7 @@ export class DayScene extends Phaser.Scene {
     if (day < 0.25 || behind < 380) this.arrivalGrade = 'hunted'
     else if (day >= 0.55 && behind > 900 && held >= 0.7) this.arrivalGrade = 'golden'
     else this.arrivalGrade = 'harried'
+    this.audio.arrivalCeremony?.(this.arrivalGrade)
   }
 
   private runArrivalCeremony(dt: number): void {
@@ -4775,13 +4862,15 @@ export class DayScene extends Phaser.Scene {
         if (this.flock.count < 220) {
           for (let i = 0; i < 5; i++) {
             const side = Math.random() < 0.5 ? -1 : 1
-            this.homecomingJoiners++
-            this.flock.spawnBird(
+            const joiner = this.flock.spawnBird(
               cx + rand(300, 700) * side * 0.6 + 200,
               this.flock.centerY + rand(-320, 320),
               180,
               rand(-40, 40),
             )
+            // count only birds that ACTUALLY joined: the flock is capped, so a
+            // refused spawn used to be subtracted from the arrival tally anyway
+            if (joiner) this.homecomingJoiners++
           }
         }
         // ...plus echo birds for visual mass into the hundreds

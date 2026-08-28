@@ -138,12 +138,16 @@ export class ScatterSystem {
         if (flock) {
           const d = Math.hypot(flock.centerX - b.sprite.x, flock.centerY - b.sprite.y)
           if (d < 130 + spread01 * 280) {
-            flock.spawnBird(b.sprite.x, b.sprite.y)
-            b.sprite.destroy()
-            b.halo?.destroy()
-            this.birds.splice(i, 1)
-            recovered++
-            this.recoveredThisFrame++
+            // Only count a recovery that actually happened — the flock ceiling
+            // can refuse the spawn, and destroying the bird anyway reported a
+            // rescue that did not occur.
+            if (flock.spawnBird(b.sprite.x, b.sprite.y)) {
+              b.sprite.destroy()
+              b.halo?.destroy()
+              this.birds.splice(i, 1)
+              recovered++
+              this.recoveredThisFrame++
+            }
           }
         }
       } else {

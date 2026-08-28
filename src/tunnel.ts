@@ -1285,6 +1285,16 @@ export class TunnelSequence {
     }
   }
 
+  /** Guarded exactly as `setText` already is: Phaser repaints the whole text
+   * canvas on a colour change, so setting the same colour every frame is a
+   * per-frame allocation and a texture re-upload for no visual difference. */
+  private shownColor = ''
+  private setVerbColor(c: string): void {
+    if (this.shownColor === c) return
+    this.shownColor = c
+    this.verbText.setColor(c)
+  }
+
   private renderUI(): void {
     let live: Hazard | null = null
     for (let k = 0; k < this.hazardN; k++) {
@@ -1346,7 +1356,7 @@ export class TunnelSequence {
       const rate = lerp(2.4, 11, k * k)
       alpha = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(this.clock * rate * TAU))
       scale = 1 + 0.03 * k
-      this.verbText.setColor(INK.bright)
+      this.setVerbColor(INK.bright)
       this.windowBar.setDisplaySize(this.plateW, 6)
       this.windowBar.setTint(0x6a5480)
     } else if (live.state === 'impact') {
@@ -1354,7 +1364,7 @@ export class TunnelSequence {
       // and a strobing plate at the moment of decision is noise.
       alpha = 1
       scale = 1.06
-      this.verbText.setColor('#fff6e6')
+      this.setVerbColor('#fff6e6')
       const left = clamp(1 - live.t / live.window, 0, 1)
       this.windowBar.setDisplaySize(this.plateW * left, 8)
       this.windowBar.setTint(left > 0.35 ? 0xffd9a0 : 0xff9d86)
@@ -1363,7 +1373,7 @@ export class TunnelSequence {
       const k = live.t / DECAY_T
       alpha = 1 - k
       scale = live.hit ? 1.06 + k * 0.3 : 1.06 - k * 0.1
-      this.verbText.setColor(live.hit ? '#fff2d8' : '#ffb2a0')
+      this.setVerbColor(live.hit ? '#fff2d8' : '#ffb2a0')
       this.windowBar.setDisplaySize(this.plateW * (live.hit ? 1 : 0), 8)
       this.windowBar.setTint(live.hit ? 0xfff2d8 : 0xff9d86)
     }

@@ -372,6 +372,14 @@ export class Flock {
   /** Fixed-timestep wrapper: stays correct through frame hitches / slow machines. */
   update(dtRaw: number, input: FlockInput, obstacles: Obstacle[]): void {
     this.collisions.length = 0
+    // ONCE PER FRAME, not once per step. This lived inside step(), which runs
+    // up to MAX_STEPS times per frame — so a bird squeezed on step N was wiped
+    // from the buffer by step N+1 before the scene could ever drain it. The
+    // bird was already removed, so it simply vanished: not recoverable, no
+    // loss recorded, no cause named. At 30fps (any mid-tier phone) that was
+    // roughly half of all strain losses, and the comment promising "every bird
+    // it takes is recoverable" was false for them.
+    this.squeezedThisFrame.length = 0
     this.breakthroughHits.length = 0
     this.brushHits.length = 0
     this.flungBirds.length = 0
@@ -791,7 +799,6 @@ export class Flock {
     // and every bird it takes is recoverable, so a player who is paying
     // attention gets it back with a call. Holding is still the right answer to
     // a threat; it is simply no longer free to hold forever.
-    this.squeezedThisFrame.length = 0
     if (activeStrain > 0.82 && this.birds.length > 12) {
       this.squeezeT -= dt
       if (this.squeezeT <= 0) {

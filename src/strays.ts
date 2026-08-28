@@ -146,10 +146,15 @@ export class StrayGroup {
         b.sprite.rotation = Math.atan2(ddy, ddx)
         b.sprite.setTexture(birdFrameKey(time, b.phase, 10))
         if (d < 60) {
-          flock.spawnBird(b.sprite.x, b.sprite.y, (ddx / d) * 200, (ddy / d) * 200)
-          b.sprite.destroy()
-          this.birds.splice(i, 1)
-          joined++
+          // The flock is capped, and spawnBird refuses at the ceiling. Keep the
+          // freed bird flying alongside rather than destroying it: it rejoins
+          // the moment attrition makes room, and the cage is not silently
+          // emptied for a count that never went up.
+          if (flock.spawnBird(b.sprite.x, b.sprite.y, (ddx / d) * 200, (ddy / d) * 200)) {
+            b.sprite.destroy()
+            this.birds.splice(i, 1)
+            joined++
+          }
         }
       } else {
         // idle loiter: lazy orbit + bob; when the flock draws near they NOTICE —
