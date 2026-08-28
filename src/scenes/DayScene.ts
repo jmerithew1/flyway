@@ -656,6 +656,13 @@ export class DayScene extends Phaser.Scene {
           .image(mx, my2, 'mote')
           .setDisplaySize(size, size)
           .setAlpha(0.9 + Math.random() * 0.1)
+          // ADD, NOT NORMAL. A mote is LIGHT, and light adds to what is behind
+          // it — drawn NORMAL it could never be brighter than its own texture
+          // over a mid-tone sky, which is why the whole flight measured with a
+          // ceiling of 68% value and no hot pixel anywhere in the frame. The
+          // art audit's "no white" was not a painting failure; the game's own
+          // light sources were compositing as paint.
+          .setBlendMode(Phaser.BlendModes.ADD)
           .setDepth(2.5)
         this.motes.push({
           x: mx, y: my2, img, taken: false, eaten: false, base: size,

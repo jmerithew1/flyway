@@ -827,10 +827,24 @@ export class Flock {
     // and every bird it takes is recoverable, so a player who is paying
     // attention gets it back with a call. Holding is still the right answer to
     // a threat; it is simply no longer free to hold forever.
-    if (activeStrain > 0.82 && this.birds.length > 12) {
+    // THE RATE, AND WHY IT IS SO MUCH SLOWER THAN THE FIRST VERSION.
+    //
+    // First cut: threshold 0.82, a bird every ~0.75s at full strain — 79 birds
+    // over a minute of holding. Measured against a pilot that simply held the
+    // verb, it took 59 birds, while one that pulsed lost 7. That punishes the
+    // INTUITIVE response (hold tight when danger appears) far harder than the
+    // expert one, which is exactly backwards: a cost meant to stop you holding
+    // forever became a bleed that ended runs early and left most of the flight
+    // unseen.
+    //
+    // The cost has to be felt and survivable. At ~2.9s a bird, a full minute of
+    // holding costs around 20 — enough that you feel the formation failing at
+    // its edges and reach for the release, not enough to end the run for using
+    // the verb the game taught you.
+    if (activeStrain > 0.86 && this.birds.length > 12) {
       this.squeezeT -= dt
       if (this.squeezeT <= 0) {
-        this.squeezeT = 1.15 - (activeStrain - 0.82) * 2.2
+        this.squeezeT = 3.2 - (activeStrain - 0.86) * 2.2
         let worst: Bird | null = null
         for (let i = 0; i < this.birds.length; i++) {
           const b = this.birds[i]

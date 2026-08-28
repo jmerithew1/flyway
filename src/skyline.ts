@@ -37,8 +37,17 @@ export const SKY_KEYS = [
  * floor the frame has been missing. */
 const LAYERS = [
   { key: 'strip_far', factor: 0.055, y: 690, tint: 0xb9aed0, alpha: 0.55, scale: 1.35 },
-  { key: 'strip_mid', factor: 0.11, y: 748, tint: 0x8578a8, alpha: 0.72, scale: 1.6 },
-  { key: 'strip_near', factor: 0.2, y: 812, tint: 0x2a2340, alpha: 0.95, scale: 2.0 },
+  { key: 'strip_mid', factor: 0.11, y: 748, tint: 0x453c60, alpha: 0.85, scale: 1.6 },
+  // THE BLACK FLOOR, AND WHY IT HAS TO BE THIS DARK.
+  //
+  // Measured across 29 gameplay captures: not one pixel below 10% value
+  // anywhere in the flight. Most of that was full-screen washes, now cut — but
+  // the near strip was tinted 0x2a2340, which is 16% value, so even with every
+  // overlay gone the frame still had no true black in it. The whole point of
+  // this layer is to BE the black: the audit named "no black and no white" as
+  // the single biggest reason the game read soft rather than dramatic, and the
+  // title screen (47.6% of its pixels below 10%) is the proof of what it buys.
+  { key: 'strip_near', factor: 0.2, y: 812, tint: 0x0b0916, alpha: 1, scale: 2.0 },
 ] as const
 
 /** How fast the sky itself creeps. Small on purpose: enough that the horizon

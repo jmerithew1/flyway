@@ -60,21 +60,60 @@ The game is functional end to end on both platforms. Every screen is reachable, 
   ```
 
   using the **child's** `scrollFactorX`, not the parent container's. With the child left at the default `1`, `px` collapses to the camera *world* point, while the plate is *drawn* at a fixed screen position by its parent. The hit box therefore sits exactly `camera.scrollX` pixels to the left of the button.
-* **Consequence:** `camera.scrollX` is ~0 for the first moment of a run and grows for the rest of it. So the pause menu works for about a second after the day begins and is dead for the entire remainder — the state a player is actually in when they reach for pause. The only escape is the PAUSE pad again (which works because `TouchControls` does its own manual `contains()` hit test rather than going through Phaser). **RESTART THE DAY and MUTE are unreachable on touch for the whole run.**
+* **Measured against `camera.scrollX`, three trials in one run:**
+
+  | when | `camera.scrollX` | hit test *at* the plate | hit test at `plate.x − camera.scrollX` | FLY ON tap resumed? |
+  |---|---|---|---|---|
+  | level start | 121 | **found the Rectangle** | — | **yes** |
+  | 12 s in | 863 | `[]` | **found it**, at css x = **71** (on screen) | no |
+  | 45 s in | 3758 | `[]` | at css x = **−1104** (off screen) | no |
+
+  The displacement tracks `camera.scrollX` exactly, which is the mechanism above, measured.
+* **Consequence:** `camera.scrollX` is ~0 only for the first moment of a run and grows for the rest of it. The pause menu therefore works for about a second after the day begins and is dead for the entire remainder — which is the state a player is actually in when they reach for pause. The only escape is the PAUSE pad again, which keeps working because `TouchControls` does its own manual `contains()` hit test instead of going through Phaser. **RESTART THE DAY and MUTE are unreachable on touch for the whole run.** This was not theoretical during testing: the automated mobile session paused mid-flight and could not resume — it sat at `scrollX 3061` for 320 seconds behind its own veil.
+* **Second-order:** while the displacement is still smaller than the screen width (roughly the first 15 seconds), each plate's hit box is *live at the wrong place* — at 12 s in, MUTE's was at css x = 71, inside the left-hand joystick zone. A player reaching for the stick while paused can trip MUTE or RESTART THE DAY without ever touching a button.
 * **What should have happened:** Regression 5 — "There should now be FLY ON / RESTART THE DAY / MUTE. Tap each." They exist and they are drawn; they cannot be tapped.
 * **Fix:** one call — `.setScrollFactor(0)` on each plate, so its own scroll factor matches the container it is rendered by.
 * **Captures:** `qa/shots/fn/m2_pause_menu.png` (all three drawn correctly), `qa/shots/fn/m4_after_mute_tap.png`, `qa/shots/fn/m5_pause_at_start.png` vs `qa/shots/fn/m5_pause_45s.png`. Data: `qa/shots/fn/m4_result.json` → `diag`, `qa/shots/fn/m5_result.json` → `trials`.
 * **Note:** the desktop pause veil is unaffected — it has no interactive children, only a text hint, which is why every desktop pause check passed.
 
-### F3 — MAJOR · The controls reference still teaches DIVE, a verb that no longer exists
+### F3 — MAJOR · The controls reference teaches two controls the build does not have — and on touch that is a third of the panel
 
-* **Viewport:** 1536×960 desktop (and the same row on touch).
-* **Steps:** Title screen → click **CONTROLS**.
-* **What happened:** The panel lists six rows, and row five is `MOUSE or V` → *"hold to trade height for speed — earned only while still descending; release to slingshot."* On a touch device the same row renders with the key name **`DIVE`**, naming a pad that is not drawn.
-* **What should have happened:** No DIVE row at all — regression 9 requires it gone from the ability bar, the touch pads *and* the controls reference.
-* **Verified working:** the pad itself is genuinely gone (`TouchControls.pads` has 4 entries: GATHER, SPREAD, CALL, PAUSE), holding the old DIVE screen position does nothing (`flock.dive` unchanged over a 1.2 s hold), and neither `V` nor a held mouse button dives (`flock.dive` false → false).
-* **Consequence:** The one screen whose job is teaching the controls teaches a control that does not exist, and on touch it points at a button that is not there.
-* **Captures:** `qa/shots/fn/d1_controls_panel.png`, cropped evidence `qa/shots/fn/d1_controls_crop.png`. Source: `src/scenes/TitleScene.ts:1079-1082`.
+* **Viewport:** 1536×960 desktop and 844×390 touch.
+* **Steps:** Title screen → CONTROLS.
+* **Desktop:** six rows, and row five is `MOUSE or V` → *"hold to trade height for speed — earned only while still descending; release to slingshot."* DIVE is cut; neither input does anything.
+* **Touch — worse.** The panel reads, verbatim:
+
+  ```
+  STEER       left thumb anywhere — the stick appears where you touch
+  GATHER      hold to tighten · tap to SURGE: …
+  SPREAD      hold to widen · tap to FLARE: …
+  CALL        ECHO — a cry rings outward …
+  DIVE        hold to trade height for speed — earned only while still descending; release to slingshot
+  BOTH PADS   BRACE — the world slows, and strain accrues twice as fast
+  ```
+
+  **Two of those six rows describe controls that do not exist on a phone.** There is no DIVE pad — `TouchControls.pads` holds exactly four (GATHER, SPREAD, CALL, PAUSE), verified at runtime. And `TouchControls.brace` is hard-coded `return false`, with its own comment: *"Brace is cut… the two-finger chord no longer does anything either — a chord was never viable on touch."* Measured: `brace` getter `false`, `bracePad` `false`, and holding both pads for 400 ms (inside BRACE's own 0.11–0.81 s live window, where the keyboard chord does engage on desktop) leaves `braceOn` false.
+* **What should have happened:** Regression 9 requires DIVE gone from the ability bar, the touch pads *and* the controls reference. Two of three are done. BRACE was cut for touch separately and the panel was never told.
+* **Verified working:** the ability bar itself is clean — the finish capture shows GATHER · SPREAD · SURGE · FLARE · ECHO and no DIVE. Holding the old DIVE screen position does nothing (`flock.dive` unchanged over 1.2 s), and neither `V` nor a held mouse button dives.
+* **Consequence:** On the one screen whose entire job is teaching the controls, a phone player is taught two verbs they cannot perform — one of which, BRACE, the level's own prompt system still cues (`PROMPT_TEXT.brace.touch` = *"no time to read it — hold BRACE to slow the world"*, fired at `scrollX` 20500–21600, with a `done()` condition of `braceOn` that can never become true on touch, so it sits for its full 7-second timeout). I did not reproduce that prompt in-flight; it is identified from source and from the fact that its desktop twin fired during the full playthrough.
+* **Captures:** `qa/shots/fn/m6_controls_touch.png` (touch), `qa/shots/fn/d1_controls_crop.png` (desktop), `qa/shots/fn/d3_finishing.png` (ability bar, clean). Source: `src/scenes/TitleScene.ts:1079-1084`, `src/touch.ts` `get brace()`, `src/level.ts:645`.
+
+### ~~F3b — The Map's FLY AGAIN button does not respond to a click~~ — RETRACTED, this one was mine
+
+Recorded rather than deleted, because it is the kind of false positive this lane exists to avoid filing.
+
+Three separate runs (`d3`, `d8`, `d9`) reported FLY AGAIN dead: no `pointerover`, no `pointerdown`, and Day never started — twice killing the run outright at that step, while HOME on the same screen and `R`/`ESC` all worked. That is a convincing shape for a real bug.
+
+It was not one. Re-run with **no virtual clock at all** — real rAF, real-time waits, `alpha` / `willRender` / `enabled` / `hitArea` recorded at the moment of the press — the button behaves perfectly on **both** platforms:
+
+| | desktop 1536×960 | touch 844×390 |
+|---|---|---|
+| alpha / `willRender` / `enabled` | 0.92 / true / true | 0.92 / true / true |
+| `pointerover` at the hit-box centre | fired | (no hover on touch) |
+| `pointerdown` | fired | fired |
+| Day active after | 1 s | 1 s |
+
+The Map's chrome fades in on `delay: 3000, duration: 800`, and driving that reveal through the pumped clock did not put the buttons in the state the real loop does. **Lesson for the next pass: the virtual clock is sound for the flight simulation, but do not use it to drive a scene whose controls are gated behind Phaser tween delays — press those with the real rAF running.** Every other check in this report that involves a delayed reveal was re-verified this way. Data: `qa/shots/fn/d10_result.json`, `qa/shots/fn/m8_result.json`.
 
 ### F4 — MAJOR · `V` is still bound as a dead key, and the touch layout table still advertises two pads that do not exist
 
@@ -229,6 +268,19 @@ Mechanics worth keeping for the next pass:
 
 ---
 
-## 7. What could NOT be tested, and why
+## 7. Checked and clear — things that look like defects and are not
+
+Recorded so the next pass does not re-file them.
+
+* **Results' buttons are `input.enabled` at `alpha 0`** for the ~1.8 s before the ceremony reveals them, which reads like the "pressable while invisible" hazard TitleScene documents. It is not one: Phaser's `inputCandidate()` calls `willRender()`, which is false at zero alpha, so the object is never hit-tested. Verified empirically — a click at REPLAY FLIGHT's exact hit-box centre 300 ms into the scene did nothing (`scenes` unchanged).
+* **The flock counter can read above 120** (a mobile capture shows `125` against a cap of 120). By design: `updateHudCount()` computes `flock.count + scatter.recoverableCount`, because "scattered-but-recoverable birds still count — they aren't lost yet". The cap itself is intact; `Flock.spawnBird` refuses past `maxBirds`.
+* **`touch.brace` returns a hard-coded `false`** — deliberate, and commented as such ("a chord was never viable on touch"). It is only a defect because the game still *teaches* it; see F4.
+* **The three Title chrome pills overlap by 2 px** (SHARE RESULT's right edge against SHARE's left) on desktop with a recorded best. Both sit at depth 72, so a 2 px sliver resolves to one of them deterministically. Noted, not filed — it is nothing like the 104 px overlap that Results was fixed for.
+* **`?day&sandbox`, `?sandbox&map` and `?nonsense`** all route correctly (Day, FlywayMap, Title) and none reaches the Sandbox scene.
+* **Two active scenes at once** appears in some raw logs (`scenes=['Day','FlywayMap']`). That is my harness calling `game.scene.start()` on the global SceneManager, which does not stop the calling scene. Driving the same transitions through a scene's own `this.scene.start` — as the game does — leaves exactly one scene active.
+
+---
+
+## 8. What could NOT be tested, and why
 
 *(filled in below)*

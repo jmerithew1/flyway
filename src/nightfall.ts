@@ -57,7 +57,17 @@ const FOG_ART = {
 // randomness — recoverability coin-flips, falcon timing — not the tuning, and
 // a pilot that dies does so at 9-13% daylight after missing an arc, which is
 // the intended failure rather than an unfair one.
-const DRAIN_PER_SEC = 0.029
+// Pulled back from 0.029. When the drain was raised it was doing two jobs: it
+// had to make an IDLE run die, and it had to give a real run pressure. The
+// ceiling rule now handles the first — a flock nobody is steering pins against
+// the sky and sheds — so the drain is free to be tuned purely for the second.
+//
+// That matters beyond balance: at 0.029 a run that lost its footing could not
+// recover, ended early, and the owner reported the game feeling "way shorter"
+// and compressed, with whole features never seen. A flight that ends at 40% of
+// its length is not a difficulty setting, it is content the player never
+// reaches.
+const DRAIN_PER_SEC = 0.026
 /** Daylight returned by one mote. Must comfortably exceed the detour cost —
  * this ratio is what stops collecting and being chased from fighting. */
 const MOTE_GAIN = 0.095
