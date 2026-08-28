@@ -114,12 +114,31 @@ function makeSoftDot(scene: Phaser.Scene): void {
   const canvas = scene.textures.createCanvas('softdot', size, size)
   if (!canvas) return
   const ctx = canvas.context
-  const grd = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+  // THE FALLOFF MUST DIE INSIDE THE QUAD, NOT AT ITS EDGE. This filled the
+  // whole square with a gradient whose outer stop sat exactly on the inscribed
+  // radius, so the corners carried a residual alpha of a couple of counts.
+  // Invisible alone — but `softdot` is drawn with ADD blending and scaled up
+  // more than 3x on the touch pads, and ADD accumulates: QA measured a 6%
+  // luminance step with a sub-5px transition, held flat for 140px, forming a
+  // 172px square centred on the CALL pad. That is the owner's "black squares
+  // around elements", surviving in the one texture the border audit could not
+  // see because it is generated rather than painted.
+  //
+  // Two changes: the gradient ends at 92% of the radius so it is fully zero
+  // before the edge, and the fill is clipped to a circle so the corners can
+  // never carry anything at all.
+  const r = size / 2
+  const grd = ctx.createRadialGradient(r, r, 0, r, r, r * 0.92)
   grd.addColorStop(0, 'rgba(255,255,255,1)')
   grd.addColorStop(0.4, 'rgba(255,255,255,0.5)')
   grd.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(r, r, r, 0, Math.PI * 2)
+  ctx.clip()
   ctx.fillStyle = grd
   ctx.fillRect(0, 0, size, size)
+  ctx.restore()
   canvas.refresh()
 }
 

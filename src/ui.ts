@@ -27,7 +27,7 @@ type TextStyle = Phaser.Types.GameObjects.Text.TextStyle
  * Every size in the game flows through display()/voice(), so one ramp here
  * fixes the whole UI at once.
  */
-const UI_SCALE = ((): number => {
+export const UI_SCALE = ((): number => {
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
   const touchy = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
   return coarse || touchy ? 1.65 : 1

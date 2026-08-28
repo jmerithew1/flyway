@@ -468,7 +468,23 @@ export class GameAudio {
   /** Replace procedural layers with any stems found at public/audio/<layer>.mp3. */
   private tryLoadStems(): void {
     if (!this.ctx) return
+    // SIX 404s ON EVERY SINGLE LOAD. The stems are an optional upgrade path and
+    // none ship, so this probed for six files that do not exist, every time,
+    // logging six console errors and six failed requests before falling back
+    // to the procedural score it was always going to use. A manifest costs one
+    // request and only when it exists; absent, the whole probe is skipped and
+    // the load is clean.
+    fetch('audio/stems.json')
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((list: string[]) => this.loadStemList(list))
+      .catch(() => {
+        /* no stems shipped: the procedural score is the intended default */
+      })
+  }
+
+  private loadStemList(list: string[]): void {
     for (const layer of STEM_LAYERS) {
+      if (!list.includes(layer)) continue
       fetch(`audio/${layer}.mp3`)
         .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
         .then((buf) => this.ctx!.decodeAudioData(buf))

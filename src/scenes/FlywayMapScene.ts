@@ -317,6 +317,12 @@ export class FlywayMapScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
       btn.input!.hitArea = new Phaser.Geom.Rectangle(-60, -30, btn.width + 120, btn.height + 60)
       btn.input!.hitAreaCallback = Phaser.Geom.Rectangle.Contains
+      // customHitArea MUST be set, or Phaser silently overwrites the rectangle
+      // on the next texture re-render and the button becomes dead to the
+      // pointer. TitleScene documents and fixes exactly this; the fix was never
+      // carried to the other two scenes, so all four buttons on Results and Map
+      // were unreachable by mouse or tap — only their keyboard shortcuts worked.
+      btn.input!.customHitArea = true
       btn.on('pointerover', () => btn.setColor('#ffe6bf'))
       btn.on('pointerout', () => btn.setColor(base))
       btn.on('pointerdown', run)

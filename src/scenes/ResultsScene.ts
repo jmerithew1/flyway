@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { isTouch } from '../touch'
 import { W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { ART } from '../artManifest'
 import { DAY_NAME, FLOCK_STAR_RETURNED, FLOW_STAR_FRACTION } from '../config'
@@ -164,6 +165,9 @@ export class ResultsScene extends Phaser.Scene {
     this.at(featherBase + 1600, () => this.tweens.add({ targets: best, alpha: 1, duration: 480 }))
 
     // ---- chrome
+    // Half the distance between the two buttons' centres: the hard ceiling on
+    // how far either hit box may reach sideways before they overlap.
+    const SPLIT = isTouch ? 470 : 350
     const mk = (x: number, label: string, hint: string, run: () => void, warm = false) => {
       const base = warm ? INK.warm : INK.bright
       const btn = this.add
@@ -171,17 +175,30 @@ export class ResultsScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setAlpha(0)
         .setInteractive({ useHandCursor: true })
-      // a text-sized hit box is a miss on a phone; pad it to a real target
-      btn.input!.hitArea = new Phaser.Geom.Rectangle(-60, -30, btn.width + 120, btn.height + 60)
+      // A text-sized hit box is a miss on a phone, so it is padded — but the
+      // padding was a flat 60px each side against labels the touch type ramp
+      // widens by 65%, and the two buttons sit only 350px apart. Measured, they
+      // shared 104 logical px of hit area behind a 16px visual gap: tapping
+      // dead centre between them fired CONTINUE JOURNEY. A control whose hit
+      // box is not where it looks is the defect the owner has already reported
+      // once. Pad generously sideways ONLY as far as the midpoint allows.
+      const padX = Math.max(18, Math.min(60, (SPLIT - btn.width) / 2 - 10))
+      btn.input!.hitArea = new Phaser.Geom.Rectangle(-padX, -30, btn.width + padX * 2, btn.height + 60)
       btn.input!.hitAreaCallback = Phaser.Geom.Rectangle.Contains
+      // customHitArea MUST be set, or Phaser silently overwrites the rectangle
+      // on the next texture re-render and the button becomes dead to the
+      // pointer. TitleScene documents and fixes exactly this; the fix was never
+      // carried to the other two scenes, so all four buttons on Results and Map
+      // were unreachable by mouse or tap — only their keyboard shortcuts worked.
+      btn.input!.customHitArea = true
       btn.on('pointerover', () => btn.setColor('#ffe6bf'))
       btn.on('pointerout', () => btn.setColor(base))
       btn.on('pointerdown', run)
       const sub = this.add.text(x, botY - 34, hint, display(11, INK.dim, 2, 300)).setOrigin(0.5).setAlpha(0)
       this.at(featherBase + 1800, () => this.tweens.add({ targets: [btn, sub], alpha: 0.92, duration: 480 }))
     }
-    mk(cx - 175, 'REPLAY FLIGHT', 'press R', () => this.scene.start('Day'), true)
-    mk(cx + 175, 'CONTINUE JOURNEY', 'press J', () => this.scene.start('FlywayMap'))
+    mk(cx - SPLIT / 2, 'REPLAY FLIGHT', isTouch ? 'tap' : 'press R', () => this.scene.start('Day'), true)
+    mk(cx + SPLIT / 2, 'CONTINUE JOURNEY', isTouch ? 'tap' : 'press J', () => this.scene.start('FlywayMap'))
     this.input.keyboard?.once('keydown-R', () => this.scene.start('Day'))
     this.input.keyboard?.once('keydown-J', () => this.scene.start('FlywayMap'))
 

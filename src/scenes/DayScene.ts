@@ -60,7 +60,7 @@ import {
   TAILWIND_ALIGN_MIN,
   TAILWIND_SPREAD_MIN,
 } from '../config'
-import { display, voice, INK, safeArea } from '../ui'
+import { display, voice, INK, safeArea, UI_SCALE } from '../ui'
 import { Atmosphere, hazeScenery } from '../atmosphere'
 import { TouchControls, decorScale, isTouch } from '../touch'
 
@@ -338,6 +338,26 @@ export class DayScene extends Phaser.Scene {
 
   create(): void {
     if (!this.textures.exists('fog-tile')) paintFogTile(this)
+
+    // CLASS PROPERTY INITIALISERS DO NOT RE-RUN ON scene.restart(). Phaser
+    // reuses the scene instance, so any state declared as `private x = false`
+    // survives a restart with whatever value it last held.
+    //
+    // `paused` leaking was a soft-lock: restarting from the pause screen (the
+    // card literally offers "R restart the day") began a new run that was
+    // already paused, with no veil to explain it and no way out — the world
+    // simply never moved again. `debugVisible` leaking inverted the D key for
+    // the rest of the session. Anything reset here must be reset EXPLICITLY,
+    // not by its declaration.
+    this.paused = false
+    this.debugVisible = false
+    this.failing = false
+    this.finishing = false
+    this.ceilingT = 0
+    this.lightBank = 0
+    this.mothsWereOn = false
+    this.thiefCallT = 0
+    this.homecomingJoiners = 0
 
     this.scrollX = 0
     this.shownPrompts.clear()
@@ -1250,6 +1270,9 @@ export class DayScene extends Phaser.Scene {
   /** Echo Call: tap C — the flock cries out; the scattered and the stray
    * turn toward home. Hoarse (weak) while on its diegetic cooldown. */
   private echoCall(): void {
+    // A paused world must not accept a verb. This spent the 6s cooldown and
+    // answered a tunnel prompt while nothing was moving.
+    if (this.paused || this.failing) return
     this.tunnel.verb('echo')
     this.flock.formShape('ring')
     if (this.finishing || this.failing) return
@@ -1690,7 +1713,7 @@ export class DayScene extends Phaser.Scene {
     // window exactly as over-gathering is, so the player reads the same
     // language and can call them back.
     let atCeiling = 0
-    for (const b of this.flock.birds) if (b.y < SKY_TOP + 22) atCeiling++
+    for (const b of this.flock.birds) if (b.y < SKY_TOP + 34) atCeiling++
     if (atCeiling > this.flock.count * 0.72 && this.flock.count > 12) {
       this.ceilingT += dt
       if (this.ceilingT > CEILING_GRACE) {
@@ -2000,7 +2023,7 @@ export class DayScene extends Phaser.Scene {
       this.hintedFeatures.add(f)
       this.brittleHints++
       const label = this.add
-        .text(sprite.x, sprite.y - sprite.displayHeight / 2 - 26, 'loose — tap SPACE', display(15, '#ffe2b8', 2))
+        .text(sprite.x, sprite.y - sprite.displayHeight / 2 - 26, isTouch ? 'loose — hold GATHER' : 'loose — tap SPACE', display(15, '#ffe2b8', 2))
         .setOrigin(0.5)
         .setDepth(7)
         .setAlpha(0)
@@ -2928,17 +2951,31 @@ export class DayScene extends Phaser.Scene {
     const padGuard = isTouch ? 320 : 90
     const top = safe.y + 70
     const bottom = safe.y + safe.h - padGuard
-    const cx = Phaser.Math.Clamp(x, safe.x + 210, safe.x + safe.w - 210)
+    // EVERY SPACING CONSTANT HERE SCALES WITH THE TYPE. Touch renders text at
+    // 1.65x (ui.ts UI_SCALE) while these margins and lane gaps stayed at their
+    // desktop values, so on a phone the copy grew but the room between it did
+    // not: measured overlaps of 313x36px, a toast clipped 51px off the left
+    // edge, and the daylight readout printed over its own label in every
+    // frame. Scaling them is the whole fix.
+    const margin = Math.round(210 * UI_SCALE)
+    const laneGap = Math.round(42 * UI_SCALE)
+    const laneStep = Math.round(44 * UI_SCALE)
+    const cx = Phaser.Math.Clamp(x, safe.x + margin, safe.x + safe.w - margin)
     let cy = Phaser.Math.Clamp(y, top, bottom)
 
     const now = this.time.now
-    this.floatLanes = this.floatLanes.filter((l) => l.until > now)
+    // filter in place: this allocated a fresh array per floated toast
+    let keep = 0
+    for (let i = 0; i < this.floatLanes.length; i++) {
+      if (this.floatLanes[i].until > now) this.floatLanes[keep++] = this.floatLanes[i]
+    }
+    this.floatLanes.length = keep
     const clashes = (ty: number): boolean =>
-      this.floatLanes.some((l) => Math.abs(l.y - ty) < 42 && Math.abs(l.x - cx) < 300)
+      this.floatLanes.some((l) => Math.abs(l.y - ty) < laneGap && Math.abs(l.x - cx) < 300 * UI_SCALE)
     if (clashes(cy)) {
       // walk outward in both directions for the nearest free lane
       let found = false
-      for (let step = 44; step <= 220 && !found; step += 44) {
+      for (let step = laneStep; step <= laneStep * 5 && !found; step += laneStep) {
         for (const cand of [cy - step, cy + step]) {
           if (cand >= top && cand <= bottom && !clashes(cand)) {
             cy = cand
@@ -4592,11 +4629,39 @@ export class DayScene extends Phaser.Scene {
       const veil = this.add.container(0, 0).setScrollFactor(0).setDepth(60)
       veil.add(this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x0f0c22, 0.62).setOrigin(0))
       veil.add(this.add.text(VIEW_W / 2, VIEW_H / 2 - 24, 'PAUSED', display(30, INK.bright, 12, 300)).setOrigin(0.5))
-      veil.add(
-        this.add
-          .text(VIEW_W / 2, VIEW_H / 2 + 26, 'P to fly on · M mute · R restart the day', voice(18, INK.soft))
-          .setOrigin(0.5),
-      )
+      if (isTouch) {
+        // A PAUSE MENU WITH NO BUTTONS IS NOT A PAUSE MENU. This offered
+        // "P to fly on · M mute · R restart the day" to a device with no
+        // keyboard: nothing on it was tappable, and the only way out was to
+        // find the pause pad again. The owner reported the missing restart
+        // directly.
+        const mk = (dy: number, label: string, hit: () => void): void => {
+          const w = 360
+          const h = 74
+          const plate = this.add
+            .rectangle(VIEW_W / 2, VIEW_H / 2 + dy, w, h, 0x1c1533, 0.92)
+            .setStrokeStyle(2, 0xd8c3a0, 0.55)
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true })
+          plate.on('pointerdown', hit)
+          veil.add(plate)
+          veil.add(this.add.text(VIEW_W / 2, VIEW_H / 2 + dy, label, display(24, INK.bright, 8, 400)).setOrigin(0.5))
+        }
+        mk(34, 'FLY ON', () => this.setPaused(false))
+        mk(124, 'RESTART THE DAY', () => this.scene.restart())
+        mk(214, this.muted ? 'SOUND ON' : 'MUTE', () => {
+          this.muted = !this.muted
+          this.audio.setMuted(true) // still paused, so it stays silent either way
+          this.setPaused(false)
+          this.setPaused(true)
+        })
+      } else {
+        veil.add(
+          this.add
+            .text(VIEW_W / 2, VIEW_H / 2 + 26, 'P to fly on · M mute · R restart the day', voice(18, INK.soft))
+            .setOrigin(0.5),
+        )
+      }
       this.pauseVeil = veil
     } else {
       this.pauseVeil?.destroy()

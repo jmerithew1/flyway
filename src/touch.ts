@@ -57,9 +57,18 @@ const KNOB_TEX = 'touchstick-knob'
 // vanished against the sunset AND shrank to ~21px after the canvas fit. Pads
 // are near-white, ringed, and sized in logical px against a canvas that is
 // letterboxed by a known factor, so they stay thumb-sized on any phone.
-const FILL = 0xfdf2e4
-const IDLE_ALPHA = 0.4
-const HELD_ALPHA = 0.72
+// WHITE TYPE ON A WHITE DISC. The pad face was a near-white fill and the label
+// was #fff4e2 on top of it: measured, the pad labels were the worst text in the
+// game at 1.05-2.76 against a 3:1 floor, i.e. barely distinguishable from their
+// own background in bright dusk.
+//
+// The disc is now a DARK plate with a warm rim, which is also the right read:
+// a control should look like a thing you press, not like a smudge of light.
+// The label keeps its warmth and now has something to sit against.
+const FILL = 0x1a1430
+const RIM = 0xe8cfa4
+const IDLE_ALPHA = 0.5
+const HELD_ALPHA = 0.82
 const FACE_ALPHA = 0.82 // label / glyph at rest; +0.18 while held
 
 /**
@@ -181,6 +190,7 @@ function ensureKnobTexture(scene: Phaser.Scene): void {
 /** One thumb pad: a tinted disc, a label, an optional tap caption. */
 class Pad {
   readonly disc: Phaser.GameObjects.Image
+  private rim!: Phaser.GameObjects.Arc
   readonly face: Phaser.GameObjects.Text | Phaser.GameObjects.Image
   private readonly sub?: Phaser.GameObjects.Text
   private readonly hitR: number
@@ -209,6 +219,13 @@ class Pad {
       .setAlpha(IDLE_ALPHA)
       .setScrollFactor(0)
       .setDepth(depth)
+    // a thin warm rim so the dark plate still reads as a control against dark
+    // terrain, rather than disappearing into it
+    this.rim = scene.add
+      .circle(cx, cy, r, 0x000000, 0)
+      .setStrokeStyle(2, RIM, 0.5)
+      .setScrollFactor(0)
+      .setDepth(depth + 0.05)
 
     if ('label' in face) {
       this.face = scene.add
@@ -291,6 +308,7 @@ class Pad {
     this.face.destroy()
     this.sub?.destroy()
     this.disc.destroy()
+    this.rim?.destroy() // the rim is a sibling object; leaking it leaks a ring per pad per restart
     this.ring.destroy()
   }
 }

@@ -170,4 +170,4 @@ export const RECKON_REAL_TIME = 2.8
 /** Seconds a flock may sit pinned against the sky before thin air starts
  * taking birds. Long on purpose: a pilot climbing over stone dips back within
  * a second or two, so only a flock nobody is steering ever reaches this. */
-export const CEILING_GRACE = 14
+export const CEILING_GRACE = 10

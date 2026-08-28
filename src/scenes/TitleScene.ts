@@ -72,6 +72,10 @@ interface Layout {
   floorY: number
   /** where the dark ceiling ends — everything above it is type ground */
   ceilY: number
+  /** left edge and width of the VISIBLE rect — never VIEW_W, and never
+   * `cx - VIEW_W / 2`, which is off-screen the moment anything is cropped */
+  safeX: number
+  safeW: number
 }
 
 /**
@@ -82,9 +86,9 @@ interface Layout {
  *
  *   - a near-black CEILING across the top, which is the ground the wordmark and
  *     the one line of copy are set on;
- *   - a hot BAND across the middle — the painting's own low sun, a shaft, and
- *     the lit roost — with the murmuration hanging in it as pure silhouette and
- *     a ruin going black on the left, the dark the flock is outrunning;
+ *   - a hot BAND across the middle — the painting's own low sun and the lit
+ *     roost — with the murmuration hanging in it as pure silhouette and a bank
+ *     of ruins going black on the left, the dark the flock is outrunning;
  *   - a near-black FLOOR across the bottom, which is the ground every control
  *     is set on, and the reason contrast here is structural rather than a
  *     stack of backing plates fighting whatever the sky happens to be doing.
@@ -222,10 +226,12 @@ export class TitleScene extends Phaser.Scene {
     const plateW = Math.min(VIEW_W - 96, Math.round(ink.w + padX * 2))
     const plateH = Math.round(ink.h + padY * 2)
 
-    const chromeY = bot - (isTouch ? 42 : 46)
-    // the row is as tall as its own boosted label needs, so nothing above it
-    // can ever creep down into the share controls
+    // The row is as tall as its own boosted label needs, so nothing above it
+    // can ever creep down into the share controls — and its BASELINE is pushed
+    // up by that same height, because a pill centred 42px off the bottom edge
+    // hangs off the screen the moment the boost makes it taller than 84.
     const rowH = Math.round((isTouch ? 64 : 50) * this.boost)
+    const chromeY = bot - Math.max(isTouch ? 42 : 46, rowH / 2 + 8)
     const chromeRowTop = chromeY - rowH / 2
     // the keyboard hint has no audience on touch, and the space it wants is the
     // space the chrome row needs
@@ -242,15 +248,16 @@ export class TitleScene extends Phaser.Scene {
     const wordY = top + h * 0.15 + wordH / 2
     const ideaY = wordY + wordH / 2 + Math.round((isTouch ? 48 : 42) * this.boost)
 
-    // The three values. The ceiling has to clear the copy with room to spare —
-    // it IS the copy's ground — and the floor has to start above the button for
-    // the same reason.
-    const ceilY = Math.min(top + h * 0.5, ideaY + h * 0.09)
-    const floorY = Math.max(top + h * 0.66, buttonY - plateH / 2 - h * 0.06)
+    // The three values. Both dark bands are SOLID past the type they carry —
+    // measuring the rendered pixels is what caught that a ramp alone leaves the
+    // copy sitting in its own falloff — and only then fade out.
+    const ceilY = ideaY + Math.round(24 * this.boost)
+    const floorY = Math.min(buttonY - plateH / 2 - h * 0.02, bot - h * 0.14)
 
     return {
       cx, top, bot, h,
       chromeY, chromeRowTop, hintY,
+      safeX: safe.x, safeW: safe.w,
       buttonY, plateW, plateH,
       ideaY, wordY, wordW, wordH,
       floorY, ceilY,
@@ -345,22 +352,46 @@ export class TitleScene extends Phaser.Scene {
    * hard-edged rectangle across a painting reads as a rendering fault, and a
    * ramp reads as depth.
    */
-  private wash(y: number, height: number, color: number, alpha: number, fromTop: boolean, depth: number): void {
-    if (this.textures.exists('vfade')) {
-      const img = this.add
-        .image(VIEW_W / 2, y, 'vfade')
-        .setOrigin(0.5, fromTop ? 0 : 1)
-        .setDisplaySize(VIEW_W, height)
-        .setTint(color)
-        .setAlpha(alpha)
-        .setDepth(depth)
-      if (fromTop) img.setFlipY(true)
-      return
-    }
+  private wash(edge: number, solidTo: number, tail: number, color: number, alpha: number, depth: number): void {
+    // A SOLID CORE, then a soft tail — not one long ramp.
+    //
+    // The first pass drew a single `vfade` across each band and got two faults
+    // at once. Because a ramp's darkness is front-loaded, the copy sitting near
+    // the far end of the band was barely covered at all and measured 2.79:1 on
+    // a phone; and because `vfade` ends its gradient exactly at its own edge,
+    // the slope discontinuity there read as a hairline straight across the
+    // picture, which looks like a rendering fault. A solid rectangle holds the
+    // value where the type actually is, and the ramp only has to carry it out
+    // to nothing — with a second, shorter ramp overlapping so the two kinks land
+    // in different places and each is half as strong.
+    const down = solidTo > edge
+    const solidH = Math.abs(solidTo - edge)
+    const ramps = this.textures.exists('vfade')
+      ? ([
+          [1, alpha * 0.66],
+          [0.45, alpha * 0.45],
+        ] as const)
+      : []
+    // THE JUNCTION MUST BE EXACT. Handing the rectangle its own alpha left it
+    // darker than the ramps composite to where they meet, and a 0.14 alpha step
+    // across the full width of a painting is not subtle — it drew a hard rule
+    // across the picture at both band edges. The rectangle therefore takes the
+    // value the ramps actually start at, computed rather than guessed.
+    const junction = ramps.reduce((acc, [, a]) => 1 - (1 - acc) * (1 - a), 0)
     this.add
-      .rectangle(VIEW_W / 2, y, VIEW_W, height, color, alpha * 0.7)
-      .setOrigin(0.5, fromTop ? 0 : 1)
+      .rectangle(VIEW_W / 2, edge, VIEW_W, solidH, color, ramps.length ? junction : alpha)
+      .setOrigin(0.5, down ? 0 : 1)
       .setDepth(depth)
+    for (const [hMul, a] of ramps) {
+      const img = this.add
+        .image(VIEW_W / 2, solidTo, 'vfade')
+        .setOrigin(0.5, down ? 0 : 1)
+        .setDisplaySize(VIEW_W, tail * hMul)
+        .setTint(color)
+        .setAlpha(a)
+        .setDepth(depth)
+      if (down) img.setFlipY(true)
+    }
   }
 
   /**
@@ -400,27 +431,27 @@ export class TitleScene extends Phaser.Scene {
   private buildLight(L: Layout): void {
     const gx = VIEW_W * 0.795
 
-    const shaft =
-      this.piece('shaft_column_04', gx, L.top - L.h * 0.02, L.h * 0.78, { oy: 0, add: true, alpha: 0.42, depth: -70 }) ??
-      this.piece('shaft_diag_05', gx, L.top + L.h * 0.36, L.h * 0.46, { add: true, alpha: 0.45, depth: -70 })
-    if (shaft) this.breathers.push({ img: shaft, base: shaft.alpha, amp: 0.05, ph: 0 })
-
-    // The hot core, kept SMALL. A big warm blob is a wash; a small one next to
-    // a near-black silhouette is a light source.
+    // ONE source, and it is small. The first pass hung a full-height shaft here
+    // as well; the roost covered where it landed and the near-black ceiling ate
+    // its head, so all it contributed was a brown smear in the top corner. What
+    // actually makes light read is a small hot core with a near-black shape in
+    // front of it, which is what the flock arriving at the roost already is.
     if (this.textures.exists('softdot')) {
       const core = this.add
-        .image(gx, L.top + L.h * 0.6, 'softdot')
-        .setTint(0xffe0a8)
-        .setDisplaySize(VIEW_W * 0.13, L.h * 0.2)
-        .setAlpha(0.55)
+        .image(VIEW_W * 0.705, L.top + L.h * 0.55, 'softdot')
+        .setTint(0xffdda0)
+        .setDisplaySize(VIEW_W * 0.16, L.h * 0.26)
+        .setAlpha(0.6)
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(-69)
-      this.breathers.push({ img: core, base: 0.55, amp: 0.06, ph: 1.9 })
+        .setDepth(-22)
+      this.breathers.push({ img: core, base: 0.6, amp: 0.06, ph: 1.9 })
     }
 
     // The destination, standing in its own light: the one piece on this screen
-    // allowed to stay fully saturated.
-    this.piece('roost_lit', gx, L.floorY + L.h * 0.12, L.h * 0.56, { oy: 1, alpha: 1, depth: -55 })
+    // allowed to stay fully saturated, and the reason it is drawn ABOVE the
+    // near-black ceiling is that the ceiling was eating the only genuinely hot
+    // value in the frame — the lamps in its crown.
+    this.piece('roost_lit', gx, L.floorY + L.h * 0.14, L.h * 0.56, { oy: 1, alpha: 1, depth: -12 })
   }
 
   /**
@@ -434,28 +465,23 @@ export class TitleScene extends Phaser.Scene {
    * is a silhouette against the one hot value in the frame.
    */
   private buildMurmuration(L: Layout): void {
-    // painted distant flocks, static, for a depth the sprites cannot buy cheaply
-    this.piece('flock_decal_a', VIEW_W * 0.55, L.ceilY + L.h * 0.06, L.h * 0.045, {
-      tint: 0x120d24,
-      alpha: 0.6,
-      depth: -52,
-    })
-    this.piece('flock_decal_b', VIEW_W * 0.68, L.ceilY + L.h * 0.14, L.h * 0.032, {
-      tint: 0x120d24,
-      alpha: 0.45,
-      depth: -52,
-    })
-
+    // NO painted flock decals. The first pass dropped `flock_decal_a/b` into the
+    // open sky for depth and at the size the composition wanted them they read
+    // as two dark smudges on the plate, not as distant birds.
     if (!this.textures.exists('bird-mid')) return
-    const p0x = VIEW_W * 0.09, p0y = L.top + L.h * 0.68
-    const p1x = VIEW_W * 0.32, p1y = L.top + L.h * 0.63
-    const p2x = VIEW_W * 0.55, p2y = L.top + L.h * 0.44
-    const p3x = VIEW_W * 0.74, p3y = L.top + L.h * 0.4
+    const p0x = VIEW_W * 0.155, p0y = L.top + L.h * 0.66
+    const p1x = VIEW_W * 0.36, p1y = L.top + L.h * 0.62
+    const p2x = VIEW_W * 0.55, p2y = L.top + L.h * 0.47
+    const p3x = VIEW_W * 0.735, p3y = L.top + L.h * 0.45
 
-    const n = isTouch ? 150 : 200
+    // Density follows the CANVAS. The canvas width derives from the device
+    // aspect, so a fixed count spreads the same body over a third more sky on a
+    // wide phone and the mass stops cohering — which is precisely how a flock
+    // turns back into a scatter of specks.
+    const n = Math.min(260, Math.round((isTouch ? 132 : 178) * (VIEW_W / 1536)))
     for (let i = 0; i < n; i++) {
       // biased toward the tail, so the body has a mass and the head a point
-      const s = Math.pow((i + Math.random()) / n, 1.2)
+      const s = Math.pow((i + Math.random()) / n, 1.15)
       const u = 1 - s
       const x = u * u * u * p0x + 3 * u * u * s * p1x + 3 * u * s * s * p2x + s * s * s * p3x
       const y = u * u * u * p0y + 3 * u * u * s * p1y + 3 * u * s * s * p2y + s * s * s * p3y
@@ -466,8 +492,13 @@ export class TitleScene extends Phaser.Scene {
       const nx = -ty / m
       const ny = tx / m
 
-      // wide at the tail, a point at the head
-      const thick = (L.h * 0.22) * Math.pow(1 - s, 1.1) + L.h * 0.025
+      // A TEARDROP, not a fan. Making the ribbon widest at s=0 spread the
+      // rearmost birds over a 400px band where they were far too sparse to
+      // cohere, and a sparse band of specks is exactly the "flies" read this
+      // screen keeps being rejected for. Narrow at the tail, a mass a quarter of
+      // the way along, and a point at the head is the shape a flock leaving a
+      // roost actually makes.
+      const thick = L.h * 0.15 * Math.sin(Math.PI * Math.pow(s, 0.55)) + L.h * 0.018
       // three uniforms summed: a soft core with stragglers, not an even band
       const off = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5
       const reach = off * thick
@@ -475,12 +506,12 @@ export class TitleScene extends Phaser.Scene {
       const scale = (0.155 - 0.055 * s) * (0.72 + Math.random() * 0.56)
       const img = this.add
         .image(x + nx * reach, y + ny * reach, 'bird-mid')
-        .setDepth(-45)
+        .setDepth(-20)
         .setTint(0x0b0818)
         .setScale(scale)
         .setRotation(Math.atan2(ty, tx))
         // the tail sinks into the dark rather than stopping at an edge
-        .setAlpha(0.45 + 0.55 * Math.min(1, s / 0.3))
+        .setAlpha(0.6 + 0.4 * Math.min(1, s / 0.22))
 
       this.birds.push({
         img,
@@ -511,20 +542,51 @@ export class TitleScene extends Phaser.Scene {
    * occluded by the ruin and genuinely emerges from behind it.
    */
   private buildDarkSide(L: Layout): void {
-    this.piece('storm_spire', VIEW_W * 0.105, L.bot, L.h * 0.82, { oy: 1, tint: BLACK, alpha: 1, depth: -30 })
-    this.piece('bell_tower', VIEW_W * 0.235, L.bot, L.h * 0.6, { oy: 1, tint: 0x0a0820, alpha: 0.97, depth: -31 })
-    this.piece('colonnade_triple', VIEW_W * 0.345, L.floorY + L.h * 0.05, L.h * 0.2, {
+    // The left edge of the plate is a pale painted arch that no wash reaches,
+    // so it is closed with real art rather than left as a bright strip.
+    this.piece('occluder_column_foliage_l', 0, L.bot, L.h * 0.86, {
+      ox: 0,
       oy: 1,
-      tint: 0x110d28,
-      alpha: 0.9,
-      depth: -32,
+      tint: BLACK,
+      alpha: 0.98,
+      depth: -15,
     })
-    this.piece('statue_robed', VIEW_W * 0.44, L.floorY + L.h * 0.04, L.h * 0.13, {
+    this.piece('storm_spire', VIEW_W * 0.135, L.bot, L.h * 0.8, { oy: 1, tint: BLACK, alpha: 1, depth: -16 })
+    this.piece('bell_tower', VIEW_W * 0.255, L.bot, L.h * 0.58, { oy: 1, tint: 0x080619, alpha: 0.98, depth: -17 })
+    // Further back reads LIGHTER, but only just: the first pass put these at 80
+    // and 90 percent over a bright mist band and they came out as pale grey
+    // cut-outs floating in the haze — stamps, not silhouettes.
+    this.piece('colonnade_triple', VIEW_W * 0.355, L.floorY + L.h * 0.035, L.h * 0.19, {
       oy: 1,
-      tint: 0x171136,
-      alpha: 0.8,
-      depth: -33,
+      tint: 0x0b0820,
+      alpha: 0.96,
+      depth: -18,
     })
+    this.piece('statue_robed', VIEW_W * 0.45, L.floorY + L.h * 0.025, L.h * 0.125, {
+      oy: 1,
+      tint: 0x0e0a26,
+      alpha: 0.94,
+      depth: -19,
+    })
+
+    // ONE lamp still burning inside the black. A near-black mass with a hot
+    // point in it is the whole value argument in miniature, it is the only
+    // fully-lit thing on the dark half of the frame, and it is literally the
+    // light the game asks you to gather.
+    const lamp = this.piece('lamp_small_lit', VIEW_W * 0.298, L.floorY + L.h * 0.015, L.h * 0.135, {
+      oy: 1,
+      depth: -14,
+    })
+    if (lamp && this.textures.exists('softdot')) {
+      const halo = this.add
+        .image(lamp.x, lamp.y - lamp.displayHeight * 0.72, 'softdot')
+        .setTint(0xffcf8e)
+        .setDisplaySize(L.h * 0.16, L.h * 0.16)
+        .setAlpha(0.4)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(-13)
+      this.breathers.push({ img: halo, base: 0.4, amp: 0.07, ph: 3.4 })
+    }
   }
 
   /**
@@ -533,8 +595,8 @@ export class TitleScene extends Phaser.Scene {
    * painting happens to be doing behind them.
    */
   private buildCeiling(L: Layout): void {
-    this.wash(L.top, L.ceilY - L.top, 0x040309, 0.94, true, -20)
-    this.piece('occluder_canopy_tl', 0, L.top, L.h * 0.3, { ox: 0, oy: 0, tint: BLACK, alpha: 0.98, depth: -18 })
+    this.wash(L.top, L.ceilY, L.h * 0.3, 0x050409, 0.8, -30)
+    this.piece('occluder_canopy_tl', 0, L.top, L.h * 0.3, { ox: 0, oy: 0, tint: BLACK, alpha: 0.98, depth: -26 })
     // The mirrored canopy, NOT occluder_wisteria_tr: that piece carries an
     // opaque rectangle in its own corner, and mirroring it dragged that block
     // into open sky as a hard-edged dark slab that read as a rendering fault.
@@ -543,7 +605,7 @@ export class TitleScene extends Phaser.Scene {
       oy: 0,
       tint: BLACK,
       alpha: 0.96,
-      depth: -18,
+      depth: -26,
       flipX: true,
     })
   }
@@ -554,15 +616,25 @@ export class TitleScene extends Phaser.Scene {
    * plates chasing whatever colour the sky is.
    */
   private buildFloor(L: Layout): void {
-    this.wash(L.bot, L.bot - L.floorY, 0x030208, 0.97, false, -8)
+    // Deep enough to actually BE black. The first pass ramped once and the
+    // bottom third stayed a mid-tone lavender ruin field with the controls
+    // sitting on top of it; the ramp reaches the floor now, and the solid pad
+    // under it guarantees the last stretch rather than approaching it.
+    this.wash(L.bot, L.floorY, L.h * 0.26, 0x030208, 0.94, -8)
     this.piece('occluder_cypress_br', VIEW_W, L.bot, L.h * 0.34, { ox: 1, oy: 1, tint: BLACK, alpha: 0.98, depth: -7 })
-    this.piece('fg_ground', VIEW_W / 2, L.bot, L.h * 0.17, { oy: 1, tint: BLACK, alpha: 0.9, depth: -6 })
-    // a hairline of warm at the horizon line, so the floor meets the band as an
-    // edge rather than as a fade into nothing
-    this.add
-      .rectangle(VIEW_W / 2, L.floorY, VIEW_W, 2, 0xffcf94, 0.16)
-      .setOrigin(0.5, 0)
-      .setDepth(-5)
+    // Stretched to the FULL canvas width, never sized by its own aspect: this
+    // strip is 1672px wide, so on any canvas wider than that it stops short and
+    // reads as a dark rectangle laid across the bottom of the picture — which
+    // is exactly what it did on a 2954-wide phone canvas.
+    if (this.textures.exists('fg_ground')) {
+      this.add
+        .image(VIEW_W / 2, L.bot, 'fg_ground')
+        .setOrigin(0.5, 1)
+        .setDisplaySize(VIEW_W, L.h * 0.16)
+        .setTint(BLACK)
+        .setAlpha(0.92)
+        .setDepth(-6)
+    }
   }
 
   private buildWords(L: Layout): void {
@@ -590,7 +662,7 @@ export class TitleScene extends Phaser.Scene {
     // a rule under the line, the width of the line: it turns a floating string
     // into a set block, and it is the cheapest possible piece of art direction
     const rule = this.add
-      .rectangle(L.cx, L.ideaY + idea.height * 0.62, Math.min(idea.width * 1.12, VIEW_W * 0.5), 1, 0xf0cf9a, 0.34)
+      .rectangle(L.cx, L.ideaY + idea.height * 0.62, Math.min(idea.width * 0.86, VIEW_W * 0.42), 1, 0xf0cf9a, 0.34)
       .setOrigin(0.5)
       .setAlpha(0)
       .setDepth(40)
@@ -762,23 +834,56 @@ export class TitleScene extends Phaser.Scene {
    */
   private buildChrome(L: Layout): void {
     const best = this.loadBest()
-    const edge = isTouch ? 40 : 52
-    this.mkButton(L.cx - VIEW_W / 2 + edge, L.chromeY, 'CONTROLS', 0, 'controls', () => this.openControls())
+    // ANCHORED TO THE VISIBLE RECT, NOT TO VIEW_W.
+    //
+    // `cx - VIEW_W / 2` is the canvas's left edge, which is only the same thing
+    // as the visible left edge while nothing is cropped. It also cannot be
+    // clamped: whatever the type ramp and the per-device boost do to the label,
+    // the pill has to end up inside the frame, because the owner asked for the
+    // share control specifically so he could share from his PHONE — the exact
+    // device where the boost is largest and an unclamped row goes off-screen.
+    const edge = isTouch ? 34 : 46
+    const leftLimit = L.safeX + edge
+    const rightLimit = L.safeX + L.safeW - edge
+    const budget = (rightLimit - leftLimit) * (best ? 0.34 : 0.4)
 
-    let x = L.cx + VIEW_W / 2 - edge
+    const leftInner = this.mkButton(leftLimit, L.chromeY, 'CONTROLS', 0, 'controls', () => this.openControls(), budget)
+
+    let x = rightLimit
     if (best) {
-      x = this.mkButton(x, L.chromeY, 'SHARE RESULT', 1, 'share-result', () => this.doShare(best)) - (isTouch ? 30 : 26)
+      x =
+        this.mkButton(x, L.chromeY, 'SHARE RESULT', 1, 'share-result', () => this.doShare(best), budget) -
+        (isTouch ? 26 : 22)
     }
-    this.mkButton(x, L.chromeY, 'SHARE', 1, 'share', () => this.doShare(null))
+    const rightInner = this.mkButton(x, L.chromeY, 'SHARE', 1, 'share', () => this.doShare(null), budget)
 
     // The number to beat. recordBest() has been writing this since the first
     // flight and nothing has ever read it back, so the screen has been offering
-    // no reason to fly again.
-    this.add
-      .text(L.cx, L.chromeY, this.bestLine(best), this.small(12, best ? '#f3cf9c' : INK.dim, 5, best ? 400 : 300))
-      .setOrigin(0.5)
-      .setDepth(70)
-      .setAlpha(0.94)
+    // no reason to fly again. It takes whatever room the pills leave and never
+    // one pixel more — a centred string that grows with the boost is the other
+    // way this row eats itself on a phone.
+    const gapL = leftInner + 18
+    const gapR = rightInner - 18
+    if (gapR - gapL > 90) {
+      const t = this.add
+        .text(
+          (gapL + gapR) / 2,
+          L.chromeY,
+          this.bestLine(best, false),
+          this.small(12, best ? '#f3cf9c' : INK.dim, 5, best ? 400 : 300),
+        )
+        .setOrigin(0.5)
+        .setDepth(70)
+        .setAlpha(0.94)
+      // drop the feather list first, and only then shrink: losing a decoration
+      // is better than losing legibility
+      if (t.width > gapR - gapL) t.setText(this.bestLine(best, true))
+      if (t.width > gapR - gapL) {
+        const f = (gapR - gapL) / t.width
+        t.setStyle(this.small(Math.max(8, Math.floor(12 * f)), best ? '#f3cf9c' : INK.dim, 3, best ? 400 : 300))
+      }
+      t.setVisible(t.width <= gapR - gapL)
+    }
 
     this.toast = this.add
       .text(L.cx, L.chromeY - Math.round((isTouch ? 62 : 54) * this.boost), '', this.small(14, '#ffe6bf', 5))
@@ -787,14 +892,17 @@ export class TitleScene extends Phaser.Scene {
       .setAlpha(0)
   }
 
-  /** What the player has to beat, in one line. */
-  private bestLine(best: FlightResult | null): string {
+  /** What the player has to beat, in one line — `terse` drops the feathers. */
+  private bestLine(best: FlightResult | null, terse: boolean): string {
     if (best) {
-      const earned = [best.homeFeather ? 'HOME' : '', best.flockFeather ? 'FLOCK' : '', best.flowFeather ? 'FLOW' : '']
-        .filter(Boolean)
-        .join(' · ')
       const pts = Math.round(best.score ?? 0).toLocaleString('en-US')
-      return `BEST  ${best.birdsArrived} HOME · ${pts} PTS${earned ? `  ·  ${earned}` : ''}`
+      const head = `BEST  ${best.birdsArrived} HOME · ${pts} PTS`
+      if (terse) return head
+      // COUNTED, not listed. Spelling the feathers out put the word HOME on the
+      // line twice — once as a count of birds and once as the name of a feather
+      // — and the row read as gibberish.
+      const earned = [best.homeFeather, best.flockFeather, best.flowFeather].filter(Boolean).length
+      return earned ? `${head} · ${earned} FEATHER${earned === 1 ? '' : 'S'}` : head
     }
     const chain = loadBestChain()
     return chain > 0 ? `BEST RUN  ${chain} CLEAN` : 'NO FLIGHT ON RECORD'
@@ -809,14 +917,30 @@ export class TitleScene extends Phaser.Scene {
    * part, for the same reason BEGIN FLIGHT is a zone: a Text that ever
    * re-renders silently resizes its own hit area.
    */
-  private mkButton(x: number, y: number, labelText: string, originX: number, name: string, run: () => void): number {
+  private mkButton(
+    x: number,
+    y: number,
+    labelText: string,
+    originX: number,
+    name: string,
+    run: () => void,
+    budget: number,
+  ): number {
     const t = this.add
       .text(x, y, labelText, this.small(13, INK.soft, 5))
       .setOrigin(originX, 0.5)
       .setDepth(70)
       .setAlpha(0)
+    const padX = isTouch ? 20 : 24
+    // The label may not outgrow its share of the row. On a phone ui.ts's 1.65
+    // ramp and this screen's own device boost multiply, and an unbudgeted
+    // "SHARE RESULT" is wide enough to walk its pill off the side of the frame.
+    if (t.width + padX * 2 > budget) {
+      const f = (budget - padX * 2) / t.width
+      t.setStyle(this.small(Math.max(9, Math.floor(13 * f)), INK.soft, 3))
+      t.setOrigin(originX, 0.5)
+    }
     const left = x - t.width * originX
-    const padX = isTouch ? 22 : 24
     const w = t.width + padX * 2
     const h = Math.round((isTouch ? 64 : 50) * this.boost)
     const cxp = left + t.width / 2
@@ -971,10 +1095,25 @@ export class TitleScene extends Phaser.Scene {
       this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x05040c, 0.97).setOrigin(0),
       this.add.text(cx, blockTop - step * 1.4, 'CONTROLS', this.small(20, '#f0cf9a', 10)).setOrigin(0.5),
     ]
+    // Centre the BLOCK, not the gutter. Hanging the keys off cx - 28 and the
+    // descriptions off cx + 28 centres the gap between two columns of very
+    // different widths, which pushes the whole list visibly right.
+    const keyStyle = this.small(15, '#ffe6bf', 5)
+    const whatStyle = this.smallVoice(18, '#ded2ea')
+    const measure = (s: string, st: Phaser.Types.GameObjects.Text.TextStyle): number => {
+      const p = this.add.text(0, -4000, s, st)
+      const w = p.width
+      p.destroy()
+      return w
+    }
+    const gut = Math.round(52 * this.boost)
+    const keyW = Math.max(...lines.map(([k]) => measure(k, keyStyle)))
+    const whatW = Math.max(...lines.map(([, w]) => measure(w, whatStyle)))
+    const blockLeft = Math.max(safe.x + 24, cx - (keyW + gut + whatW) / 2)
     lines.forEach(([key, what], i) => {
       const y = blockTop + i * step
-      kids.push(this.add.text(cx - 28, y, key, this.small(15, '#ffe6bf', 5)).setOrigin(1, 0.5))
-      kids.push(this.add.text(cx + 28, y, what, this.smallVoice(18, '#ded2ea')).setOrigin(0, 0.5))
+      kids.push(this.add.text(blockLeft + keyW, y, key, keyStyle).setOrigin(1, 0.5))
+      kids.push(this.add.text(blockLeft + keyW + gut, y, what, whatStyle).setOrigin(0, 0.5))
     })
     const blockBot = blockTop + (lines.length - 1) * step
     kids.push(

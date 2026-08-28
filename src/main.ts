@@ -32,7 +32,16 @@ class BootScene extends Phaser.Scene {
     dismissBootVeil()
     const params = new URLSearchParams(window.location.search)
     this.scene.start(
-      params.has('sandbox') ? 'Sandbox' : params.has('day') ? 'Day' : params.has('map') ? 'FlywayMap' : 'Title',
+      // The flock sandbox is a development scene and must not be reachable
+      // from a shipped URL — ?sandbox exposed an unfinished screen to anyone
+      // who guessed the query string.
+      params.has('sandbox') && location.hostname === 'localhost'
+        ? 'Sandbox'
+        : params.has('day')
+          ? 'Day'
+          : params.has('map')
+            ? 'FlywayMap'
+            : 'Title',
     )
   }
 }
@@ -49,6 +58,37 @@ Promise.all([fontsReady]).finally(() => {
   ;(window as unknown as Record<string, unknown>).__game = game
   // failsafe: never leave the player staring at a veil if a load stalls
   window.setTimeout(dismissBootVeil, 8000)
+
+  // ROTATION LEAVES THE CANVAS STALE, AND THE GAME ENDS UP IN A FIFTH OF THE
+  // SCREEN. Portrait is blocked, so the game itself TELLS the player to rotate
+  // — and doing exactly that was the thing that broke it: measured at 844x390,
+  // a portrait->landscape round trip left the canvas 390x180 letterboxed at
+  // (227,104), i.e. 21% of the screen, with black on all four sides. Phaser's
+  // parentSize was correct; only displaySize was stale, and refresh() fixes it
+  // instantly. Debounced because a rotation fires several resize events.
+  let refreshT = 0
+  const refit = (): void => {
+    window.clearTimeout(refreshT)
+    refreshT = window.setTimeout(() => game.scale.refresh(), 120)
+  }
+  window.addEventListener('resize', refit)
+  window.addEventListener('orientationchange', refit)
+  screen.orientation?.addEventListener?.('change', refit)
+
+  // AND THE WORLD MUST NOT RUN BEHIND THE NOTICE. The portrait block hides the
+  // canvas in CSS but the simulation kept going: 30s in portrait cost 3.5
+  // daylight and closed the fog by 533px, so a player who turned their phone
+  // came back to a run they had already partly lost, invisibly.
+  const portrait = window.matchMedia('(orientation: portrait) and (max-width: 900px)')
+  const gate = (): void => {
+    if (portrait.matches) game.loop.sleep()
+    else {
+      game.loop.wake()
+      refit()
+    }
+  }
+  portrait.addEventListener('change', gate)
+  gate()
 })
 
 const config: Phaser.Types.Core.GameConfig = {

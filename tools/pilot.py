@@ -1,3 +1,4 @@
+import os
 import sys
 """A pilot that actually plays the game, for two-sided fairness testing.
 
@@ -23,7 +24,25 @@ person have a chance", which is the only thing the difficulty contract needs.
 """
 from playwright.sync_api import sync_playwright
 
-DEV = 'http://localhost:5199/?day'
+# MEASURE THE BUILT BUNDLE WHEN ANYTHING ELSE IS RUNNING.
+#
+# The dev server is the default for convenience, but it is NOT safe to measure
+# against while anything is editing src/: a Vite HMR reload destroys the page
+# context mid-run. That does not merely crash the probe — it silently corrupts
+# results. Chasing a "flaky" AFK verdict across a dozen dev-server runs, the
+# flakiness largely vanished the moment the same code was measured against a
+# static build: both sides passed, twice, where the dev server had been
+# alternating. A gate that reports differently depending on whether a colleague
+# happens to be typing is not a gate.
+#
+#   npx vite build
+#   mkdir -p /tmp/serve && cp -r dist /tmp/serve/flyway
+#   python -m http.server 5218 --directory /tmp/serve
+#   PILOT_URL='http://localhost:5218/flyway/?day' python tools/pilot.py
+#
+# Note the /flyway/ path: vite.config sets that base for builds, so serving
+# dist at the root 404s every asset.
+DEV = os.environ.get('PILOT_URL', 'http://localhost:5199/?day')
 END = 25400
 
 PILOT = """(cfg) => {
@@ -170,14 +189,17 @@ def main():
 
         for look, margin in [(0.62, 60), (0.72, 70)]:
             boot(pg)
-            pg.evaluate("(c) => { window.__AVOID.lookahead = c.l; window.__AVOID.margin = c.m; }",
+            # A production build does not expose the tuning hook, and that is
+            # correct — what ships is the shipped value. Sweeping is a dev-only
+            # convenience, so its absence must not read as a crash.
+            pg.evaluate("(c) => { if (window.__AVOID) { window.__AVOID.lookahead = c.l; window.__AVOID.margin = c.m; } }",
                         {'l': look, 'm': margin})
             pg.mouse.move(1150, 110)
             afk = pg.evaluate(AFK)
             afk_ok = afk['birds'] == 0
 
             boot(pg)
-            pg.evaluate("(c) => { window.__AVOID.lookahead = c.l; window.__AVOID.margin = c.m; }",
+            pg.evaluate("(c) => { if (window.__AVOID) { window.__AVOID.lookahead = c.l; window.__AVOID.margin = c.m; } }",
                         {'l': look, 'm': margin})
             sk = pg.evaluate(PILOT, cfg)
             # A probe that cannot press the buttons proves nothing. `form` is
