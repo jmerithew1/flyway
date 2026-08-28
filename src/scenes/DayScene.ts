@@ -45,6 +45,7 @@ import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS,
   CALL_WAVE_SPEED,
   CALL_WAVE_REACH,
   RECKON_REAL_TIME,
+  CEILING_GRACE,
 } from '../config'
 import {
   BRACE_CHORD_DELAY,
@@ -244,6 +245,7 @@ export class DayScene extends Phaser.Scene {
   private vfx!: VFXDirector
   private camDir!: CameraDirector
   private tunnel!: TunnelSequence
+  private ceilingT = 0
   private thiefCallT = 0
   private mothsWereOn = false
   private squeezeDrain: (() => void) | null = null
@@ -1667,18 +1669,42 @@ export class DayScene extends Phaser.Scene {
       if (b.y > SKY_BOTTOM) b.vy -= (b.y - SKY_BOTTOM) * 10 * dt
     }
 
-    // THE CEILING STILL COSTS NOTHING, and that is a known open defect.
-    // §8b4 requires every loss to announce itself, and this rule is silent: a
-    // flock held against the top is merely pushed back, so a parked pointer can
-    // ride the ceiling while the authored scroll carries it forward for free.
-    // That is why an idle run sometimes reaches the roost.
+    // THIN AIR, AND WHY THE THRESHOLD IS SO LONG.
     //
-    // A first attempt shed birds at the ceiling and was REVERTED: it also
-    // punished a competent pilot, who legitimately flies high to clear ground
-    // obstacles, taking a passing run from 115 birds home to 0. The rule needs
-    // to distinguish "pinned at the ceiling doing nothing" from "climbing to
-    // clear something", and until it does, shipping the blunt version trades a
-    // flaky gate for a broken game.
+    // The ceiling only ever pushed back, so a flock held against it paid
+    // nothing — and because the world scrolls the flock forward whether or not
+    // anyone is steering, a parked pointer could ride the top of the screen the
+    // whole flight. That is why an idle run sometimes reached the roost: not
+    // skill and not mercy, just an authored scroll and a rule with no teeth.
+    // §8b4 also forbids a silent loss rule, and this one was silent.
+    //
+    // A first attempt shed birds after 2.5s at the ceiling and was REVERTED: it
+    // punished a competent pilot, who climbs to clear ground obstacles, taking
+    // a passing run from 115 birds home to 0. The distinguishing signal is not
+    // altitude, it is DURATION — a pilot climbing over something dips back
+    // within a second or two, while a parked pointer never leaves. So the
+    // clock has to run far longer than any real climb, and it resets the
+    // instant the flock comes down.
+    //
+    // The cost is attrition, never death, and it is shed into the recovery
+    // window exactly as over-gathering is, so the player reads the same
+    // language and can call them back.
+    let atCeiling = 0
+    for (const b of this.flock.birds) if (b.y < SKY_TOP + 22) atCeiling++
+    if (atCeiling > this.flock.count * 0.72 && this.flock.count > 12) {
+      this.ceilingT += dt
+      if (this.ceilingT > CEILING_GRACE) {
+        this.ceilingT = CEILING_GRACE - 1.4
+        const b = this.flock.birds[(Math.random() * this.flock.count) | 0]
+        if (b) {
+          if (!this.scatter.spawn(b.x, b.y, b.vx * 0.3, 40)) this.stats.lost++
+          this.flock.removeBird(b)
+          this.lastLossSource = 'The air is too thin up here - they could not hold it.'
+        }
+      }
+    } else {
+      this.ceilingT = 0
+    }
 
 
     this.processCollisions(time)
@@ -2464,7 +2490,15 @@ export class DayScene extends Phaser.Scene {
     const x1 = this.scrollX + VIEW_W + 600
     return this.obstacles.filter((o) => {
       const half = o.shape === 'circle' ? o.r : o.hw
-      return o.x + half > x0 && o.x - half < x1 && !o.broken
+      if (o.x + half <= x0 || o.x - half >= x1 || o.broken) return false
+      // THE CORRIDOR OWNS ITS OWN SPACE. `aqueduct_run` and `root_tangle` both
+      // sit at x=25000, dead centre of the finale's span — and the tunnel hard
+      // assigns each bird's y to a lane wall, so it can place a bird inside
+      // that stone with no recourse until the next fixed step. A level piece
+      // standing in the tunnel is a piece the lane hold drags birds straight
+      // through. tunnel.ownsWorldX exists precisely to suppress them and had
+      // no callers.
+      return !this.tunnel.ownsWorldX(o.x)
     })
   }
 
@@ -3673,6 +3707,27 @@ export class DayScene extends Phaser.Scene {
   }
 
   private checkCheckpoints(): void {
+    // A CHECKPOINT AT EACH TUNNEL MOUTH. The nearest landmark to the finale is
+    // 1,050px back — about five seconds of replay before you even reach the
+    // corridor you failed in. The tunnel's whole design rests on failure being
+    // cheap (that is what makes a hard section addictive rather than
+    // punishing), and `tunnel.checkpointX` was written for exactly this and
+    // never called.
+    for (let i = 0; i < TUNNELS.length; i++) {
+      const cx = this.tunnel.checkpointX(i)
+      if (cx > this.checkpoint.x && this.flock.centerX >= cx) {
+        this.checkpoint = {
+          x: cx,
+          name: TUNNELS[i].name || 'the tunnel mouth',
+          count: this.flock.count,
+          found: this.stats.found,
+          flow: this.stats.flow,
+          lost: this.stats.lost,
+          collisionEvents: this.stats.collisionEvents,
+          score: this.score.snapshot(),
+        }
+      }
+    }
     for (const lm of LANDMARKS) {
       if (lm.x > this.checkpoint.x && this.flock.centerX >= lm.x) {
         this.checkpoint = {

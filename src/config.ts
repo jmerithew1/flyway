@@ -167,3 +167,7 @@ export const CALL_WAVE_REACH = 1700
 /** The reckoning window in REAL seconds. Slow motion is a gift of perception,
  * not of time - the clock must not slow with the world. */
 export const RECKON_REAL_TIME = 2.8
+/** Seconds a flock may sit pinned against the sky before thin air starts
+ * taking birds. Long on purpose: a pilot climbing over stone dips back within
+ * a second or two, so only a flock nobody is steering ever reaches this. */
+export const CEILING_GRACE = 14
