@@ -35,9 +35,20 @@ function deriveWidth(): number {
   if (typeof window === 'undefined') return 1536
   const w = window.innerWidth || 1536
   const h = window.innerHeight || 960
-  if (h <= 0) return 1536
-  // clamped so a freak aspect cannot produce an absurd canvas
-  return Math.round(Math.min(2560, Math.max(1536, H * (w / h))))
+  if (w <= 0 || h <= 0) return 1536
+  // ALWAYS derive the LANDSCAPE aspect, never the current one. Portrait is
+  // blocked (see index.html), so a page loaded upright will be rotated a moment
+  // later — and the canvas size is fixed at boot. Deriving from a portrait
+  // viewport would bake in a wrong aspect that the rotation can no longer
+  // correct, which is worse than any bar.
+  const aspect = Math.max(w, h) / Math.min(w, h)
+  // The ceiling was 2560 (2.67:1) and that was too low: an Android phone in
+  // landscape with browser chrome visible lands around 3.5:1, so FIT
+  // pillarboxed it — bars down both sides, the opposite defect to the crop this
+  // replaced. 4:1 covers every real device; beyond that a bar is the honest
+  // answer, because the alternative is a framebuffer no phone should be asked
+  // to draw.
+  return Math.round(Math.min(3840, Math.max(1536, H * aspect)))
 }
 
 export const W = deriveWidth()

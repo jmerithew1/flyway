@@ -198,6 +198,14 @@ def check_motion() -> tuple[bool, str]:
     return code == 0, line
 
 
+def check_lane() -> tuple[bool, str]:
+    """R45: does the terrain actually constrain the lane, in both directions?"""
+    code, out = sh([sys.executable, 'tools/lane_census.py'])
+    keep = [l.strip() for l in out.splitlines()
+            if l.strip().startswith(('fly ', 'THREAD', 'NOTHING'))]
+    return code == 0, ' · '.join(keep) if keep else out.strip()[:140]
+
+
 MANUAL = [
     ('R9', 'endings differ by grade with sound off, in one frame'),
     ('R10', 'no straight edges or seams anywhere in the fog'),
@@ -217,6 +225,7 @@ CHECKS = [
     ('R32a', 'no dead code for cut features', check_dead_code),
     ('R32b', 'no stale player-facing copy', check_stale_copy),
     ('R21', 'the world moves', check_motion),
+    ('R45', 'terrain constrains the lane in both directions', check_lane),
     ('MAP', 'every plan section has a rubric line and an owner', check_coverage),
     ('--', 'types compile', check_types),
 ]

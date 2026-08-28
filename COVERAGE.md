@@ -59,7 +59,7 @@ Status: `DONE` shipped and verified · `ACTIVE` being worked now · `QUEUED` nex
 | 10 | Manoeuvring feel and skill ceiling | R4 R5 R31 | reward | ACTIVE |
 | 11 | Level content: rhythm and pressure | R19 R21 | level | ACTIVE |
 | 11b | Composition: authored, not accumulated | R19 | level | ACTIVE |
-| 11c | THE WORLD MUST MOVE | R21 R22 | level | ACTIVE |
+| 11c | THE WORLD MUST MOVE | R21 R22 R45 | level | ACTIVE |
 | 11d | Each act needs its own vocabulary | R35 | level | QUEUED |
 | 12 | Mobile must be equally fun | R15 | main | QUEUED |
 | 13 | Sound doing dramatic work | R28 R29 | audio | ACTIVE |

@@ -380,7 +380,7 @@ def resolve(rel: str) -> str:
     raise SystemExit(f'no shipped file for {rel} (looked for {stem}.webp)')
 
 
-def geometry(file_rel: str, family: str, w: int, h: int):
+def geometry(file_rel: str, family: str, w: int, h: int, draft_entry: dict | None = None):
     """Colliders + openings for one piece, derived from its own alpha.
 
     Derived together in a single pass so a painted opening is exactly the gap
@@ -393,6 +393,26 @@ def geometry(file_rel: str, family: str, w: int, h: int):
     if family == 'organic-brittle':
         # a curtain blocks as one soft mass until it is punched through
         return [{'x': 0, 'y': 0, 'w': w, 'h': h}], []
+    # 2.5D PASSABILITY COMES FIRST. The draft carries a `bands` field for 191 of
+    # its 255 pieces: full-width coverage masses (crowns, beams, lintels) that
+    # genuinely block, with narrow verticals (arch legs, mullions, tracery)
+    # deliberately left OUT because the flock passes them in depth. That model
+    # is what makes flying through a ruin feel like flight rather than like a
+    # maze of solid bars.
+    #
+    # Deriving colliders from the full silhouette instead made every mullion
+    # solid, and the difficulty contract went red: a competent pilot died at
+    # x~19,000 with 185-262 collision events, at 94% daylight — killed by
+    # terrain with the dark nowhere near it. The owner reported it as "a lot
+    # that are still not registering correctly and it's messing up the game".
+    #
+    # So bands win wherever the draft has them. The silhouette pass remains for
+    # the newly registered pieces, which have no draft entry and therefore no
+    # bands to prefer.
+    if draft_entry:
+        bands = draft_entry.get('bands') or draft_entry.get('bands40')
+        if bands:
+            return bands, draft_entry.get('openings') or []
     rects, openings = silhouette_colliders(os.path.join(PUBLIC, file_rel))
     if not rects:
         # filigree and rings can vanish under the speck filter; a solid-looking
@@ -434,8 +454,8 @@ def main() -> None:
     missing = []
     emitted: list[str] = []
 
-    def emit(alias: str, file_rel: str, w: int, h: int, family: str) -> None:
-        colliders, openings = geometry(file_rel, family, w, h)
+    def emit(alias: str, file_rel: str, w: int, h: int, family: str, draft_entry: dict | None = None) -> None:
+        colliders, openings = geometry(file_rel, family, w, h, draft_entry)
         emitted.append(file_rel)
         lines.append(
             f"  '{alias}': {{ key: '{alias}', file: '{file_rel}', w: {w}, h: {h}, "
@@ -448,7 +468,7 @@ def main() -> None:
         if not e:
             missing.append(pid)
             continue
-        emit(alias, resolve(e['file']), e['w'], e['h'], family)
+        emit(alias, resolve(e['file']), e['w'], e['h'], family, e)
 
     for alias, (rel, family) in DIRECT.items():
         file_rel = resolve(f'assets/processed/{rel}.webp')

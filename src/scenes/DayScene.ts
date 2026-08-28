@@ -137,6 +137,7 @@ export class DayScene extends Phaser.Scene {
   /** Decoration that never animates but still gets a transform every frame. */
   private decorStatic: { img: Phaser.GameObjects.Image; pad: number }[] = []
   private audio = new GameAudio()
+  private promptPlate!: Phaser.GameObjects.Graphics
   private falcon!: FalconSystem
   private moths!: MothSwarm
   private thief!: LightThief
@@ -225,6 +226,8 @@ export class DayScene extends Phaser.Scene {
   private shownPrompts = new Set<string>()
   private lastHit = new Map<Bird, number>()
   /** live mote chain: length, its remaining window, and the run's best */
+  /** Overflow light banked toward a returned bird. */
+  private lightBank = 0
   private moteChain = 0
   private moteChainT = 0
   private moteChainBest = 0
@@ -814,8 +817,19 @@ export class DayScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(20)
       .setVisible(false)
+    // INSTRUCTIONS MUST BE READABLE, NOT BEAUTIFUL. A light italic serif over a
+    // bright dusk sky is the worst possible combination for a line the player
+    // has to act on in under a second, and a stroke alone could not save it —
+    // the owner reported these as hard to read, and two of them overlapping.
+    // A solid plate behind the text makes contrast independent of whatever the
+    // sky is doing, which no amount of shadow tuning can achieve.
+    this.promptPlate = this.add
+      .graphics()
+      .setAlpha(0)
+      .setScrollFactor(0)
+      .setDepth(19.9)
     this.promptText = this.add
-      .text(0, 0, '', voice(23, '#f7ecdf'))
+      .text(0, 0, '', display(21, '#fdf6ec', 1, 400))
       .setOrigin(0.5)
       .setAlpha(0)
       .setScrollFactor(0)
@@ -2008,10 +2022,8 @@ export class DayScene extends Phaser.Scene {
     const x1 = this.scrollX + VIEW_W + 100
 
     // the chain window: a live clock on the most frequent action in the game
-    if (this.moteChain > 0) {
-      this.moteChainT -= dt
-      if (this.moteChainT <= 0) this.endMoteChain(false)
-    }
+    const lapsed = this.score.tickHarvest(dt)
+    if (lapsed >= 5) this.audio.formSnap('gather')
 
     // spread widens the net, and a shrunken flock narrows it
     const spread01 = Math.max(0, -this.flock.form)
@@ -2055,18 +2067,27 @@ export class DayScene extends Phaser.Scene {
 
   /** One mote taken: the chain advances, and the chain is what pays. */
   private collectMote(m: { x: number; y: number; worth: number; base: number }): void {
-    this.moteChain += 1
-    this.moteChainT = MOTE_CHAIN_WINDOW
-    this.moteChainBest = Math.max(this.moteChainBest, this.moteChain)
-
     // The chain pays in DAYLIGHT, which is the fog's distance — so a long
     // sweep does not add an abstract score, it physically shoves the wall of
     // night backward. That is the reward the game already owns.
-    const tier = Math.min(4, Math.floor(this.moteChain / 5))
-    const mult = [1, 1.25, 1.6, 2, 3][tier]
+    const mult = this.score.collectLight(m.worth, this.night.daylight)
+    const tier = this.score.harvest.tier
     this.flock.relieveStrain(0.5)
     this.night.feed(m.worth * mult)
-    this.awardScore('light', 1, { x: m.x, y: m.y })
+
+    // SURPLUS LIGHT COMES BACK AS BIRDS — the upward loop the run did not have.
+    // Daylight caps at 1.0 and the route carries roughly 4.7x more light than
+    // the flight consumes, so for most of a good run a x3 chain paid EXACTLY
+    // what a x1 chain paid: the multiplier was decorative precisely when it had
+    // been earned, which teaches the player it is fake. `spill` is 0 while the
+    // meter has room and 1 once the bonus is entirely wasted, so this pays
+    // nothing while daylight still matters and cannot ever feed the fog.
+    this.lightBank += this.score.harvest.spill * (mult - 1)
+    if (this.lightBank >= 1) {
+      this.lightBank -= 1
+      if (this.scatter.recoverableCount > 0) this.scatter.answerCall(1e9)
+      else this.flock.relieveStrain(1.2)
+    }
 
     // A rising PENTATONIC rung, not a chromatic semitone: the score is G-major
     // pentatonic over a D2 drone, so a chromatic ladder leaves the key by the
@@ -2839,6 +2860,12 @@ export class DayScene extends Phaser.Scene {
   /** A collision breaks the chain — the loss the player feels most. Even a
    * 2-link chain says so now; silence was reading as "nothing was lost". */
   private breakScoreStreak(): void {
+    const lostChain = this.score.breakHarvest()
+    if (this.score.harvest.lastLossMatters) {
+      this.chainText.setText(`LIGHT CHAIN LOST  ${lostChain}`).setColor('#e0a898').setAlpha(1)
+      this.tweens.killTweensOf(this.chainText)
+      this.tweens.add({ targets: this.chainText, alpha: 0, duration: 900, delay: 900 })
+    }
     const had = this.score.stumble()
     if (had < 1) return
     this.chainText.setText(had >= 3 ? `CHAIN BROKEN  ${had}` : 'chain broken').setColor('#e0a898').setAlpha(1)

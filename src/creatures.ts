@@ -141,6 +141,20 @@ function makeStreakTexture(scene: Phaser.Scene): void {
   g.addColorStop(1, 'rgba(255,255,255,0)')
   ctx.fillStyle = g
   ctx.fillRect(0, 0, w, h)
+  // FEATHER THE OTHER AXIS. A linear gradient filled across a full-height rect
+  // is soft on X and a HARD CUT on Y, so it renders as a rectangle with sharp
+  // top and bottom edges — the owner saw these as "subtle squares" around the
+  // birds. It is the identical defect that produced the black boxes in the fog,
+  // where a gradient smooth on one axis was a straight edge on the other.
+  // Masking with a vertical falloff makes every edge reach zero alpha.
+  const fade = ctx.createLinearGradient(0, 0, 0, h)
+  fade.addColorStop(0, 'rgba(0,0,0,0)')
+  fade.addColorStop(0.5, 'rgba(0,0,0,1)')
+  fade.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.globalCompositeOperation = 'destination-in'
+  ctx.fillStyle = fade
+  ctx.fillRect(0, 0, w, h)
+  ctx.globalCompositeOperation = 'source-over'
   canvas.refresh()
 }
 

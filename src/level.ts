@@ -32,6 +32,35 @@ import { ART } from './artManifest'
  * things that are unambiguously wrong — a populated band with nothing moving,
  * and a flat profile with no alternation at all.
  *
+ * THE VERTICAL AXIS: this level used to be one-note. Every one of its 69 pieces
+ * was flown OVER or threaded, and not one of them asked the flock to come DOWN
+ * — the owner's report was "you can fly over a lot of obstacles, all are over".
+ * The cause was geometric rather than artistic. `pieceDisplay` puts a `top`
+ * piece's centre at h/2-26, so its bottom edge lands at h-26, while the flock
+ * cruises through roughly y=330-560. Every top piece in the file was between
+ * 240 and 340 tall, which put all eighteen of them at y<315: paintings hanging
+ * in a part of the sky nobody flies in. Below about h=380 a top-mounted piece
+ * is not an obstacle at all, whatever it looks like.
+ *
+ * Twelve of them are now tall enough to reach the lane, and there is a spine of
+ * FOUR descents made of stone — 9450, 14100, 17000, 17700 — which are the ones
+ * that are actually enforced. The other ten are hanging vegetation, which
+ * collides as `soft`: they shut the sky visually and drag on a flock that
+ * ploughs through, but they cannot trap anyone. That split is deliberate. It is
+ * what lets the first eight descents be taught for free before a single one is
+ * made of something that will not give way, and it is why the stone spine can
+ * afford to tighten from 296px of clearance down to 160px across the flight.
+ *
+ * The thirteen pieces still clear of the lane are scenery ON PURPOSE, and it is
+ * worth saying which, so it stays a decision. Six are low ground walls that
+ * become the FLOOR of a squeeze once the ceiling above them comes down — the
+ * census scores pieces one at a time and cannot see a pair. The other six are
+ * canopies deliberately left high: two hold the drafting straight open, one is
+ * inside the gust wall, and three sit over lanes already too tight to narrow.
+ * Negative space is content; what is not allowed is a piece that LOOKS like an
+ * obstacle while asking nothing, because that teaches the player that shapes do
+ * not mean anything.
+ *
  * Every mover teaches before it charges. The first bob (x=1600) and the first
  * pendulum (x=4620) are both incapable of taking a bird: one is hanging matter
  * that never collides, the other is brittle and stands alone in the widest
@@ -41,6 +70,14 @@ import { ART } from './artManifest'
  * 21900. Every solid mover in this file has been swept across its full x span
  * and its full cycle: none of them has a single (position, phase) pair with no
  * route through it.
+ *
+ * A NOTE ON THE NUMBERS BELOW. Clearances are quoted sparingly and only where
+ * the number IS the decision, because they are not properties of this file:
+ * they fall out of the manifest's collider model, which is 2.5D — wide masses
+ * collide, narrow verticals are depth-passable — and that model has been
+ * rewritten more than once. Anything quoted here was measured by sweeping the
+ * piece across its whole x span and, if it moves, its whole cycle. Re-measure
+ * rather than trusting a comment if collision changes underneath this again.
  */
 
 export interface PieceFeature {
@@ -156,20 +193,26 @@ const mid = (x: number, y: number, art: PieceFeature['art'], h: number, extra: P
 export const FEATURES: PieceFeature[] = [
   // ===== OPENING (0-2100): open flight, then teach ==========================
   gnd(900, 'grand_arch', 560, { wide: true }), // generous arch — learn Gather
-  // THE FIRST MOVING THING IN THE FLIGHT, and it is incapable of hurting
-  // anyone: hanging vegetation never collides at all, and it breathes above a
-  // 180px wall the flock already clears without deciding anything. The whole
-  // lesson is "this world keeps time" — the player learns to watch a cycle
-  // long before a cycle is ever allowed to cost them a bird.
-  top(1600, 'root_tangle', 300, { motion: { kind: 'bob', amp: 40, period: 5.0 } }),
+  // THE FIRST MOVING THING IN THE FLIGHT, and the first thing that makes the
+  // flock DROP. Both lessons are given away free here: hanging vegetation
+  // collides as `soft`, so a bird that ignores it is dragged rather than lost,
+  // and it breathes over a low wall the flock already clears.
+  //
+  // Its old height, 300, is why it taught nothing. A `top` piece's bottom edge
+  // lands at h-26, and the flock cruises through roughly y=330-560, so 300 put
+  // this entirely at y<274 — scenery hanging in a sky nobody flies in. Below
+  // ~380 a top piece is not an obstacle at all, whatever it looks like, and
+  // eighteen of them in this file were sitting under that line at once.
+  top(1600, 'root_tangle', 560, { motion: { kind: 'bob', amp: 40, period: 5.0 } }),
   gnd(1600, 'wall_double_arch', 330), // wide low wall + hang above = 2 easy routes
 
   // ===== EARLY RUINS (2100-4600): route choices =============================
   // three-route ruin: hang piece / open middle / low arcade
-  // The same motif one act deeper: the hanging mass now breathes toward the
-  // arcade's crown, so the top route visibly narrows and widens on a beat.
-  // Still soft, still unfailable — develop the reading before charging for it.
-  top(2600, 'root_tangle', 330, { motion: { kind: 'bob', amp: 52, period: 4.6 } }),
+  // The same motif one act deeper, and the descent gets shallower rather than
+  // deeper — the arcade's crown is closer under it than the low wall was. Still
+  // soft, still unfailable, but the flock now has to come down to a line it can
+  // be pushed off; develop the reading before anything charges for it.
+  top(2600, 'root_tangle', 420, { motion: { kind: 'bob', amp: 52, period: 4.6 } }),
   gnd(2600, 'triple_arcade', 400),
   gnd(3150, 'obelisk_a', 600), // split obelisk
   // The Surge lesson used to sit at x=3150 - the SAME x as the solid obelisk on
@@ -188,7 +231,11 @@ export const FEATURES: PieceFeature[] = [
   // sides and nothing to be confused with.
   gnd(3650, 'gothic_arch', 520, { flow: 'gather' }), // narrow: gather
   gnd(4150, 'wall_multi_window', 520, { flow: 'spread' }), // spread through windows
-  top(4150, 'leaf_strand', 260, { motion: { kind: 'bob', amp: 34, period: 4.8 } }),
+  // The descent and the Flow gate become ONE move: the strand shuts the top of
+  // the frame down to 454, so the only way to reach the window bays this gate
+  // is scored on is to drop into them. A gate that could be flown over was not
+  // a gate; now the spread is a thing you do on the way down.
+  top(4150, 'leaf_strand', 480, { motion: { kind: 'bob', amp: 34, period: 4.8 } }),
 
   // ===== EARLY-MID (4600-7100): variety =====================================
   // THE FIRST PENDULUM, and like the first bob it is built so that failing it
@@ -215,8 +262,25 @@ export const FEATURES: PieceFeature[] = [
   gnd(8050, 'rose_window_big', 430), // solid tracery — fly around, strays under
   gnd(8450, 'keyhole_arch', 520),
   gnd(8950, 'column_pair', 460), // triple split, large-native
-  top(8950, 'leaf_strand', 240, { flipX: true, motion: { kind: 'bob', amp: 42, period: 3.8 } }),
+  // The tightest soft squeeze so far — the column pair's mass is the highest
+  // floor any of these have hung over. It is deliberately the LAST rehearsal:
+  // everything asking for a descent up to this point is hanging matter that
+  // only drags, and the very next piece is the first one made of stone.
+  top(8950, 'leaf_strand', 400, { flipX: true, motion: { kind: 'bob', amp: 42, period: 3.8 } }),
   gnd(9450, 'wall_two_window', 500), // window threading
+  // THE FIRST DESCENT MADE OF STONE. Everything overhead until now has been
+  // vegetation the flock ploughs through; this is a shard off a collapsed vault
+  // — it floats, which this world allows, and it collides like the ruins it
+  // fell from. Its mass hangs as one band ACROSS the cruise band, and the sliver
+  // of sky left over it sits above y=210, where the air thins and a flock that
+  // hides up there sinks and starts to bleed. So the way past is the 402px of
+  // open air underneath, and going over is a choice the game charges for
+  // rather than a wall that forbids it.
+  //
+  // Sited where the answer is never in doubt: no other piece within 500px, the
+  // approach fully open, and the widest clearance of any of the four. A lesson
+  // about a new KIND of obstacle must not also be a test of precision.
+  top(9450, 'tall_shard', 440),
   // brittle curtains all sat at `top` above the flight lane, stacked over
   // solid stone - unreachable, so Surge had nothing to burst. Now at
   // flight altitude in clear air. Nudged 65px further out than it was, because
@@ -252,14 +316,23 @@ export const FEATURES: PieceFeature[] = [
   // so the Flow gate does not merely wobble — it opens and shuts on a beat that
   // can be counted and met. The canopy is hanging matter and never collides, so
   // the pulse is a read the player can take at full value with no trap in it.
-  top(11800, 'seed_pod_cluster_b', 330, { sway: true, motion: { kind: 'bob', amp: 48, period: 4.4, phase: Math.PI } }),
+  // Raised from 330 so the pulse is real rather than decorative: at 440 the
+  // canopy reaches 414 and rides down to 462, into the band the flock actually
+  // occupies, while the lattice's mass lifts to meet it. At 330 these were two
+  // things waving at each other from opposite sides of a lane neither entered.
+  // The canopy is hanging matter, so the closing half of the beat drags rather
+  // than blocks — the gate can be met late without being lost.
+  top(11800, 'seed_pod_cluster_b', 440, { sway: true, motion: { kind: 'bob', amp: 48, period: 4.4, phase: Math.PI } }),
 
   // ===== WIND HEIGHTS (12000-14400): pressure + wind ========================
   gnd(12300, 'colonnade_arch', 480),
   // The wind act thins back to two movers on purpose. The crosswind IS the
   // tempo through here, and a second rhythm laid over it would leave neither
   // legible — the player would be reading two clocks and trusting neither.
-  top(12300, 'root_tangle', 280, { flipX: true, sway: true, motion: { kind: 'bob', amp: 44, period: 4.6 } }),
+  // ...and the one mover it does keep is now a descent, reaching 494 and riding
+  // to 538. Being pushed DOWN while a crosswind pushes you back is two demands
+  // at once, which is worth more than two separate movers would have been.
+  top(12300, 'root_tangle', 520, { flipX: true, sway: true, motion: { kind: 'bob', amp: 44, period: 4.6 } }),
   gnd(12900, 'obelisk_b', 580), // split in crosswind
   // brittle net high. The idle sway comes off because a pendulum writes the
   // sprite's rotation every frame — held together the piece fights itself and
@@ -267,6 +340,14 @@ export const FEATURES: PieceFeature[] = [
   mid(13500, 340, 'web_net', 360, { brittle: true, motion: { kind: 'pendulum', amp: 56, period: 4.0 } }),
   gnd(13500, 'wall_four_arch', 380), // arch row low
   gnd(14100, 'gate_double', 440),
+  // The second stone shard, and the first one that costs something: 171px of
+  // air under it against the 402px it was taught with, in the storm, where the
+  // buffet is already moving the flock vertically without being asked. Same
+  // object, same answer, less than half the room — which is how a lesson is
+  // developed rather than repeated. It was 460 until a lane sweep showed that
+  // left a 136px slot with the gate's lower opening shut behind it; in a storm
+  // that is not a descent to time, it is one to survive.
+  top(14100, 'tall_shard', 420, { flipX: true }),
 
   // ===== RAPID MORPH (14400-17400) ==========================================
   gnd(14700, 'gothic_arch', 500, { flipX: true }),
@@ -277,47 +358,67 @@ export const FEATURES: PieceFeature[] = [
   // thin bar rather than a mass, which is what makes it read: one line sliding
   // through open air, with a side to pick.
   //
+  // It hangs at 280 rather than the 250 it was first placed at, because at 250
+  // it spanned y=188..312 — ABOVE the band the flock actually cruises through,
+  // which is the exact defect this pass exists to remove. A travelling slot the
+  // flock passes underneath without noticing is scenery with a tween on it.
+  //
   // Safe at every phase by construction rather than by luck. Swept across the
   // whole piece and the whole cycle: the lane above the bar never closes below
-  // 96px, the lane below never below 276px, and the arch's own side lane is
-  // outside the motion entirely. There is no (position, phase) pair anywhere in
-  // the cycle with no route through it — a misread beat costs tempo, not birds.
-  mid(14700, 250, 'bridge_span', 124, { motion: { kind: 'bob', amp: 52, period: 3.0 } }),
+  // 126px and the air below it never below 564px. There is no (position, phase)
+  // pair anywhere in the cycle with no route through it — a misread beat costs
+  // the player tempo, not birds.
+  mid(14700, 280, 'bridge_span', 124, { motion: { kind: 'bob', amp: 52, period: 3.0 } }),
   gnd(15300, 'wall_multi_window', 560, { flow: 'spread' }),
-  // drop-window: the sky is shut — flare and thread the bays. Now the shut sky
-  // BREATHES, on the fastest period yet, so the moment reads as pressure
-  // arriving rather than as a wall that was always there.
-  top(15300, 'ceiling_pods', 250, { flipX: true, motion: { kind: 'bob', amp: 58, period: 3.2 } }),
+  // drop-window: the sky is shut — flare and thread the bays. That line has been
+  // in this file for a long time and was simply UNTRUE: at h=250 the canopy
+  // stopped at y=224, a hundred pixels above anywhere the flock flies, so the
+  // sky was wide open and the whole beat existed only in the comment. At 500 it
+  // reaches 474 and rides down to 532 — squarely across the cruise band, so the
+  // flare-and-drop the line describes is finally the thing that happens. It
+  // BREATHES too, on the fastest period yet, so the moment reads as pressure
+  // arriving rather than as a wall that was there all along. Being hanging
+  // matter it slows a flock that refuses the drop instead of stopping it, which
+  // is the right price for the act's opening beat rather than its hardest.
+  top(15300, 'ceiling_pods', 500, { flipX: true, motion: { kind: 'bob', amp: 58, period: 3.2 } }),
   gnd(15900, 'grand_arch', 460, { flipX: true }), // large-native, light stone: matches the act's palette
   top(15900, 'root_tangle', 280, { flipX: true, motion: { kind: 'bob', amp: 50, period: 3.6 } }),
   gnd(16500, 'triple_arcade', 480, { flipX: true }),
-  top(16500, 'seed_pod_cluster_b', 260, { motion: { kind: 'bob', amp: 52, period: 3.6 } }), // breathing gap: the canopy sinks toward the columns
-  // DEVELOP it out of art that was already standing here. The thorn arc hangs
-  // from the sky, so bobbing it drives the CEILING of the level's main lane up
-  // and down — the opening travels bodily instead of pinching, and it never
-  // narrows below 320px at any point of the cycle. Through the arc's own
-  // colliders a second, thin line opens and closes as it moves; that one is a
-  // bonus for a player reading closely, never the route, which is why the wide
-  // lane underneath is the thing that is guaranteed.
-  top(17000, 'thorn_arc', 320, { sway: true, motion: { kind: 'bob', amp: 48, period: 3.8, phase: 0 } }),
+  // breathing gap: the canopy sinks toward the columns — another line that was
+  // describing a piece which stopped 100px short of the lane. At 440 it sinks
+  // to 466, into the band, and the gap over the arcade really does close.
+  top(16500, 'seed_pod_cluster_b', 440, { motion: { kind: 'bob', amp: 52, period: 3.6 } }),
+  // The TWIST for both lessons at once, and the only piece that carries them
+  // together: a forced descent that also MOVES. Raised from 320 for the same
+  // reason as its neighbours — a ceiling that stops at 294 is not a ceiling —
+  // and because this is stone rather than vegetation, the drop it asks for is
+  // enforced instead of merely suggested. Bobbing it drives the ceiling of the
+  // level's main lane up and down, so the opening travels bodily rather than
+  // pinching: swept over the whole span and cycle it never falls under 390px,
+  // which is room to be late in but not room to ignore. A second thin
+  // line opens and closes through the arc's own colliders as it rides; that one
+  // is a bonus for a player reading closely, never the route, which is why the
+  // wide lane underneath is the part that is guaranteed.
+  top(17000, 'thorn_arc', 440, { sway: true, motion: { kind: 'bob', amp: 48, period: 3.8, phase: 0 } }),
   gnd(17000, 'wall_arch_window', 420),
 
   // ===== SECOND CHOICE CLUSTER (17400-20400) ================================
-  // THE TWIST, 700px and three seconds later: the same descending ceiling,
-  // faster, and this time the sky above it is shut for the whole cycle — there
-  // is no high line here at all, so the lane that breathes IS the way through.
-  // Declared in ANTIPHASE with the arc at 17000, so the ceiling that was
-  // lifting is now dropping and a player who simply held the altitude that
-  // worked 700px ago is made to move. It breathes between 284px and 364px:
-  // enough to feel the sky come down, never enough to make the lane a threat.
-  top(17700, 'wisteria_arch', 340, { motion: { kind: 'bob', amp: 40, period: 3.2, phase: Math.PI } }),
+  // CONCLUDE both, 700px and three seconds later: the same stone ceiling coming
+  // down, faster, and this time the sky above it is shut for the entire cycle —
+  // there is no high line here at all, so the lane that breathes IS the way
+  // through. Declared in ANTIPHASE with the arc at 17000, so the ceiling that
+  // was lifting is now dropping and a player who simply held the altitude that
+  // worked 700px ago is made to move. This one arrives after two rehearsals in
+  // stone and eight in vegetation, which is why it is allowed to be the only
+  // place in the flight with no line over the top at any phase at all.
+  top(17700, 'wisteria_arch', 440, { motion: { kind: 'bob', amp: 40, period: 3.2, phase: Math.PI } }),
   gnd(17700, 'aqueduct_slope', 420), // slope + organic above: 3 lanes
   gnd(18300, 'column_ring', 580, { flipX: true }),
   // burst the lace — light waits behind. Moved off x=18620, where it hung 320px
   // behind the column and 280px ahead of the window wall and so was never met
   // on its own, into the window wall's own upper lane. One read, three real
   // answers: the 200px lane over the top, Surge through the lace, or the low
-  // window at 166px. It is left STILL on purpose: this band is one of the two
+  // window at 131px. It is left STILL on purpose: this band is one of the two
   // hushes the composition is built around, and the one mover it is allowed is
   // spent on the branch cluster 600px on, not here.
   mid(18900, 430, 'curtain_ivy_lace', 380, { brittle: true }),
@@ -325,8 +426,8 @@ export const FEATURES: PieceFeature[] = [
   // AND HERE THE LEVEL GOES QUIET: one mover in 2000px, the sparsest stretch
   // after the opening. It is also the heaviest travelling mass in the flight —
   // the whole branch cluster slides bodily, carrying a lane above it and a lane
-  // below it as it goes, so the way through moves rather than closes. Measured
-  // over the whole span and cycle those hold at 167px and 233px at their worst
+  // below it as it goes, so the way through moves rather than closes. Swept
+  // over the whole span and cycle those hold at 274px and 345px at their worst
   // and there is never a moment with neither. A single slow heavy object in
   // still air is what buys the gauntlet's crescendo its impact 600px later; a
   // busy stretch here would spend that for nothing.
@@ -352,16 +453,21 @@ export const FEATURES: PieceFeature[] = [
   mid(21300, 350, 'curtain_beaded', 280, { brittle: true, motion: { kind: 'pendulum', amp: 48, period: 3.0 } }),
   // CONCLUDE the travelling mass at the gauntlet's peak: the fastest period in
   // the flight, inside the gust, under a canopy running against it. The
-  // amplitude was cut from 58 to 44 after a sweep measured the pinch between
-  // the wheel and the wall below it closing to 107px — at this tempo, in this
+  // amplitude was cut from 58 to 44 when a sweep found the pinch between the
+  // wheel and the wall beneath it closing to 107px — at this tempo, in this
   // air, the pressure has to come from the clock and never from the clearance,
-  // or reading it stops being possible and starts being a guess. At 44 the
-  // lanes bottom out at 143px above and 121px below, and never both vanish.
+  // or reading it stops being possible and becomes a guess. It is left at 44
+  // even though the collider model has since opened that pinch back up: the
+  // reason for the number was the tempo, and the tempo has not changed.
   mid(21900, 320, 'wheel_diagonal', 235, { motion: { kind: 'bob', amp: 44, period: 2.8, phase: 0 } }), // diagonal wheel high
   top(21900, 'leaf_strand', 260, { motion: { kind: 'bob', amp: 46, period: 2.8, phase: Math.PI } }),
   gnd(21900, 'wall_arch_inset', 380, { flipX: true }),
   gnd(22500, 'tall_gate', 580, { flipX: true }),
-  top(22500, 'ceiling_pods', 300, { sway: true, motion: { kind: 'bob', amp: 54, period: 3.4 } }), // canopy cover for the falcon zone
+  // canopy cover for the falcon zone — and now low enough to BE cover: at 374,
+  // riding to 428, it is a roof the flock can actually put between itself and a
+  // stoop. Cover that hangs above the lane is a picture of cover, which is all
+  // this was at h=300.
+  top(22500, 'ceiling_pods', 400, { sway: true, motion: { kind: 'bob', amp: 54, period: 3.4 } }),
   // The last brittle veil hangs over the triple window wall rather than 320px
   // behind it, and the stray flock at x=23010 sits in the lane above it: the
   // reward for going over the top is on screen from the moment the curtain is.
@@ -376,7 +482,7 @@ export const FEATURES: PieceFeature[] = [
   // way home. The homecoming is the only stretch allowed to keep no time at
   // all, and that absence is what makes it read as arrival rather than as one
   // more thing to get past.
-  top(25000, 'root_tangle', 300, { sway: true, motion: { kind: 'bob', amp: 46, period: 4.8 } }),
+  top(25000, 'root_tangle', 420, { sway: true, motion: { kind: 'bob', amp: 46, period: 4.8 } }),
   // then open sky to the roost
 ]
 
