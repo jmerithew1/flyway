@@ -659,9 +659,7 @@ export function touchLayout(safe: { x: number; y: number; w: number; h: number }
   return [
     { name: 'GATHER', x: R - 146, y: B - 160, r: PAD_R },
     { name: 'SPREAD', x: R - 368, y: B - 160, r: PAD_R },
-    { name: 'DIVE', x: R - 140, y: B - 352, r: MINI_R },
     { name: 'ECHO', x: R - 330, y: B - 362, r: MINI_R },
-    { name: 'BRACE', x: R - 524, y: B - 250, r: SMALL_R },
     { name: 'PAUSE', x: R - 92, y: safe.y + 78, r: PAUSE_R },
   ]
 }

@@ -160,7 +160,6 @@ export class DayScene extends Phaser.Scene {
   private keySpace!: Phaser.Input.Keyboard.Key
   private keyShift!: Phaser.Input.Keyboard.Key
   private touch!: TouchControls
-  private keyDive!: Phaser.Input.Keyboard.Key
   private prevDive = false
   private gestureCx = 0
   private gestureCy = 0
@@ -906,7 +905,6 @@ export class DayScene extends Phaser.Scene {
     this.keySpace = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
     this.keyShift = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
     // Dive: hold the mouse button; V is the keyboard fallback (D is the overlay)
-    this.keyDive = kb.addKey(Phaser.Input.Keyboard.KeyCodes.V)
     kb.on('keydown-C', () => this.echoCall())
     kb.on('keydown-E', () => this.echoCall())
     // touch pads mirror the keyboard grammar exactly; inert on desktop
@@ -1931,7 +1929,6 @@ export class DayScene extends Phaser.Scene {
     }
     // Brace: taught entering the gauntlet, where reading the world matters
     if (this.scrollX > 20500 && this.scrollX < 21600) {
-      this.showPrompt('brace', '', () => this.braceOn)
     }
     const zoneAhead = this.windZoneAt(this.flock.centerX + 500)
     if (zoneAhead) {
@@ -4611,9 +4608,19 @@ export class DayScene extends Phaser.Scene {
    * engaged neither is passed to the flock, and the release edges are consumed
    * so letting go never fires Surge and Flare on the way out. */
   private updateBrace(rawDt: number): void {
+    // BRACE IS CUT, and this is where it kept coming back. The plan cut it
+    // twice over — a world-slow is a player convenience rather than anything a
+    // flock can do, and it was the game's only CHORD, which is near-impossible
+    // on a thumb. But the chord stayed live and was still taught by two
+    // prompts, so it shipped as a hidden control that blanks both formations
+    // while held: a player who happened to hold SPACE and SHIFT together lost
+    // gather and spread with no explanation.
+    //
+    // The machinery stays for now because the tunnel's director-driven
+    // time-dip uses the same easing path; what is removed is the INPUT, so
+    // nothing the player can press reaches it.
     this.braceCool = Math.max(0, this.braceCool - rawDt)
-    const chord =
-      !this.finishing && !this.failing && ((this.keySpace.isDown && this.keyShift.isDown) || this.touch.brace)
+    const chord = false
     if (chord && this.braceCool <= 0) {
       this.braceHeld += rawDt
       const live = this.braceHeld > BRACE_CHORD_DELAY && this.braceHeld < BRACE_CHORD_DELAY + BRACE_MAX_TIME
@@ -4622,7 +4629,6 @@ export class DayScene extends Phaser.Scene {
         this.braceConsumed = true
         this.flock.setBrace(true)
         this.audio.braceTone(true)
-        this.showPrompt('brace', '', () => !this.braceOn)
       } else if (!live && this.braceOn) {
         this.endBrace()
       }
@@ -4714,8 +4720,10 @@ export class DayScene extends Phaser.Scene {
     this.audio.setMuted(on || this.muted) // a paused world is a silent one
     if (on) {
       const veil = this.add.container(0, 0).setScrollFactor(0).setDepth(60)
-      veil.add(this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x0f0c22, 0.62).setOrigin(0))
-      veil.add(this.add.text(VIEW_W / 2, VIEW_H / 2 - 24, 'PAUSED', display(30, INK.bright, 12, 300)).setOrigin(0.5))
+      veil.add(this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x0f0c22, 0.62).setOrigin(0).setScrollFactor(0))
+      veil.add(
+        this.add.text(VIEW_W / 2, VIEW_H / 2 - 24, 'PAUSED', display(30, INK.bright, 12, 300)).setOrigin(0.5).setScrollFactor(0),
+      )
       if (isTouch) {
         // A PAUSE MENU WITH NO BUTTONS IS NOT A PAUSE MENU. This offered
         // "P to fly on · M mute · R restart the day" to a device with no
@@ -4729,7 +4737,10 @@ export class DayScene extends Phaser.Scene {
         // only version that cannot break when a label changes — and the label
         // shrinks rather than spilling if it still will not fit the screen.
         const mk = (dy: number, label: string, hit: () => void): void => {
-          const t = this.add.text(VIEW_W / 2, VIEW_H / 2 + dy, label, display(22, INK.bright, 6, 400)).setOrigin(0.5)
+          const t = this.add
+            .text(VIEW_W / 2, VIEW_H / 2 + dy, label, display(22, INK.bright, 6, 400))
+            .setOrigin(0.5)
+            .setScrollFactor(0)
           const maxW = Math.min(VIEW_W * 0.8, 620)
           if (t.width + 64 > maxW) t.setFontSize(Math.max(13, Math.floor(22 * ((maxW - 64) / t.width))))
           const w = Math.min(maxW, Math.max(300, t.width + 64))
@@ -4738,6 +4749,14 @@ export class DayScene extends Phaser.Scene {
             .rectangle(VIEW_W / 2, VIEW_H / 2 + dy, w, h, 0x1c1533, 0.92)
             .setStrokeStyle(2, 0xd8c3a0, 0.55)
             .setOrigin(0.5)
+            // scrollFactor 0 ON THE PLATE, not just on its container. Phaser's
+            // hit test computes `px + camScrollX * obj.scrollFactorX - camScrollX`
+            // from the OBJECT's own factor and ignores the parent's — so once
+            // the level had scrolled, the hit box sat a full scroll-width away
+            // from the drawn plate and every one of these buttons went dead.
+            // They looked correct in every way an inspection would check:
+            // visible, alpha 1, input enabled, right size, right position.
+            .setScrollFactor(0)
             .setInteractive({ useHandCursor: true })
           plate.on('pointerdown', hit)
           veil.add(plate)

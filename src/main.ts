@@ -88,7 +88,13 @@ Promise.all([fontsReady]).finally(() => {
     }
   }
   portrait.addEventListener('change', gate)
-  gate()
+  // AFTER Phaser has started its loop, not before. TimeStep.sleep() is guarded
+  // by `if (this.running)`, and at construction time it is not running yet — so
+  // calling gate() here directly was a no-op, Phaser started the loop a moment
+  // later, and nothing ever stopped it. Measured: a page opened in portrait
+  // burned 6.3 points of daylight and scrolled 261px in nine seconds while the
+  // player was still being told to turn their phone.
+  game.events.once(Phaser.Core.Events.READY, gate)
 })
 
 const config: Phaser.Types.Core.GameConfig = {

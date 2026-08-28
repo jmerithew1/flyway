@@ -642,7 +642,6 @@ export const PROMPT_TEXT: Record<string, { key: string; touch: string }> = {
   call: { key: 'birds are adrift — press C to ECHO them home', touch: 'birds are adrift — tap ECHO to bring them home' },
   regroup: { key: 'release — regroup', touch: 'let the pads go — regroup' },
   dive: { key: 'drop below it — hold the mouse button to dive', touch: 'drop below it — hold DIVE' },
-  brace: { key: 'no time to read it — hold SPACE + SHIFT to slow the world', touch: 'no time to read it — hold BRACE to slow the world' },
   vortex: { key: 'they are scattered — circle the cursor to whirl them in', touch: 'they are scattered — circle the stick to whirl them in' },
 }
 

@@ -47,11 +47,16 @@ VARIATION_MIN = {
 # opening". Prose is not code, and a check that cries wolf gets ignored, which
 # would defeat the entire point of having it.
 CUT_VERBS = ['beacon', 'lantern']
+# Controls the player must NOT be taught, because they no longer exist.
+CUT_CONTROLS = ['BRACE', 'DIVE', 'SPACE + SHIFT', 'SPACE+SHIFT']
 CUT_IDENTS = [r'(set|enter|begin|do|use)?[Bb]eacon', r'(set|enter|begin|do|use)?[Ll]antern']
 
 # Copy the owner rejected, or that describes behaviour the game no longer has.
 STALE_COPY = [
     ('birds glowing are about to be lost', 'rejected phrasing; it is a blink now, not a glow'),
+    ('hold BRACE', 'BRACE is cut — teaching a control that does not exist'),
+    ('SPACE + SHIFT', 'the Brace chord is cut; no input in this game is a chord'),
+    ('MOUSE or V', 'DIVE is cut — V is no longer bound'),
 ]
 
 
