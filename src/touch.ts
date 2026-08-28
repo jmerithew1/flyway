@@ -7,7 +7,7 @@
  * fixed ability cluster arranged along the right thumb's natural sweep:
  * GATHER and SPREAD are the two big held pads (a short tap on either fires
  * its ability — SURGE and FLARE, exactly mirroring the SPACE/SHIFT grammar),
- * with DIVE, CALL and BRACE as smaller pads up the arc.
+ * with DIVE and CALL as smaller pads up the arc.
  *
  * STEERING — the one subtle part. DayScene steers from
  * `this.input.activePointer`, treating it as an *intention point on screen*:
@@ -70,7 +70,7 @@ const FACE_ALPHA = 0.82 // label / glyph at rest; +0.18 while held
  */
 const PAD_R = 86 // big formation pads (~16 mm across)
 const MINI_R = 50 // dive / call
-const SMALL_R = 44 // brace
+const SMALL_R = 44
 const PAUSE_R = 38
 const TOUCH_SLOP = 20 // hit radius is forgivingly larger than the visual
 
@@ -434,7 +434,6 @@ export class TouchControls {
   private spreadPad?: Pad
   private callPad?: Pad
   private divePad?: Pad
-  private bracePad?: Pad
   private pausePad?: Pad
   private stick?: Stick
   private scene?: Phaser.Scene
@@ -494,10 +493,9 @@ export class TouchControls {
     this.spreadPad = mk('SPREAD', { label: 'SPREAD', sub: 'tap · FLARE' }, () => this.onFlare())
     this.divePad = mk('DIVE', { label: 'DIVE' }, () => {})
     this.callPad = mk('CALL', { label: 'CALL' }, () => this.onCall())
-    this.bracePad = mk('BRACE', { label: 'BRACE' }, () => {})
     // PAUSE: small, out of the thumb arcs, top-right — touch had no chrome at all
     this.pausePad = mk('PAUSE', { label: 'II' }, () => this.onPause())
-    this.pads = [this.gatherPad, this.spreadPad, this.divePad, this.callPad, this.bracePad, this.pausePad]
+    this.pads = [this.gatherPad, this.spreadPad, this.divePad, this.callPad, this.pausePad]
 
     // audit hook: the resolved geometry, so a probe can check reachability
     // and hit-testing against the real layout rather than a transcription
@@ -565,7 +563,11 @@ export class TouchControls {
    * two-finger version for anyone who finds it.
    */
   get brace(): boolean {
-    return (this.bracePad?.held ?? false) || (this.gather && this.spread)
+    // Brace is cut. The getter stays only so callers compile; it is always
+    // false, and the two-finger chord no longer does anything either — a chord
+    // was never viable on touch, which is why the verb was cut in the first
+    // place.
+    return false
   }
 
   /** 0 = ready (bright), 1 = just fired (dim). Mirrors the hoarse cooldown. */
@@ -619,7 +621,7 @@ export class TouchControls {
     this.pads = []
     this.stick?.destroy()
     this.stick = undefined
-    this.gatherPad = this.spreadPad = this.callPad = this.divePad = this.bracePad = this.pausePad = undefined
+    this.gatherPad = this.spreadPad = this.callPad = this.divePad = this.pausePad = undefined
     this.padPointers.clear()
     this.scene = undefined
   }

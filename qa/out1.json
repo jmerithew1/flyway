@@ -1,0 +1,147 @@
+{
+ "bootSeconds": 13,
+ "scenes": [
+  "Title"
+ ],
+ "scale": {
+  "mode": 4,
+  "gameSize": [
+   1536,
+   960
+  ],
+  "parent": [
+   844,
+   390
+  ],
+  "display": [
+   844,
+   527.5
+  ],
+  "rect": {
+   "l": 0,
+   "t": -69,
+   "w": 844,
+   "h": 527.5
+  },
+  "win": [
+   844,
+   390
+  ],
+  "dpr": 3
+ },
+ "texts": [
+  {
+   "sc": "Title",
+   "txt": "DAYLIGHT",
+   "a": 0.9,
+   "vis": true,
+   "cx": 66.8,
+   "cy": 21.1,
+   "w": 74.2,
+   "h": 12.6,
+   "px": "18px"
+  },
+  {
+   "sc": "Title",
+   "txt": "Bring the flock home before nightfall.",
+   "a": 0.97,
+   "vis": true,
+   "cx": 422,
+   "cy": 163.8,
+   "w": 293.4,
+   "h": 26.9,
+   "px": "41px"
+  },
+  {
+   "sc": "Title",
+   "txt": "THE LIGHT YOU GATHER IS THE DISTANCE BETWEEN YOU A",
+   "a": 0.95,
+   "vis": true,
+   "cx": 422,
+   "cy": 195,
+   "w": 614.3,
+   "h": 15.9,
+   "px": "23px"
+  },
+  {
+   "sc": "Title",
+   "txt": "BEGIN FLIGHT",
+   "a": 1,
+   "vis": true,
+   "cx": 422,
+   "cy": 251,
+   "w": 255,
+   "h": 38.5,
+   "px": "56px"
+  },
+  {
+   "sc": "Title",
+   "txt": "or tap the sky",
+   "a": 0.9,
+   "vis": true,
+   "cx": 422,
+   "cy": 305.4,
+   "w": 103.3,
+   "h": 14.3,
+   "px": "21px"
+  },
+  {
+   "sc": "Title",
+   "txt": "CONTROLS",
+   "a": 0.88,
+   "vis": true,
+   "cx": 69,
+   "cy": 368,
+   "w": 78.6,
+   "h": 15.4,
+   "px": "21px"
+  },
+  {
+   "sc": "Title",
+   "txt": "SHARE",
+   "a": 0.88,
+   "vis": true,
+   "cx": 790.7,
+   "cy": 368,
+   "w": 47.3,
+   "h": 15.4,
+   "px": "21px"
+  },
+  {
+   "sc": "Title",
+   "txt": "",
+   "a": 0,
+   "vis": true,
+   "cx": 422,
+   "cy": 315.3,
+   "w": 1.6,
+   "h": 15.9,
+   "px": "23px"
+  },
+  {
+   "sc": "Title",
+   "txt": "turn your phone to fly",
+   "a": 0.93,
+   "vis": true,
+   "cx": 422,
+   "cy": 187.1,
+   "w": 273.6,
+   "h": 40.7,
+   "px": "63px"
+  },
+  {
+   "sc": "Title",
+   "txt": "THE FLOCK NEEDS THE WIDE SKY",
+   "a": 1,
+   "vis": true,
+   "cx": 422,
+   "cy": 220,
+   "w": 325.3,
+   "h": 17,
+   "px": "26px"
+  }
+ ],
+ "veil": "removed"
+}
+LOGS: ['[warning] WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost', '[log] %c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent']
+NETERR: []

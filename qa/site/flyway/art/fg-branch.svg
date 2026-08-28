@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="300" viewBox="0 0 520 300">
+  <!-- Foreground branch entering from the top-left corner. Near-black, meant to
+       frame a corner and nothing more. Tapering limb, a few forks, leaf sprays. -->
+  <g fill="#1d1628">
+    <!-- main limb sweeping down-right, tapering to nothing -->
+    <path d="
+      M 0,18
+      C 60,30 128,58 190,96
+      C 248,132 304,166 366,186
+      C 372,188 372,196 366,196
+      C 300,180 242,146 182,110
+      C 122,74 58,48 0,40
+      Z"/>
+    <!-- upper fork -->
+    <path d="M 118,66 C 150,48 186,38 224,36 C 230,36 230,43 224,44 C 190,47 158,57 128,74 Z"/>
+    <!-- lower fork -->
+    <path d="M 196,102 C 214,132 226,166 230,200 C 231,206 224,207 222,201 C 216,170 204,138 188,110 Z"/>
+    <!-- twig off the main limb -->
+    <path d="M 300,166 C 322,180 340,200 352,222 C 355,227 349,231 346,226 C 334,206 316,187 296,174 Z"/>
+    <!-- leaf sprays, clustered at the fork ends -->
+    <g>
+      <ellipse cx="232" cy="30"  rx="17" ry="8" transform="rotate(-24 232 30)"/>
+      <ellipse cx="252" cy="42"  rx="14" ry="7" transform="rotate(-8 252 42)"/>
+      <ellipse cx="216" cy="18"  rx="13" ry="6.5" transform="rotate(-38 216 18)"/>
+      <ellipse cx="234" cy="210" rx="15" ry="7.5" transform="rotate(64 234 210)"/>
+      <ellipse cx="224" cy="228" rx="12" ry="6" transform="rotate(78 224 228)"/>
+      <ellipse cx="358" cy="232" rx="14" ry="7" transform="rotate(52 358 232)"/>
+      <ellipse cx="372" cy="246" rx="11" ry="5.5" transform="rotate(40 372 246)"/>
+      <ellipse cx="150" cy="60"  rx="12" ry="6" transform="rotate(-30 150 60)"/>
+      <ellipse cx="86"  cy="40"  rx="13" ry="6.5" transform="rotate(-20 86 40)"/>
+      <ellipse cx="40"  cy="24"  rx="12" ry="6" transform="rotate(-14 40 24)"/>
+    </g>
+  </g>
+</svg>

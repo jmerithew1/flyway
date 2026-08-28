@@ -12,7 +12,9 @@ export function createCoreTextures(scene: Phaser.Scene): void {
   makeVerticalFade(scene)
   makeStreakTexture(scene)
   makeAlarmRing(scene)
-  makeCageTexture(scene)
+  makeCageTexture(scene, 'cage', 'dome')
+  makeCageTexture(scene, 'cage_box', 'box')
+  makeCageTexture(scene, 'cage_great', 'great')
   makeMoteTexture(scene)
   makeFogRoll(scene)
   makeShardTexture(scene)
@@ -80,17 +82,19 @@ export function loadArt(scene: Phaser.Scene): void {
 }
 
 /**
- * After load: 'falcon' resolves to the owner-supplied art if present,
- * otherwise a scaled dark stand-in built from the wings-down bird pose.
+ * After load: 'falcon' resolves to the best raptor art available.
+ *
+ * This used to fall straight through to a STARLING pose, scaled up and tinted
+ * flat black, because the painted hawk was never registered and so never
+ * loaded. That stand-in is what read as "a floating sticker": a songbird
+ * silhouette at 3x size has a songbird's stubby wings and blunt tail, and no
+ * amount of tint makes it a predator. The painted poses ship now, so the
+ * fallback is a genuine last resort rather than the thing everyone saw.
  */
 export function resolveFalconTexture(scene: Phaser.Scene): void {
-  if (scene.textures.exists('falcon-art')) {
-    const src = scene.textures.get('falcon-art').getSourceImage() as HTMLCanvasElement
-    scene.textures.addImage('falcon', src as unknown as HTMLImageElement)
-    return
-  }
-  // stand-in: bird-down pose, enlarged and darkened at draw time by tint/scale
-  const src = scene.textures.get('bird-down').getSourceImage() as HTMLCanvasElement
+  const source = ['falcon-art', 'falcon_bank', 'bird-down'].find((k) => scene.textures.exists(k))
+  if (!source) return
+  const src = scene.textures.get(source).getSourceImage() as HTMLCanvasElement
   scene.textures.addImage('falcon', src as unknown as HTMLImageElement)
 }
 
@@ -165,29 +169,84 @@ function makeAlarmRing(scene: Phaser.Scene): void {
  * cage says it instantly, and in a game about a flock it is the one enclosure
  * that needs no explanation.
  */
-function makeCageTexture(scene: Phaser.Scene): void {
-  if (scene.textures.exists('cage')) return
-  const size = 160
-  const canvas = scene.textures.createCanvas('cage', size, size)
+function makeCageTexture(scene: Phaser.Scene, key: string, form: 'dome' | 'box' | 'great'): void {
+  if (scene.textures.exists(key)) return
+  // ONE cage was treated as solving the problem, but a single silhouette in a
+  // single place teaches one lesson and then repeats it for the rest of the
+  // flight. Three built forms, placed five ways (§8g), turn a collectable into
+  // a family of encounters that each ask something different — and the shape
+  // itself says which kind it is before the player is close enough to act.
+  const size = form === 'great' ? 224 : 160
+  const canvas = scene.textures.createCanvas(key, size, size)
   if (!canvas) return
   const ctx = canvas.context
   const cx = size / 2
   const top = size * 0.16
   const bot = size * 0.86
-  const rx = size * 0.32
+  const rx = size * (form === 'great' ? 0.38 : 0.32)
   ctx.strokeStyle = 'rgba(255,255,255,0.95)'
   ctx.lineWidth = 3
   ctx.lineCap = 'round'
+
+  const midY = (top + bot) / 2
+
+  if (form === 'box') {
+    // A PERCHED cage sits on something. It is squared off and it has feet, so
+    // it reads as resting rather than swinging even when it is standing still
+    // — the player should never have to watch it move to know which it is.
+    const half = rx * 1.02
+    const bx = cx - half
+    ctx.strokeRect(bx, top, half * 2, bot - top)
+    for (let i = 1; i < 6; i++) {
+      const x = bx + (half * 2 * i) / 6
+      ctx.beginPath()
+      ctx.moveTo(x, top)
+      ctx.lineTo(x, bot)
+      ctx.stroke()
+    }
+    for (const f of [0.34, 0.68]) {
+      const y = top + (bot - top) * f
+      ctx.beginPath()
+      ctx.moveTo(bx, y)
+      ctx.lineTo(bx + half * 2, y)
+      ctx.stroke()
+    }
+    // feet, which are the whole tell
+    for (const f of [-0.78, 0.78]) {
+      ctx.beginPath()
+      ctx.moveTo(cx + half * f, bot)
+      ctx.lineTo(cx + half * f, bot + size * 0.06)
+      ctx.stroke()
+    }
+    const bg = ctx.createRadialGradient(cx, midY, 0, cx, midY, rx)
+    bg.addColorStop(0, 'rgba(255,255,255,0.30)')
+    bg.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = bg
+    ctx.fillRect(bx, top, half * 2, bot - top)
+    canvas.refresh()
+    return
+  }
 
   // the hook it hangs from
   ctx.beginPath()
   ctx.arc(cx, top - size * 0.06, size * 0.045, Math.PI * 0.15, Math.PI * 1.5)
   ctx.stroke()
 
+  if (form === 'great') {
+    // the GREAT cage is worth a detour, so it has to look worth one from far
+    // away: a finial above the hook, and denser bars reading as heavier metal
+    ctx.beginPath()
+    ctx.moveTo(cx, top - size * 0.1)
+    ctx.lineTo(cx, top - size * 0.16)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(cx, top - size * 0.185, size * 0.026, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
   // meridian bars, bowing out to the cage's waist
-  const midY = (top + bot) / 2
-  for (let i = 0; i < 7; i++) {
-    const f = (i / 6) * 2 - 1 // -1..1 across the cage
+  for (let i = 0; i < (form === 'great' ? 11 : 7); i++) {
+    const f = (i / (form === 'great' ? 10 : 6)) * 2 - 1 // -1..1 across the cage
     const x = cx + f * rx
     ctx.beginPath()
     ctx.moveTo(cx + f * rx * 0.12, top)

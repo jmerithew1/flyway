@@ -36,7 +36,7 @@ export const STRAIN_RECOVERY_RATE = 2.2
 
 // ---- Phase 8: second ability wave ------------------------------------------
 // All of these are OFF by default: the flock behaves exactly as before until
-// the scene calls setDive / enterVortex / setBrace / bankMomentum, and harmony
+// the scene calls setDive / enterVortex / setBrace / bankMomentum
 // only ever *removes* strain, never adds it.
 
 // -- Dive (hold): altitude traded for speed, released as a slingshot ----------
@@ -67,21 +67,6 @@ export const VORTEX_COHESION_BOOST = 0.9
 /** Per-second rate at which every bird's orbitBias slews to the whirl's sign. */
 export const VORTEX_ALIGN_RATE = 3.2
 
-// -- Harmony: calm neutral flight banked, spent on the next formation change --
-/** Harmony gained per second of calm neutral flight (1/3 → ~3s to full). */
-export const HARMONY_BUILD = 1 / 3
-/** Harmony lost per second once flight stops being calm. */
-export const HARMONY_DECAY = 1 / 1.2
-/** |form| must stay under this to count as neutral. */
-export const HARMONY_FORM_BAND = 0.15
-/** Both strains must stay under this to count as calm. */
-export const HARMONY_STRAIN_MAX = 0.1
-/** Harmony needed before a formation change can spend it. */
-export const HARMONY_SPEND_MIN = 0.55
-/** Seconds of strain-free grace bought by a full-harmony spend. */
-export const HARMONY_SPEND_TIME = 0.7
-/** Form-attack multiplier during the grace — the "instant" formation change. */
-export const HARMONY_ATTACK_MULT = 2.2
 
 // -- Brace (hold SPACE+SHIFT): perception bought with formation health -------
 /** Strain-clock accrual multiplier while braced. See Flock.setBrace's contract. */
@@ -178,3 +163,7 @@ export const MOTE_TIERS = ['', 'KINDLED', 'RUNNING', 'BLAZING', 'THE FLYWAY REME
 export const CALL_WAVE_SPEED = 1500
 /** How far it carries before it dies. */
 export const CALL_WAVE_REACH = 1700
+
+/** The reckoning window in REAL seconds. Slow motion is a gift of perception,
+ * not of time - the clock must not slow with the world. */
+export const RECKON_REAL_TIME = 2.8

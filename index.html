@@ -101,8 +101,78 @@
       #boot-veil .veil-fill { animation: none; width: 100%; }
     }
   </style>
+  <style>
+    /* PORTRAIT IS NOT A PLAYABLE ORIENTATION. The flight is a wide, side-on
+       world with a fog wall closing from the left and the roost far to the
+       right; in portrait the player cannot see far enough ahead to read an
+       approaching hazard, which turns authored difficulty into ambush. So the
+       game is not letterboxed into portrait, it is BLOCKED there.
+
+       Done in CSS rather than JavaScript on purpose: it cannot fail to run, it
+       cannot be missed during loading, and it responds the instant the device
+       turns. The Screen Orientation lock API is not used because it requires
+       fullscreen on most mobile browsers and is unsupported on iOS, so it would
+       silently do nothing exactly where it is most needed. */
+    #rotate {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #14102a;
+      color: #f2e8f5;
+      font-family: 'Jost', system-ui, sans-serif;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 2rem;
+    }
+    #rotate .glyph {
+      width: 74px;
+      height: 118px;
+      border: 3px solid #f2e8f5;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+      animation: turn 2.4s ease-in-out infinite;
+    }
+    @keyframes turn {
+      0%, 30% { transform: rotate(0deg); }
+      60%, 100% { transform: rotate(-90deg); }
+    }
+    #rotate h1 {
+      font-size: 1.4rem;
+      font-weight: 400;
+      letter-spacing: 0.22em;
+      margin: 0 0 0.9rem;
+      text-transform: uppercase;
+    }
+    #rotate p {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.1rem;
+      font-style: italic;
+      opacity: 0.78;
+      margin: 0;
+      max-width: 22rem;
+      line-height: 1.5;
+    }
+    /* Only on phone-sized screens — a desktop window that happens to be tall
+       must never be blocked out of the game. */
+    @media (orientation: portrait) and (max-width: 900px) {
+      #rotate { display: flex; }
+      /* Phaser appends its canvas straight to <body>, so there is no wrapper to
+         hide — target the canvas and the loading veil directly. Getting this
+         selector wrong would leave the game visibly running behind the notice. */
+      canvas, #boot-veil { visibility: hidden; }
+    }
+  </style>
 </head>
 <body>
+  <div id="rotate">
+    <div class="glyph"></div>
+    <h1>Turn your phone</h1>
+    <p>The flyway runs wide. Hold your phone sideways to see the road ahead — and what is coming up behind you.</p>
+  </div>
   <div id="boot-veil">
     <div class="veil-inner">
       <img src="assets/processed/final/wordmark.webp" alt="FLYWAY" />

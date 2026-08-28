@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="170" viewBox="0 0 420 170">
+  <!-- Foreground grass. Each blade: left edge sweeps up from a wide base to a
+       tip, right edge sweeps back down to a SEPARATE base point, so it fills as
+       a solid tapering wedge rather than closing into a loop. -->
+  <g fill="#1d1628">
+    <!-- clump A -->
+    <path d="M 8,170  C 12,130 20,96  40,62  L 47,68  C 32,100 26,134 26,170 Z"/>
+    <path d="M 30,170 C 34,142 44,114 66,86  L 74,92  C 56,118 50,144 48,170 Z"/>
+    <path d="M 52,170 C 50,142 44,116 30,94  L 38,88  C 54,112 62,140 70,170 Z"/>
+    <path d="M 80,170 C 76,132 84,100 104,70 L 112,76 C 96,104 90,136 98,170 Z"/>
+    <path d="M 106,170 C 110,144 106,120 92,100 L 100,94 C 116,116 122,144 124,170 Z"/>
+    <!-- clump B -->
+    <path d="M 178,170 C 176,140 184,112 202,86 L 210,92 C 196,116 190,142 196,170 Z"/>
+    <path d="M 202,170 C 206,146 202,124 188,104 L 196,98 C 212,120 220,146 220,170 Z"/>
+    <path d="M 230,170 C 226,136 236,104 256,76  L 265,82 C 248,108 240,138 248,170 Z"/>
+    <path d="M 254,170 C 258,148 254,126 240,108 L 248,102 C 264,124 272,148 272,170 Z"/>
+    <!-- clump C -->
+    <path d="M 322,170 C 318,134 328,102 348,74 L 357,80 C 340,106 332,138 340,170 Z"/>
+    <path d="M 348,170 C 352,146 348,122 334,102 L 342,96 C 358,120 366,146 366,170 Z"/>
+    <path d="M 380,170 C 376,140 384,114 400,90  L 408,96 C 394,118 388,144 396,170 Z"/>
+    <!-- seed heads on the tallest blades -->
+    <ellipse cx="44"  cy="64" rx="5" ry="11" transform="rotate(-16 44 64)"/>
+    <ellipse cx="108" cy="72" rx="5" ry="11" transform="rotate(-14 108 72)"/>
+    <ellipse cx="261" cy="78" rx="5" ry="11" transform="rotate(-18 261 78)"/>
+    <ellipse cx="353" cy="76" rx="5" ry="11" transform="rotate(-15 353 76)"/>
+  </g>
+</svg>

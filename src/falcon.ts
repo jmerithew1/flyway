@@ -16,6 +16,29 @@ export interface FalconZone {
 }
 
 type Phase = 'idle' | 'unease' | 'shadow' | 'window' | 'reckoning' | 'strike' | 'exit' | 'flee'
+type Pose = 'bank' | 'dive' | 'strike' | 'retreat'
+
+/**
+ * Where the painted bird's NOSE points in each source image, in screen radians
+ * (+x right, +y down), measured off the art.
+ *
+ * The poses are not drawn facing a single way — bank and strike look right,
+ * retreat climbs up-left, dive plunges down-left — so the old blanket "they all
+ * face left, flip when travelling right" rule sent half the sequence through
+ * its own move tail-first, and its hand-tuned rotations were authored against a
+ * stand-in that was never the final art. Aiming from a measured nose angle
+ * removes the guesswork: give aim() a heading and the bird points along it.
+ */
+const POSE_NOSE: Record<Pose, number> = {
+  bank: 0.0, // level, facing right
+  dive: 2.18, // plunging down-left
+  // On the strike frame the heading is where the TALONS go, not where the beak
+  // points: the bird is already braking, head up, feet thrown out ahead of it.
+  // Aiming this one off the beak rotated it 65 degrees and put the claws behind
+  // the direction of travel — the exact frame that has to read as contact.
+  strike: 1.82, // talons thrust down and slightly left
+  retreat: -2.14, // climbing away, up-left
+}
 
 /** How far through the dive the talons cross the flock. The strike RESOLVES
  * here — not when the dive starts — so birds disappear on the frame the
@@ -70,36 +93,49 @@ export class FalconSystem {
   private pendingTargets: Bird[] = []
   private pendingGathered = false
   private resolved = true
-  private diveAngle = 1.3
   private fleeFrom = { x: 0, y: 0 }
   private impactY = 430
   private baseScale = 1
   /** Flock size when the zone armed — mobbing needs ~70% of it intact. */
   private zoneArrivalCount = 120
-  private lastX = 0
+  /** Which painted pose is currently on the sprite — aim() needs it to know
+   * which way the art faces before it decides to mirror or rotate. */
+  private pose: Pose = 'bank'
+  private lastPos: { x: number; y: number } | null = null
 
   constructor(scene: Phaser.Scene, audio: GameAudio, zoneXs: number[]) {
     this.scene = scene
     this.audio = audio
     this.zones = zoneXs.map((x, i) => ({ x, done: false, window: FALCON_WINDOWS[Math.min(i, FALCON_WINDOWS.length - 1)] }))
 
-    // shadow: soft dark silhouette decal, screen-space, upper sky
+    // THE SWEEPING SHADOW — the first thing the player sees, and for a long
+    // time it was the wings-down STARLING pose at 3.2x, which is a fat little
+    // songbird outline and reads as nothing at all. It is now a wings-fully-
+    // spread soar, which is the shape a raptor casts from directly overhead.
+    // Drawn tint-filled, so only the outline survives: this is the one place
+    // the warm-rimmed flock/ hawk art is safe to use, because setTintFill
+    // discards its colour entirely.
+    const shadowKey = scene.textures.exists('falcon_soar') ? 'falcon_soar' : 'falcon'
     this.shadow = scene.add
-      .image(0, 120, 'falcon')
-      .setScale(3.2)
+      .image(0, 120, shadowKey)
       .setTintFill(0x1a1226)
       .setAlpha(0)
       .setScrollFactor(0)
       .setDepth(8)
-    // normalize display size regardless of source art resolution; the stand-in
-    // (a scaled supplied bird pose) is darkened toward raptor silhouette
-    this.falcon = scene.add.image(0, -400, 'falcon').setDepth(9).setVisible(false)
-    const tex = scene.textures.get('falcon').getSourceImage() as { width: number; height: number }
+    // normalize display size regardless of source art resolution
+    const startKey = scene.textures.exists('falcon_bank') ? 'falcon_bank' : 'falcon'
+    this.falcon = scene.add.image(0, -400, startKey).setDepth(9).setVisible(false)
+    const tex = scene.textures.get(startKey).getSourceImage() as { width: number; height: number }
     const span = 310
     this.falcon.setScale(span / tex.width)
     this.baseScale = span / tex.width
-    if (!scene.textures.exists('falcon-art') && !scene.textures.exists('falcon_dive')) this.falcon.setTint(0x151024)
-    this.shadow.setScale((span * 1.45) / tex.width)
+    // Flat tint is the LAST resort: it is what makes a painted bird read as a
+    // sticker. Only reach for it when there is genuinely no pose art loaded.
+    if (!scene.textures.exists('falcon-art') && !scene.textures.exists('falcon_bank')) {
+      this.falcon.setTint(0x151024)
+    }
+    const shTex = scene.textures.get(shadowKey).getSourceImage() as { width: number; height: number }
+    this.shadow.setScale((span * 1.45) / shTex.width)
 
     // I1 — THE DIVE IS A HARD STREAK. A sprite sliding down the screen at 46
     // frames of travel reads as a sprite sliding down the screen; a stack of
@@ -149,26 +185,60 @@ export class FalconSystem {
 
   /** Authored pose sequence from the supplied art (bank/dive/strike/retreat);
    * falls back to the legacy single texture when the sheet isn't loaded. */
-  private setPose(pose: 'bank' | 'dive' | 'strike' | 'retreat'): void {
+  private setPose(pose: Pose): void {
     const key = `falcon_${pose}`
     if (!this.scene.textures.exists(key)) return
+    this.pose = pose
     if (this.falcon.texture.key !== key) {
       this.falcon.setTexture(key)
       this.falcon.clearTint()
       const src = this.scene.textures.get(key).getSourceImage() as { width: number; height: number }
-      // the flock is 27px across; a 310px raptor read as ~11x their size.
-      // 210 keeps it clearly the biggest thing in the sky without absurdity.
-      this.falcon.setScale(210 / src.width)
-      this.baseScale = 210 / src.width
+      // Normalize the LONG axis, not the width. Width-normalizing made the
+      // same bird change size every time it changed pose — the wide-spread
+      // strike came out a third shorter than the bank, and the folded dive
+      // came out narrow AND small, so the one frame that should hit hardest
+      // was the smallest thing on screen. Long-axis normalizing keeps one
+      // raptor at one size through the whole sequence.
+      // The flock is 27px across, so 260 puts the hawk at ~10x a bird: clearly
+      // the largest thing in the sky, and large enough to have presence.
+      const s = 260 / Math.max(src.width, src.height)
+      this.falcon.setScale(s)
+      this.baseScale = s
     }
   }
 
-  /** Point the bird where it is going. The poses are drawn facing left, so
-   * travelling right means flipping — otherwise it flies backwards through
-   * its own dive, which is exactly what the audit caught. */
-  private faceTravel(vx: number): void {
-    if (Math.abs(vx) < 1) return
-    this.falcon.setFlipX(vx > 0)
+  /**
+   * Point the painted bird along `dir` (screen radians), plus an optional
+   * `roll` for drama on top of the heading.
+   *
+   * Mirrors rather than spins whenever mirroring needs less rotation, so the
+   * art is never rotated far from the attitude it was painted in — a raptor
+   * spun 140 degrees stops reading as a raptor.
+   */
+  private aim(dir: number, roll = 0): void {
+    const norm = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a))
+    const nose = POSE_NOSE[this.pose]
+    const straight = norm(dir - nose)
+    const flipped = norm(dir - (Math.PI - nose))
+    const flip = Math.abs(flipped) < Math.abs(straight)
+    this.falcon.setFlipX(flip)
+    this.falcon.setRotation((flip ? flipped : straight) + roll)
+  }
+
+  /** Aim along actual travel, measured frame to frame. Hovering (no real
+   * movement) keeps the previous heading rather than snapping to noise. */
+  private aimTravel(x: number, y: number, fallback: number, roll = 0): void {
+    const prev = this.lastPos
+    this.lastPos = { x, y }
+    if (prev) {
+      const dx = x - prev.x
+      const dy = y - prev.y
+      if (Math.hypot(dx, dy) > 2) {
+        this.aim(Math.atan2(dy, dx), roll)
+        return
+      }
+    }
+    this.aim(fallback, roll)
   }
 
   update(dt: number, flock: Flock, scrollX: number, viewW: number, obstacles: Obstacle[] = []): void {
@@ -227,7 +297,10 @@ export class FalconSystem {
       this.falcon.setVisible(true)
       const hover = Math.sin(this.timer * 5.5)
       this.falcon.setPosition(this.strikeX + hover * 26, 150 + hover * 12)
-      this.falcon.setRotation(hover * 0.06)
+      // it hangs there LOOKING AT the flock below and behind it. Aiming at the
+      // travel vector here made it mirror-flip twice a second on the hover
+      // wobble, which is a strobe, not a threat.
+      this.aim(Math.PI + hover * 0.06)
       if (this.reckonFailed || t > RECKON_TIME) {
         // out of time, or a wrong input: it commits, and this one hurts
         this.phase = 'strike'
@@ -244,10 +317,9 @@ export class FalconSystem {
       this.falcon.setVisible(true)
       const wob = Math.sin(this.timer * 4.2)
       const bankX = flock.centerX + 60 + wob * 30
-      this.faceTravel(bankX - (this.lastX || bankX))
-      this.lastX = bankX
       this.falcon.setPosition(bankX, 120 + wob * 16)
-      this.falcon.setRotation(wob * 0.08)
+      // it holds station ahead of and above the flock, turned back to watch it
+      this.aim(Math.PI + wob * 0.08)
       if (t > this.window) {
         this.timer = 0
         this.armStrike(flock)
@@ -262,10 +334,14 @@ export class FalconSystem {
         y: -220 + (q / IMPACT_P) * (this.impactY + 220),
       })
       const f = at(p)
-      this.faceTravel(f.x - (this.lastX || f.x))
-      this.lastX = f.x
       this.falcon.setPosition(f.x, f.y)
-      this.falcon.setRotation(this.diveAngle - 0.35 - p * 0.3)
+      // along the dive line itself — the same line the streaks are laid on, so
+      // the bird and its speed trail can never disagree about where it is going
+      // at() is linear, so sampling behind p is safe even on the first frame —
+      // clamping it to 0 there would give a zero-length vector and a bird
+      // pointing flat right for one frame of the fastest move in the game
+      const back = at(p - 0.03)
+      this.aim(Math.atan2(f.y - back.y, f.x - back.x))
       this.renderStreaks(p, at)
       // THE TALONS ARRIVE. Not a frame earlier: the screech, the hit-stop and
       // the birds all land together, on contact.
@@ -275,6 +351,7 @@ export class FalconSystem {
       if (p >= 1) {
         this.hideStreaks()
         this.diveT = 0
+        this.lastPos = null
         this.phase = 'exit'
         this.timer = 0
       }
@@ -288,11 +365,10 @@ export class FalconSystem {
       const run = Math.pow(Math.max(0, (p - 0.1) / 0.9), 1.7)
       const fx = this.fleeFrom.x - recoil * 90 + run * 1500
       const fy = this.fleeFrom.y - recoil * 40 - run * (this.fleeFrom.y + 620)
-      this.faceTravel(fx - (this.lastX || fx))
-      this.lastX = fx
       this.falcon.setPosition(fx, fy)
-      // it TUMBLES out of control at first, then straightens into the run
-      this.falcon.setRotation(-0.35 - Math.sin(p * 22) * 0.5 * recoil - run * 0.35)
+      // it TUMBLES out of control at first, then straightens into the run —
+      // the tumble rides on top of the heading rather than replacing it
+      this.aimTravel(fx, fy, -0.9, -Math.sin(p * 22) * 0.5 * recoil)
       this.falcon.setAlpha(1 - Math.pow(p, 2.4) * 0.85)
       this.falcon.setScale(this.baseScale * (1 - run * 0.55))
       if (p >= 1) {
@@ -305,10 +381,8 @@ export class FalconSystem {
       const p = Math.min(1, this.timer / 0.8)
       const fx = this.strikeX + 130 + p * 900
       const fy = flock.centerY + 80 - p * (flock.centerY + 500)
-      this.faceTravel(fx - (this.lastX || fx))
-      this.lastX = fx
       this.falcon.setPosition(fx, fy)
-      this.falcon.setRotation(-0.4)
+      this.aimTravel(fx, fy, -0.9)
       for (const c of this.carried) c.sprite.setPosition(fx + c.dx, fy + c.dy)
       if (p >= 1) {
         this.falcon.setVisible(false)
@@ -328,8 +402,6 @@ export class FalconSystem {
     this.falcon.setVisible(true).setAlpha(1).setScale(this.baseScale)
     this.strikeX = flock.centerX
     this.impactY = flock.centerY
-    // the line the streaks are laid along
-    this.diveAngle = Math.atan2((this.impactY + 220) / IMPACT_P, 300)
     const gathered = flock.form > 0.35
 
     // MOBBING: a large, healthy, committed flock turns the tables — it rises
@@ -345,24 +417,8 @@ export class FalconSystem {
       return
     }
 
-    if (false) {
-      this.lastTaken = 0
-      this.phase = 'flee'
-      this.timer = 0
-      this.fleeFrom = { x: flock.centerX + 40, y: Math.max(140, flock.centerY - 220) }
-      this.falcon.setPosition(this.fleeFrom.x, this.fleeFrom.y)
-      this.hideStreaks()
-      this.audio.falconMiss()
-      this.audio.falconRetreatScreech()
-      this.audio.mobSwell()
-      for (const b of flock.birds) {
-        b.vy -= 260 + Math.random() * 160
-        b.panic = Math.max(b.panic, 0.5)
-      }
-      this.onMobBegin?.()
-      this.onStrikeResolved?.(0, true, true)
-      return
-    }
+    // (the automatic mob path that used to live here is gone: mobbing is
+    // now the player's answer to the reckoning, and mobNow() owns it.)
 
     this.phase = 'strike'
     this.resolved = false
@@ -411,6 +467,7 @@ export class FalconSystem {
   mobNow(flock: Flock): void {
     if (this.phase !== 'reckoning') return
     this.lastTaken = 0
+    this.lastPos = null
     this.phase = 'flee'
     this.timer = 0
     this.fleeFrom = { x: flock.centerX + 40, y: Math.max(140, flock.centerY - 220) }
@@ -480,6 +537,7 @@ export class FalconSystem {
   reset(beforeX: number): void {
     for (const z of this.zones) if (z.x > beforeX) z.done = false
     this.phase = 'idle'
+    this.lastPos = null
     this.falcon.setVisible(false).setAlpha(1).setScale(this.baseScale)
     this.shadow.setAlpha(0)
     this.hideStreaks()

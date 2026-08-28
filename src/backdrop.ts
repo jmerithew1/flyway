@@ -6,8 +6,41 @@ import Phaser from 'phaser'
  * at boot — zero external assets, mockup palette.
  */
 
-export const W = 1536
+/**
+ * THE GAME'S WIDTH FOLLOWS THE DEVICE. Height is fixed; width is derived from
+ * the viewport's aspect ratio.
+ *
+ * Why: the scale mode was `ENVELOP`, chosen so a wide phone would fill the
+ * screen and "show more world", which is exactly right for a side-scroller.
+ * But ENVELOP scales to COVER and crops the overflow, and on a viewport that is
+ * short relative to 1.6 it crops VERTICALLY — the opposite of the intent. On a
+ * Pixel held in landscape (~3.0 aspect) that removed roughly half the screen
+ * height, taking the GATHER and SPREAD pads off-screen entirely and making the
+ * game unplayable, while an iPhone at ~2.16 cropped only ~26% and survived. The
+ * bug was invisible on the owner's own phone, which is why it shipped.
+ *
+ * Deriving the width instead delivers the original intent honestly: the canvas
+ * aspect MATCHES the device, so FIT neither crops nor letterboxes, and a wider
+ * phone genuinely sees more of the road ahead and more of the dark behind.
+ *
+ * The floor of 1536 is load-bearing — a great deal of layout is positioned
+ * against this constant, so the world may grow wider but must never grow
+ * narrower than the design it was composed for. Narrower devices letterbox
+ * slightly rather than cropping, because a bar is honest and a missing control
+ * is not.
+ */
 export const H = 960
+
+function deriveWidth(): number {
+  if (typeof window === 'undefined') return 1536
+  const w = window.innerWidth || 1536
+  const h = window.innerHeight || 960
+  if (h <= 0) return 1536
+  // clamped so a freak aspect cannot produce an absurd canvas
+  return Math.round(Math.min(2560, Math.max(1536, H * (w / h))))
+}
+
+export const W = deriveWidth()
 
 export function paintBackdrop(scene: Phaser.Scene): void {
   const canvas = scene.textures.createCanvas('backdrop', W, H)

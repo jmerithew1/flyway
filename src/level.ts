@@ -11,6 +11,36 @@ import { ART } from './artManifest'
  * PACING RULE: every obstacle must be readable 2-4s before arrival. At
  * SCROLL_SPEED that is >=356px of clearance between event x positions; at
  * PRESSURE_SPEED >=428px. pacingReport() asserts this.
+ *
+ * MOTION RHYTHM: the flight used to place ~200 pieces of which SIX moved, so
+ * 25,400px of ruins read as a gallery the player is carried past rather than a
+ * world keeping time. The fix is not "more movers" — an even sprinkle is worse
+ * than none, because constant motion everywhere is noise and gives the eye
+ * nothing to rest against. What is composed here is the SHAPE of it, per
+ * 2,000px band:
+ *
+ *   1 1 3 1 2 5 2 3 3 1 4 2 1
+ *
+ * Two peaks, and each one is paid for in advance by the stillness before it.
+ * The Overgrown (5) follows the drafting straight, which is the quietest
+ * stretch in the level and deliberately carries a single soft canopy across
+ * its whole 2,000px. The Gauntlet (4) follows the level's other hush at
+ * 18,000-20,000, where one slow heavy mass moves through otherwise still air.
+ * The wind act between them thins back out on purpose: the crosswind is
+ * already a tempo, and two clocks running at once means the player trusts
+ * neither. tools/motion_census.py measures this shape and fails on the two
+ * things that are unambiguously wrong — a populated band with nothing moving,
+ * and a flat profile with no alternation at all.
+ *
+ * Every mover teaches before it charges. The first bob (x=1600) and the first
+ * pendulum (x=4620) are both incapable of taking a bird: one is hanging matter
+ * that never collides, the other is brittle and stands alone in the widest
+ * clear window in the level. The solid family is introduced at x=10200 by a
+ * ring whose entire collision is a 21px band inside 790px of open air, and only
+ * then developed, twisted and concluded at 14700, 17000, 17700, 19500 and
+ * 21900. Every solid mover in this file has been swept across its full x span
+ * and its full cycle: none of them has a single (position, phase) pair with no
+ * route through it.
  */
 
 export interface PieceFeature {
@@ -26,8 +56,33 @@ export interface PieceFeature {
   alpha?: number
   /** Perfect Flow gate: pass cleanly in this formation for Flow credit. */
   flow?: 'spread' | 'gather'
-  /** Rhythmic, readable motion — art AND colliders move together. */
-  motion?: { kind: 'pendulum' | 'bob'; amp: number; period: number }
+  /**
+   * Rhythmic, readable motion — art AND colliders move together.
+   *
+   * The two kinds are NOT interchangeable, and the difference decides where
+   * each is allowed to go. `bob` translates the sprite and every one of its
+   * colliders by the same dy, so painting and physics can never disagree by a
+   * pixel: that is why solid stone is only ever given a bob. `pendulum` also
+   * LEANS the art — a fixed roll the colliders do not take — so at a tall
+   * piece's extremes the painting sits several percent of its height off its
+   * own collision. On a curtain you burst or a frond you brush that lean is
+   * free; on anything that kills, it is a lie the player cannot see through.
+   * Pendulums therefore hang on brittle and organic-hang pieces ONLY.
+   *
+   * Periods stay inside 2.6-5.0s. The flock covers ~235px/s and sees ~1000px
+   * of clear sightline ahead of itself, so a cycle in that band completes at
+   * least once between "I can see it" and "I am in it": every moving hazard
+   * below can be watched, committed to, and beaten on purpose rather than
+   * guessed at. Nothing here is fast enough to be a coin flip.
+   *
+   * `phase` (radians) offsets a piece within its cycle, so two movers can run
+   * in antiphase and the opening BETWEEN them travels instead of merely
+   * breathing wider and narrower. The scene currently seeds every mover with a
+   * RANDOM phase, so nothing in this file may depend on it: every pairing
+   * below is sized to be passable at every relative phase, and reads as a
+   * composed beat rather than a coincidence only once the scene honours it.
+   */
+  motion?: { kind: 'pendulum' | 'bob'; amp: number; period: number; phase?: number }
 }
 
 export interface WindZone {
@@ -68,7 +123,7 @@ export const LANDMARKS: Landmark[] = [
   { x: 23200, name: 'Last Arch' },
 ]
 
-const GROUND = 948 // pieces sink into the foreground garden so bases read planted, never floating
+export const GROUND = 948 // pieces sink into the foreground garden so bases read planted, never floating
 
 /** bottom-mounted piece: sits on the ground line whatever its final scale */
 const gnd = (x: number, art: PieceFeature['art'], h: number, extra: Partial<PieceFeature> = {}): PieceFeature => ({
@@ -101,12 +156,20 @@ const mid = (x: number, y: number, art: PieceFeature['art'], h: number, extra: P
 export const FEATURES: PieceFeature[] = [
   // ===== OPENING (0-2100): open flight, then teach ==========================
   gnd(900, 'grand_arch', 560, { wide: true }), // generous arch — learn Gather
-  top(1600, 'root_tangle', 300),
+  // THE FIRST MOVING THING IN THE FLIGHT, and it is incapable of hurting
+  // anyone: hanging vegetation never collides at all, and it breathes above a
+  // 180px wall the flock already clears without deciding anything. The whole
+  // lesson is "this world keeps time" — the player learns to watch a cycle
+  // long before a cycle is ever allowed to cost them a bird.
+  top(1600, 'root_tangle', 300, { motion: { kind: 'bob', amp: 40, period: 5.0 } }),
   gnd(1600, 'wall_double_arch', 330), // wide low wall + hang above = 2 easy routes
 
   // ===== EARLY RUINS (2100-4600): route choices =============================
   // three-route ruin: hang piece / open middle / low arcade
-  top(2600, 'root_tangle', 330),
+  // The same motif one act deeper: the hanging mass now breathes toward the
+  // arcade's crown, so the top route visibly narrows and widens on a beat.
+  // Still soft, still unfailable — develop the reading before charging for it.
+  top(2600, 'root_tangle', 330, { motion: { kind: 'bob', amp: 52, period: 4.6 } }),
   gnd(2600, 'triple_arcade', 400),
   gnd(3150, 'obelisk_a', 600), // split obelisk
   // The Surge lesson used to sit at x=3150 - the SAME x as the solid obelisk on
@@ -116,17 +179,35 @@ export const FEATURES: PieceFeature[] = [
   // rest of the level combined. It now has its own clear air, at the altitude
   // the flock actually flies, so the first lesson can be learned rather than
   // survived.
-  mid(3620, 470, 'curtain_beaded', 300, { brittle: true }), // Surge teacher: a small veil to punch through
+  //
+  // The same mistake then happened again 470px later: the veil was re-sited to
+  // x=3620 and the gothic arch stands at x=3650, THIRTY pixels away, so Surge
+  // and a stone gate still arrived as one unreadable event (pacingReport
+  // measured 0.17s between them, the worst number in the file). The teacher now
+  // lives out at 4620 — see below — where it has 470px of empty air on both
+  // sides and nothing to be confused with.
   gnd(3650, 'gothic_arch', 520, { flow: 'gather' }), // narrow: gather
   gnd(4150, 'wall_multi_window', 520, { flow: 'spread' }), // spread through windows
-  top(4150, 'leaf_strand', 260),
+  top(4150, 'leaf_strand', 260, { motion: { kind: 'bob', amp: 34, period: 4.8 } }),
 
   // ===== EARLY-MID (4600-7100): variety =====================================
+  // THE FIRST PENDULUM, and like the first bob it is built so that failing it
+  // is not available: a brittle veil standing alone in the widest clear window
+  // in the level, swinging barely a tenth of its own width, on the slowest
+  // period in the file. Fly over it, fly under it, or Surge through it — and
+  // the 4850 mote arc sits immediately behind it, so the reward for choosing
+  // the veil is on screen while the choice is still being made.
+  mid(4620, 470, 'curtain_beaded', 300, { brittle: true, motion: { kind: 'pendulum', amp: 34, period: 5.0 } }),
   gnd(5100, 'double_arch_wall', 420), // divide or commit
-  top(5100, 'leaf_strand', 300),
+  top(5100, 'leaf_strand', 300, { motion: { kind: 'bob', amp: 40, period: 4.4 } }),
   gnd(5700, 'column_ring', 560), // steering column, painted detail
   gnd(6150, 'column_broken', 520, { flipX: true }),
-  top(6150, 'ceiling_pods', 280, { sway: true }),
+  // The drafting straight starts here and the level goes DELIBERATELY still
+  // for it: one soft canopy on a long period across the whole 2000px band, and
+  // nothing else. The 1300px lane of light at x=7000 is this flight's one held
+  // note, and a busy sky would spend the quiet that makes the Overgrown's
+  // five-mover peak land 3000px later.
+  top(6150, 'ceiling_pods', 280, { sway: true, motion: { kind: 'bob', amp: 46, period: 4.2 } }),
   gnd(6650, 'tall_gate', 620), // tall narrow gate — vertical compression
 
   // ===== MID RUINS (7100-9600): architecture peaks ==========================
@@ -134,68 +215,168 @@ export const FEATURES: PieceFeature[] = [
   gnd(8050, 'rose_window_big', 430), // solid tracery — fly around, strays under
   gnd(8450, 'keyhole_arch', 520),
   gnd(8950, 'column_pair', 460), // triple split, large-native
-  top(8950, 'leaf_strand', 240, { flipX: true }),
+  top(8950, 'leaf_strand', 240, { flipX: true, motion: { kind: 'bob', amp: 42, period: 3.8 } }),
   gnd(9450, 'wall_two_window', 500), // window threading
   // brittle curtains all sat at `top` above the flight lane, stacked over
   // solid stone - unreachable, so Surge had nothing to burst. Now at
-  // flight altitude in clear air.
-  mid(9760, 455, 'wisteria_curtain', 300, { brittle: true, motion: { kind: 'pendulum', amp: 46, period: 4.2 } }), // brittle shortcut above, visibly loose
+  // flight altitude in clear air. Nudged 65px further out than it was, because
+  // at 9760 it stood 310px behind the window wall — 1.74s, inside the reaction
+  // floor — and the two arrived as one event.
+  mid(9825, 455, 'wisteria_curtain', 300, { brittle: true, motion: { kind: 'pendulum', amp: 46, period: 4.2 } }), // brittle shortcut above, visibly loose
 
   // ===== OVERGROWN RUINS (9600-12000): the organic turn =====================
-  mid(10200, 380, 'thorn_ring', 360, { motion: { kind: 'bob', amp: 34, period: 4.2 } }), // drifting ring — clear lane beneath
-  mid(11060, 470, 'wisteria_dense', 420, { brittle: true, motion: { kind: 'pendulum', amp: 90, period: 3.4 } }), // swinging brittle curtain
+  // THE FIRST DENSITY PEAK: five of this act's seven pieces move, and the act
+  // earns that by following the stillest 2000px in the flight and paying for it
+  // with the sparse wind act after. Density here is the point — this is where
+  // the world stops being architecture and starts being weather.
+  //
+  // It also introduces the SOLID mover family, at a cost of nothing: the ring's
+  // single collider is a 21px band standing in 790px of open air, so "stone can
+  // travel too" is taught by something that cannot be hit except on purpose.
+  mid(10200, 380, 'thorn_ring', 360, { motion: { kind: 'bob', amp: 44, period: 4.4 } }), // drifting ring — clear lane beneath
   gnd(10750, 'wall_circle_bite', 360),
   gnd(11300, 'organic_arch', 380), // vine arch
-  top(11300, 'seed_pod_cluster_a', 340, { sway: true }), // seed grove: brush through, pods rain seeds
-  gnd(11800, 'lattice_gate', 400, { flow: 'spread', motion: { kind: 'bob', amp: 50, period: 4.4 } }), // drifting lattice
-  top(11800, 'seed_pod_cluster_b', 330, { sway: true }),
+  // The vine arch is CURTAINED rather than doubled. This veil used to be its
+  // own encounter at x=11060, 310px behind the wall before it and 240px ahead
+  // of the arch after it — two pacing violations for one piece, and three
+  // things to read inside 550px. Hung in the arch's own mouth it becomes a
+  // single decision with three answers: over the top, Surge through the veil,
+  // or the 110px lane beneath it, which stays open at every phase of the swing.
+  mid(11300, 520, 'wisteria_dense', 400, { brittle: true, motion: { kind: 'pendulum', amp: 84, period: 3.4, phase: 0 } }),
+  // seed grove: brush through, pods rain seeds. Run against the veil below it
+  // so the canopy lifts as the curtain swings out — the diagonal line through
+  // the arch opens and closes rather than simply breathing.
+  top(11300, 'seed_pod_cluster_a', 340, { sway: true, motion: { kind: 'bob', amp: 56, period: 3.4, phase: Math.PI } }),
+  gnd(11800, 'lattice_gate', 400, { flow: 'spread', motion: { kind: 'bob', amp: 50, period: 4.4, phase: 0 } }), // drifting lattice
+  // Floor and ceiling of the lattice gate share a period and run in ANTIPHASE,
+  // so the Flow gate does not merely wobble — it opens and shuts on a beat that
+  // can be counted and met. The canopy is hanging matter and never collides, so
+  // the pulse is a read the player can take at full value with no trap in it.
+  top(11800, 'seed_pod_cluster_b', 330, { sway: true, motion: { kind: 'bob', amp: 48, period: 4.4, phase: Math.PI } }),
 
   // ===== WIND HEIGHTS (12000-14400): pressure + wind ========================
   gnd(12300, 'colonnade_arch', 480),
-  top(12300, 'root_tangle', 280, { flipX: true, sway: true }),
+  // The wind act thins back to two movers on purpose. The crosswind IS the
+  // tempo through here, and a second rhythm laid over it would leave neither
+  // legible — the player would be reading two clocks and trusting neither.
+  top(12300, 'root_tangle', 280, { flipX: true, sway: true, motion: { kind: 'bob', amp: 44, period: 4.6 } }),
   gnd(12900, 'obelisk_b', 580), // split in crosswind
-  mid(13500, 340, 'web_net', 360, { brittle: true, sway: true }), // brittle net high
+  // brittle net high. The idle sway comes off because a pendulum writes the
+  // sprite's rotation every frame — held together the piece fights itself and
+  // the swing stutters. The swing is the better read, so it supersedes.
+  mid(13500, 340, 'web_net', 360, { brittle: true, motion: { kind: 'pendulum', amp: 56, period: 4.0 } }),
   gnd(13500, 'wall_four_arch', 380), // arch row low
   gnd(14100, 'gate_double', 440),
 
   // ===== RAPID MORPH (14400-17400) ==========================================
   gnd(14700, 'gothic_arch', 500, { flipX: true }),
+  // THE TRAVELLING SLOT — the only piece added to this level to build one, and
+  // the most Mario-like thing in the flight. A fallen span floats across the
+  // arch's mouth and rides up and down through it, so what the flock must find
+  // is not a shape to thread but a beat to meet. The span collides as a single
+  // thin bar rather than a mass, which is what makes it read: one line sliding
+  // through open air, with a side to pick.
+  //
+  // Safe at every phase by construction rather than by luck. Swept across the
+  // whole piece and the whole cycle: the lane above the bar never closes below
+  // 96px, the lane below never below 276px, and the arch's own side lane is
+  // outside the motion entirely. There is no (position, phase) pair anywhere in
+  // the cycle with no route through it — a misread beat costs tempo, not birds.
+  mid(14700, 250, 'bridge_span', 124, { motion: { kind: 'bob', amp: 52, period: 3.0 } }),
   gnd(15300, 'wall_multi_window', 560, { flow: 'spread' }),
-  top(15300, 'ceiling_pods', 250, { flipX: true }), // drop-window: the sky is shut — flare and thread the bays
+  // drop-window: the sky is shut — flare and thread the bays. Now the shut sky
+  // BREATHES, on the fastest period yet, so the moment reads as pressure
+  // arriving rather than as a wall that was always there.
+  top(15300, 'ceiling_pods', 250, { flipX: true, motion: { kind: 'bob', amp: 58, period: 3.2 } }),
   gnd(15900, 'grand_arch', 460, { flipX: true }), // large-native, light stone: matches the act's palette
-  top(15900, 'root_tangle', 280, { flipX: true }),
+  top(15900, 'root_tangle', 280, { flipX: true, motion: { kind: 'bob', amp: 50, period: 3.6 } }),
   gnd(16500, 'triple_arcade', 480, { flipX: true }),
   top(16500, 'seed_pod_cluster_b', 260, { motion: { kind: 'bob', amp: 52, period: 3.6 } }), // breathing gap: the canopy sinks toward the columns
-  top(17000, 'thorn_arc', 320, { sway: true }),
+  // DEVELOP it out of art that was already standing here. The thorn arc hangs
+  // from the sky, so bobbing it drives the CEILING of the level's main lane up
+  // and down — the opening travels bodily instead of pinching, and it never
+  // narrows below 320px at any point of the cycle. Through the arc's own
+  // colliders a second, thin line opens and closes as it moves; that one is a
+  // bonus for a player reading closely, never the route, which is why the wide
+  // lane underneath is the thing that is guaranteed.
+  top(17000, 'thorn_arc', 320, { sway: true, motion: { kind: 'bob', amp: 48, period: 3.8, phase: 0 } }),
   gnd(17000, 'wall_arch_window', 420),
 
   // ===== SECOND CHOICE CLUSTER (17400-20400) ================================
-  top(17700, 'wisteria_arch', 340),
+  // THE TWIST, 700px and three seconds later: the same descending ceiling,
+  // faster, and this time the sky above it is shut for the whole cycle — there
+  // is no high line here at all, so the lane that breathes IS the way through.
+  // Declared in ANTIPHASE with the arc at 17000, so the ceiling that was
+  // lifting is now dropping and a player who simply held the altitude that
+  // worked 700px ago is made to move. It breathes between 284px and 364px:
+  // enough to feel the sky come down, never enough to make the lane a threat.
+  top(17700, 'wisteria_arch', 340, { motion: { kind: 'bob', amp: 40, period: 3.2, phase: Math.PI } }),
   gnd(17700, 'aqueduct_slope', 420), // slope + organic above: 3 lanes
   gnd(18300, 'column_ring', 580, { flipX: true }),
-  mid(18620, 460, 'curtain_ivy_lace', 380, { brittle: true }), // burst the lace — light waits behind
+  // burst the lace — light waits behind. Moved off x=18620, where it hung 320px
+  // behind the column and 280px ahead of the window wall and so was never met
+  // on its own, into the window wall's own upper lane. One read, three real
+  // answers: the 200px lane over the top, Surge through the lace, or the low
+  // window at 166px. It is left STILL on purpose: this band is one of the two
+  // hushes the composition is built around, and the one mover it is allowed is
+  // spent on the branch cluster 600px on, not here.
+  mid(18900, 430, 'curtain_ivy_lace', 380, { brittle: true }),
   gnd(18900, 'oval_window_wall', 440),
-  mid(19500, 380, 'branch_cluster', 300, { sway: true }),
+  // AND HERE THE LEVEL GOES QUIET: one mover in 2000px, the sparsest stretch
+  // after the opening. It is also the heaviest travelling mass in the flight —
+  // the whole branch cluster slides bodily, carrying a lane above it and a lane
+  // below it as it goes, so the way through moves rather than closes. Measured
+  // over the whole span and cycle those hold at 167px and 233px at their worst
+  // and there is never a moment with neither. A single slow heavy object in
+  // still air is what buys the gauntlet's crescendo its impact 600px later; a
+  // busy stretch here would spend that for nothing.
+  mid(19500, 380, 'branch_cluster', 300, { sway: true, motion: { kind: 'bob', amp: 66, period: 3.4 } }),
   gnd(19500, 'wall_double_arch', 340),
   gnd(20100, 'bent_arch', 500),
-  mid(20420, 470, 'curtain_beaded', 360, { brittle: true, motion: { kind: 'pendulum', amp: 40, period: 4.6 } }),
 
   // ===== GAUNTLET (20400-23200) =============================================
+  // THE SECOND DENSITY PEAK, and the last one: four movers, the shortest
+  // periods in the level, arriving straight out of the quietest stretch in it.
+  // Everything here has already been taught somewhere safer — this act only
+  // asks for it faster and in worse air.
   gnd(20700, 'column_pair', 520),
-  top(20700, 'ceiling_pods', 260, { sway: true, flipX: true }),
+  top(20700, 'ceiling_pods', 260, { sway: true, flipX: true, motion: { kind: 'bob', amp: 62, period: 2.8 } }),
   gnd(21300, 'gate_double', 460), // double gate split
-  mid(21900, 320, 'wheel_diagonal', 235), // diagonal wheel high
+  // The gate is CURTAINED. The veil moves off x=20420, where it sat 320px
+  // behind the bent arch and 280px ahead of the column pair and so belonged to
+  // neither, and hangs in the double gate's upper lane instead: one read, two
+  // answers — the 170px lane over the top, or Surge straight through. The
+  // downdraft pushing into it is exactly why the answer has to be picked early,
+  // and brittle is exactly why a misread in the level's worst air costs speed
+  // rather than birds.
+  mid(21300, 350, 'curtain_beaded', 280, { brittle: true, motion: { kind: 'pendulum', amp: 48, period: 3.0 } }),
+  // CONCLUDE the travelling mass at the gauntlet's peak: the fastest period in
+  // the flight, inside the gust, under a canopy running against it. The
+  // amplitude was cut from 58 to 44 after a sweep measured the pinch between
+  // the wheel and the wall below it closing to 107px — at this tempo, in this
+  // air, the pressure has to come from the clock and never from the clearance,
+  // or reading it stops being possible and starts being a guess. At 44 the
+  // lanes bottom out at 143px above and 121px below, and never both vanish.
+  mid(21900, 320, 'wheel_diagonal', 235, { motion: { kind: 'bob', amp: 44, period: 2.8, phase: 0 } }), // diagonal wheel high
+  top(21900, 'leaf_strand', 260, { motion: { kind: 'bob', amp: 46, period: 2.8, phase: Math.PI } }),
   gnd(21900, 'wall_arch_inset', 380, { flipX: true }),
   gnd(22500, 'tall_gate', 580, { flipX: true }),
-  top(22500, 'ceiling_pods', 300, { sway: true }), // canopy cover for the falcon zone
-  mid(23320, 455, 'wisteria_curtain', 360, { brittle: true }),
+  top(22500, 'ceiling_pods', 300, { sway: true, motion: { kind: 'bob', amp: 54, period: 3.4 } }), // canopy cover for the falcon zone
+  // The last brittle veil hangs over the triple window wall rather than 320px
+  // behind it, and the stray flock at x=23010 sits in the lane above it: the
+  // reward for going over the top is on screen from the moment the curtain is.
+  mid(23000, 400, 'wisteria_curtain', 360, { brittle: true, motion: { kind: 'pendulum', amp: 50, period: 3.8 } }),
   gnd(23000, 'triple_window_wall', 420),
 
   // ===== FINAL FLOW (23200-25400) ===========================================
   gnd(23600, 'pointed_arch', 520, { flipX: true, flow: 'gather' }), // gather, thread
   gnd(24250, 'gauntlet_gate', 720, { wide: true, flow: 'spread' }), // the monumental final gate — spread through its arches
   gnd(25000, 'aqueduct_run', 520, { wide: true }), // huge final split — the aqueduct run
-  top(25000, 'root_tangle', 300, { sway: true }),
+  // One last slow breath over the aqueduct, then genuinely still air all the
+  // way home. The homecoming is the only stretch allowed to keep no time at
+  // all, and that absence is what makes it read as arrival rather than as one
+  // more thing to get past.
+  top(25000, 'root_tangle', 300, { sway: true, motion: { kind: 'bob', amp: 46, period: 4.8 } }),
   // then open sky to the roost
 ]
 
@@ -217,11 +398,18 @@ export const STRAYS: StrayDef[] = [
   { x: 5260, y: 140, count: 12 }, // over the double-arch wall
   { x: 5950, y: 200, count: 6 },
   { x: 8050, y: 620, count: 8 }, // beneath the rose window
-  { x: 9650, y: 150, count: 7 }, // beyond the brittle wisteria
+  { x: 9650, y: 150, count: 7 }, // high, just before the brittle wisteria
   { x: 10200, y: 420, count: 14 }, // INSIDE the thorn ring's reward line
   { x: 13350, y: 480, count: 7 }, // mid-wind
-  { x: 19360, y: 495, count: 8 },
-  { x: 23010, y: 250, count: 9 },
+  // dropped from y=495: the branch cluster above now travels, and at the bottom
+  // of its swing its stone reached y=489 — six pixels off a stray, so the light
+  // would have been calling the flock into a lane that is only sometimes there.
+  // At 580 it sits inside the lower lane at every phase of the cycle.
+  { x: 19360, y: 580, count: 8 },
+  // likewise raised out of the wisteria curtain that now hangs at x=23000
+  // (y 220-580): these are the reward for taking the lane OVER the veil, so
+  // they have to be visibly above it rather than buried in it.
+  { x: 23010, y: 145, count: 9 },
   { x: 24300, y: 160, count: 10 }, // final optional flock
 ]
 

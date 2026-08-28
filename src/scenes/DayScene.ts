@@ -9,6 +9,7 @@ import { GameAudio } from '../audio'
 import { scoreFeathers } from '../result'
 import { ScoreBook, MasteryEvent, NIGHTFALL_PAR } from '../score'
 import { FalconSystem } from '../falcon'
+import { MothSwarm, LightThief, createCreatureTextures } from '../creatures'
 import { birdFrameKey } from '../textures'
 import { ART } from '../artManifest'
 import {
@@ -31,6 +32,7 @@ import {
   ROOST_Y,
   SKY_TOP,
   SKY_BOTTOM,
+  GROUND,
 } from '../level'
 import { paintFogTile, W as VIEW_W, H as VIEW_H } from '../backdrop'
 import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS,
@@ -38,6 +40,7 @@ import { DAY_NAME, DAY_SUBTITLE, START_BIRDS, FAIL_BIRDS, WARN_BIRDS,
   MOTE_TIERS,
   CALL_WAVE_SPEED,
   CALL_WAVE_REACH,
+  RECKON_REAL_TIME,
 } from '../config'
 import {
   BRACE_CHORD_DELAY,
@@ -135,6 +138,8 @@ export class DayScene extends Phaser.Scene {
   private decorStatic: { img: Phaser.GameObjects.Image; pad: number }[] = []
   private audio = new GameAudio()
   private falcon!: FalconSystem
+  private moths!: MothSwarm
+  private thief!: LightThief
 
   private keySpace!: Phaser.Input.Keyboard.Key
   private keyShift!: Phaser.Input.Keyboard.Key
@@ -147,7 +152,6 @@ export class DayScene extends Phaser.Scene {
   private gestureWound = 0
   private gestureArmed = false
   private gestureCool = 0
-  private harmonyLit = false
   private braceOn = false
   private braceAmt = 0
   private braceHeld = 0
@@ -640,6 +644,25 @@ export class DayScene extends Phaser.Scene {
 
     // authored predator zones: one mid-day, one in the final run
     this.falcon = new FalconSystem(this, this.audio, [8150, 22300])
+    // CREATURES. The flight was static geometry plus one scripted predator, so
+    // nothing in the world had intent. Each of these is answered by a verb the
+    // player already has, which is what finally makes the moveset load-bearing
+    // rather than a list of keys.
+    createCreatureTextures(this)
+    // Placed off the line and spread across the flight so they are met one at a
+    // time. The first cluster is forced harmless by the swarm itself, so the
+    // lesson is always free — no creature's first appearance is its first threat.
+    this.moths = new MothSwarm(this, [
+      { x: 5200, y: 430, count: 6, harmless: true },
+      { x: 11300, y: 360, count: 8, spanX: 260 },
+      { x: 15600, y: 520, count: 9, spanX: 320, period: 5.2 },
+      { x: 19900, y: 400, count: 10, spanX: 300 },
+      { x: 23800, y: 470, count: 10, spanX: 360, period: 4.4 },
+    ])
+    // The thief waits on a ruin long before it matters, so it is seen, then
+    // recognised, and only then does it cost anything.
+    this.thief = new LightThief(this, 13400, 330, 4)
+    this.thief.onPanic = () => this.tierFlash?.(2)
     // the dive commits: the light goes before the bird arrives
     this.falcon.onDiveBegin = () => {
       this.predatorDimTarget = 1
@@ -676,7 +699,9 @@ export class DayScene extends Phaser.Scene {
     this.flock.intentX = 600
     this.flock.intentY = 430
     this.scatter = new ScatterSystem(this)
-    for (const def of STRAYS) this.strays.push({ group: new StrayGroup(this, def.x, def.y, def.count), def })
+    STRAYS.forEach((def, i) =>
+      this.strays.push({ group: new StrayGroup(this, def.x, def.y, def.count, undefined, i), def }),
+    )
 
     this.leafEmitter = this.add
       .particles(0, 0, 'leaf', {
@@ -859,7 +884,7 @@ export class DayScene extends Phaser.Scene {
     this.bloom = this.cameras.main.postFX.addBloom(0xffffff, 1, 1, 0.62, 0.34, 4)
 
     this.night = new Nightfall(this, VIEW_W, VIEW_H)
-    this.night.reset(this.flock.centerX)
+    this.night.reset(this.checkpoint.x)
     this.failTexts = []
 
     // ---- day intro: over live gameplay, no confirmation
@@ -1301,8 +1326,25 @@ export class DayScene extends Phaser.Scene {
     dt *= 1 - this.cardEase * 0.82
     // THE RECKONING crawls the world much harder than a card does — this is a
     // held breath, not a reading pause, and the slow motion IS the drama.
+    if (this.card && this.cardAutoT > 0) {
+      this.cardAutoT -= rawDt
+      if (this.cardAutoT <= 0) this.dismissCard()
+    }
+    if (this.retryFallbackT > 0) {
+      this.retryFallbackT -= rawDt
+      if (this.retryFallbackT <= 0) this.retryGo?.()
+    }
     this.reckonEase += ((this.reckonOn ? 1 : 0) - this.reckonEase) * (1 - Math.exp(-11 * rawDt))
     dt *= 1 - this.reckonEase * 0.88
+    // The window must run on REAL time. Driving it from the slowed clock meant
+    // a player who did not answer froze the world at 12% speed for ~21 real
+    // seconds - the sim stalled outright, and both fairness probes hung at the
+    // same x rather than finishing. Slow motion is for the player's benefit; it
+    // must never buy them extra time.
+    if (this.reckonOn) {
+      this.reckonRealT += rawDt
+      if (this.reckonRealT > RECKON_REAL_TIME) this.falcon.failReckoning()
+    }
     this.updateBrace(rawDt)
     this.braceAmt += ((this.braceOn ? 1 : 0) - this.braceAmt) * (1 - Math.exp(-BRACE_EASE * rawDt))
     dt *= 1 - this.braceAmt * (1 - BRACE_WORLD_SCALE)
@@ -1430,6 +1472,19 @@ export class DayScene extends Phaser.Scene {
     )
 
     this.falcon.update(dt, this.flock, this.scrollX, VIEW_W, this.visibleObstacles())
+    this.moths.update(dt, this.flock, this.scrollX)
+    // Moths take daylight while they cling — the cost is the point, and it is
+    // visible on the meter the player is already watching.
+    if (this.moths.drainPerSec > 0) {
+      this.night.daylight = Math.max(0, this.night.daylight - this.moths.drainPerSec * dt)
+    }
+    this.thief.update(dt, this.flock, this.scrollX)
+    if (this.thief.readyToDisgorge) {
+      // it gives back MORE than it took, because it was already carrying what
+      // it stole from others — that surplus is what makes the detour worth it
+      const gift = this.thief.disgorge()
+      for (let i = 0; i < gift; i++) this.night.feed()
+    }
     // The one warning that can cost the run: it preempts the queue, and it
     // fires at every encounter, not once per session (audit: critical).
     if (this.falcon.inWarning && !this.falconWarned) {
@@ -1602,14 +1657,6 @@ export class DayScene extends Phaser.Scene {
     this.audio.setStrain(this.flock.gatherStrain, this.flock.spreadStrain)
     this.audio.setFlockState(this.flock.form, Phaser.Math.Clamp(meanSpeed, 0, 1))
     // ---- HARMONY: earned by calm neutral flight, spent on the next change
-    if (this.flock.harmonyGrace > 0 && !this.harmonyLit) {
-      this.harmonyLit = true
-      this.audio.celebrationSwell(0.35)
-      this.formFlourish(true)
-      this.showPrompt('harmony', 'the flock is calm — this one is free', () => this.flock.harmonyGrace <= 0)
-    } else if (this.flock.harmonyGrace <= 0) {
-      this.harmonyLit = false
-    }
     // ---- FLOCK VOICE: the murmuration talks to itself
     this.audio.setVoice(
       Phaser.Math.Clamp(this.flock.count / START_BIRDS, 0, 1),
@@ -1617,7 +1664,7 @@ export class DayScene extends Phaser.Scene {
         (1 - Math.max(this.flock.gatherStrain, this.flock.spreadStrain)) *
           (1 - Math.abs(this.flock.form) * 0.4) *
           (this.falcon.inWarning ? 0.15 : 1) *
-          (0.35 + this.flock.harmony * 0.65),
+          0.72,
         0,
         1,
       ),
@@ -1893,7 +1940,17 @@ export class DayScene extends Phaser.Scene {
    * thing you need is most visible exactly when you most need it.
    */
   private updateNightfall(dt: number): void {
-    if (this.finishing || this.failing) return
+    if (this.failing) return
+    // The dark used to be switched off the instant `finishing` began, which
+    // made a graded ending impossible: arriving hunted and arriving clean drew
+    // the identical frame. It keeps advancing through the ceremony now — it
+    // simply stops taking birds — so the fog on your heels is IN the ending.
+    if (this.finishing) {
+      this.night.update(dt, this.flock, this.scrollX, VIEW_W, VIEW_H)
+      this.night.takenThisFrame.length = 0
+      this.nightVeil.setAlpha((1 - this.night.daylight) * 0.5)
+      return
+    }
     // later acts are hungrier - the chase tightens as the day runs out
     this.skyline.setAct(this.atmo.act)
     this.skyline.update(dt, this.scrollX)
@@ -3559,6 +3616,7 @@ export class DayScene extends Phaser.Scene {
    */
   private beginReckoning(): void {
     this.reckonOn = true
+    this.reckonRealT = 0
     this.reckonStep = 0
     // three verbs the player already owns, in a random order so it is read and
     // not memorised
@@ -3653,6 +3711,17 @@ export class DayScene extends Phaser.Scene {
     if (this.failing || this.finishing) return
     if (this.flock.count >= FAIL_BIRDS) return
     this.failing = true
+    // Snapshot the run BEFORE the respawn rolls the counters back to the
+    // checkpoint. Read afterwards these are all checkpoint values, which is
+    // why the fail screen could never have shown the run that actually
+    // happened.
+    this.failMetrics = {
+      reached: Math.round(this.furthestReached()),
+      found: this.stats.found,
+      held: this.flock.count,
+      started: this.stats.startCount,
+      recovered: this.stats.recovered,
+    }
     this.stats.resets++
     this.audio.failureFade()
 
@@ -3756,10 +3825,19 @@ export class DayScene extends Phaser.Scene {
     // first time you lose the flock should land. Every repeat at the SAME
     // checkpoint is compressed hard: you already know what happened, and what
     // you want is to be flying again.
+    // RETRY SPEED, resolved. Naming the loss is what makes difficulty read as
+    // fair; a card between the player and the retry is the strongest possible
+    // anti-retry feature. Both are true, so they are split by which loss this
+    // is. The FIRST loss at a landmark gets the whole story and waits for the
+    // player's own press — their press is what makes the continuity theirs
+    // rather than something the game did to them. Every REPEAT at the same
+    // landmark skips the card entirely and is flying again inside a second,
+    // because you already know what happened and what you want is to be back
+    // in the air. This is the Super Meat Boy / Celeste contract.
     const repeat = this.failsHere >= 1
-    const tText = repeat ? 300 : 1500
-    const tBack = repeat ? 1000 : 4300
-    const tHold = repeat ? 120 : 1150
+    const tText = repeat ? 0 : 1200
+    const tBack = repeat ? 700 : 0 // 0 = wait for input instead of a timer
+    const tHold = repeat ? 100 : 420
     this.time.delayedCall(tText, () => {
       const cx = VIEW_W / 2
       const name = this.checkpoint.name || 'the morning sky'
@@ -3770,22 +3848,45 @@ export class DayScene extends Phaser.Scene {
           .setAlpha(0)
           .setScrollFactor(0)
           .setDepth(52)
+      const m = this.failMetrics
       this.failTexts = [
-        mk(360, 'THE FLOCK SCATTERED', 34, '#f2e4d5', 8),
+        mk(304, 'THE FLOCK SCATTERED', 34, '#f2e4d5', 8),
         // NAME THE CAUSE. lossCause() already knew - 'the dark took them',
         // 'struck the stone', 'the falcon struck' - and this screen threw it
         // all away for a generic line, so players could not tell what had
         // happened, or whether the game was even over. Attribution is the
         // difference between difficulty that reads as fair and difficulty that
         // reads as arbitrary.
-        mk(414, this.lastLossSource || 'Too few birds remained together.', 17, '#e8c9b8'),
-        mk(478, `Returning to ${name}`, 20, '#dccce0', 2),
-        mk(522, `${Math.max(this.checkpoint.count, 60)} BIRDS`, 24, '#f2e8f5', 3),
+        mk(358, this.lastLossSource || 'Too few birds remained together.', 17, '#e8c9b8'),
+        // THE RUN, in four numbers. Not a results screen — just enough to
+        // understand what this attempt was, at the one moment the player most
+        // wants to know. Shown only on a first loss; a repeat never sees it.
+        mk(430, `${m.held} of ${m.started} still flying · ${m.found} lights gathered`, 16, '#cfc0d8'),
+        mk(456, `${(m.reached / 1000).toFixed(1)}k of ${(ROOST_X / 1000).toFixed(1)}k flown${m.recovered ? ` · ${m.recovered} called back` : ''}`, 16, '#cfc0d8'),
+        mk(516, `Returning to ${name}`, 20, '#dccce0', 2),
+        mk(548, `${Math.max(this.checkpoint.count, 60)} BIRDS WILL FLY AGAIN`, 24, '#f2e8f5', 3),
       ]
       this.tweens.add({ targets: this.failTexts, alpha: 0.95, duration: 700 })
+      if (!repeat) {
+        const go = this.add
+          .text(VIEW_W / 2, 622, isTouch ? 'TAP TO FLY AGAIN' : 'PRESS ANY KEY TO FLY AGAIN', display(18, '#f2e8f5', 5, 300))
+          .setOrigin(0.5).setAlpha(0).setScrollFactor(0).setDepth(52)
+        this.failTexts.push(go)
+        // it breathes, so it never reads as a static label the player might
+        // sit and wait behind
+        this.tweens.add({ targets: go, alpha: 0.9, duration: 600, delay: 400 })
+        this.tweens.add({ targets: go, alpha: 0.45, duration: 1100, delay: 1000, yoyo: true, repeat: -1 })
+        this.time.delayedCall(500, () => {
+          if (!this.retryGo) return
+          this.input.once('pointerdown', () => this.retryGo?.())
+          this.input.keyboard?.once('keydown', () => this.retryGo?.())
+        })
+      }
     })
     // 3) restart from the landmark
-    this.time.delayedCall(tBack, () => {
+    const back = (): void => {
+      this.retryGo = null
+      this.retryFallbackT = 0
       this.respawnAtCheckpoint()
       // the world must be VISIBLE before it is dangerous again
       this.paused = true
@@ -3797,11 +3898,36 @@ export class DayScene extends Phaser.Scene {
       this.failTexts = []
       // the dark is pushed back to its standoff on a checkpoint restore, so a
       // retry is a real reprieve rather than resuming inside the fog
-      this.night.reset(this.flock.centerX)
+      this.night.reset(this.checkpoint.x)
       this.tweens.add({ targets: [this.fadeRect, this.duskOverlay], alpha: 0, duration: 1100, delay: 150 })
       this.audio.failureRecover()
       this.failing = false
-    })
+    }
+    if (repeat) {
+      this.time.delayedCall(tBack, back)
+    } else {
+      this.retryGo = back
+      // Never trap the player behind a press. A Phaser timer cannot be trusted
+      // here — under a driven update loop it may not advance at all, which is
+      // exactly how a card once hung the world forever — so the escape hatch
+      // runs on the sim clock, which always ticks.
+      this.retryFallbackT = 40
+    }
+  }
+
+  /** Waiting on the player's press to return to the checkpoint. */
+  private retryGo: (() => void) | null = null
+  private retryFallbackT = 0
+  private failMetrics = { reached: 0, found: 0, held: 0, started: 0, recovered: 0 }
+
+  /** How far right the flock ever actually got, for the fail screen's tally.
+   * Tracked here rather than read off the fog, because the fog's own furthest
+   * mark is its anchor and is not ours to reach into. */
+  private furthestX = 0
+
+  private furthestReached(): number {
+    this.furthestX = Math.max(this.furthestX, this.flock.centerX)
+    return this.furthestX
   }
 
   private failsHere = 0
@@ -3824,13 +3950,31 @@ export class DayScene extends Phaser.Scene {
     const targetCount = Math.max(cp.count, 60 + (this.failsHere - 1) * 18)
     while (this.flock.count > targetCount) this.flock.removeBird(this.flock.birds[this.flock.birds.length - 1])
     while (this.flock.count < targetCount) this.flock.spawnBird(cp.x + rand(-120, 120), 430 + rand(-80, 80))
+    // THE RETURN MUST FLY. Teleporting the flock into position is most of why
+    // a restart read as a save-state reload rather than as the story
+    // continuing: the birds simply existed again, in formation, facing right.
+    // They now come in from off the left edge under their own power and gather
+    // as they arrive, so the checkpoint is a place the flock flies BACK to.
+    //
+    // The camera's left edge is at cp.x - VIEW_W * 0.35, so spawning behind
+    // that keeps every bird off-screen at frame one — the player sees empty
+    // sky, then a flock arriving into it, which is the whole point.
+    const gateX = this.scrollX
+    let i = 0
     for (const b of this.flock.birds) {
-      b.x = cp.x + rand(-140, 140)
-      b.y = 430 + rand(-90, 90)
-      b.vx = rand(180, 240)
-      b.vy = rand(-30, 30)
+      // a ragged column rather than a wall, so they arrive over about a second
+      // instead of crossing the edge as one line
+      b.x = gateX - 220 - (i % 7) * 90 - rand(0, 260)
+      b.y = 430 + rand(-150, 150)
+      // fast enough to catch up to the checkpoint quickly, and varied so the
+      // column stretches and closes the way a real flock does
+      b.vx = rand(330, 430)
+      b.vy = rand(-20, 20)
+      i++
     }
-    this.flock.intentX = cp.x + 200
+    // they steer toward the landmark itself, so the gather happens where the
+    // player is about to need it
+    this.flock.intentX = cp.x + 120
     this.flock.intentY = 430
     this.stats.found = cp.found
     this.stats.flow = cp.flow
@@ -3942,7 +4086,10 @@ export class DayScene extends Phaser.Scene {
   /** the card currently showing, if any */
   private card: Phaser.GameObjects.Container | null = null
   private cardEase = 0
+  private cardAutoT = 0
+  private cardDismiss: (() => void) | null = null
   private reckonEase = 0
+  private reckonRealT = 0
   private cardsShown = new Set<string>()
   private cardCooldown = 0
 
@@ -3984,20 +4131,31 @@ export class DayScene extends Phaser.Scene {
 
     const dismiss = (): void => {
       if (this.card !== c) return
+      this.cardAutoT = 0
+      this.cardDismiss = null
       this.card = null
       this.cardCooldown = 2.5
       this.input.off('pointerdown', dismiss)
       this.input.keyboard?.off('keydown', dismiss)
       this.tweens.add({ targets: c, alpha: 0, scale: 0.96, duration: 200, onComplete: () => c.destroy() })
     }
+    this.cardDismiss = dismiss
     // a beat of grace so the click that caused the encounter does not eat it
     this.time.delayedCall(360, () => {
       if (this.card !== c) return
       this.input.once('pointerdown', dismiss)
       this.input.keyboard?.once('keydown', dismiss)
     })
-    // never trap the player
-    this.time.delayedCall(9000, dismiss)
+    // Never trap the player. This used to rely on a Phaser timer, which does
+    // not advance under a driven update loop - so a card could stay open
+    // forever, holding the world at 18% speed. The sim clock always advances,
+    // so the escape hatch always fires.
+    this.cardAutoT = 9
+  }
+
+  /** Close whatever card is open, from anywhere. */
+  private dismissCard(): void {
+    this.cardDismiss?.()
   }
 
   /** Fire each lesson the first time the world actually asks for it. */
@@ -4336,65 +4494,97 @@ export class DayScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * THE DEPARTURE — the flock leaves the roost, and it is the flock.
+   *
+   * What was here spawned fourteen decorative sprites that faded out and were
+   * destroyed while the real flock was already airborne beside them, so it read
+   * as "some birds leave a tree", not as "we are setting out". Now the actual
+   * birds are held on the branches and released in waves, which means the
+   * number that lifts off is exactly the number on the HUD.
+   *
+   * Style: no new visual language. The same painted roost, the same navy
+   * silhouettes, the same warm dusk. The drama is in staging and timing -
+   * stillness, then one bird, then a cascade - not in effects.
+   */
   private beginDeparture(): void {
-    if (!this.textures.exists('perched_a')) return
-    // The flock wakes ON the roost: hold it there, low and slow, and let it
-    // stream out as the birds lift. Control is live the whole time.
-    for (const b of this.flock.birds) {
-      b.x = 210 + rand(-90, 90)
-      b.y = 620 + rand(-70, 70)
-      b.vx = rand(40, 90)
-      b.vy = rand(-20, 20)
-    }
-    this.flock.intentX = 720
-    this.flock.intentY = 470
-    const treeArt = ART[this.textures.exists('roost_tree_hero') ? 'roost_tree_hero' : 'roost_tree']
-    const treeKey = this.textures.exists('roost_tree_hero') ? 'roost_tree_hero' : 'roost_tree'
-    const th = 430
+    const key = this.textures.exists('roost_unlit')
+      ? 'roost_unlit'
+      : this.textures.exists('roost_tree_hero')
+        ? 'roost_tree_hero'
+        : 'roost_tree'
+    if (!this.textures.exists(key)) return
+
+    const th = 620
+    const art = ART[key] ?? { w: 764, h: 1010 }
+    const treeW = (art.w / art.h) * th
+    const treeX = 250
     const tree = this.add
-      .image(150, 952, treeKey)
+      .image(treeX, GROUND + 18, key)
       .setOrigin(0.5, 1)
-      .setDisplaySize((treeArt.w / treeArt.h) * th, th)
+      .setDisplaySize(treeW, th)
       .setDepth(2)
-      .setAlpha(0.95)
+    // ground mist so the trunk sits IN the world rather than on top of it
     this.add
-      .image(150, 918, 'softdot')
+      .image(treeX, GROUND - 6, 'softdot')
       .setTint(0x6a5c86)
-      .setDisplaySize((treeArt.w / treeArt.h) * th * 1.1, 130)
-      .setAlpha(0.32)
+      .setDisplaySize(treeW * 1.25, 150)
+      .setAlpha(0.3)
       .setDepth(2.4)
-    void tree
-    // sleepers on the branches, waking in sequence
-    for (let i = 0; i < 14; i++) {
-      const key = ['perched_a', 'perched_b', 'perched_c', 'perched_sleep'][i % 4]
-      const art = ART[key]
-      const h = 22 + Math.random() * 7
-      const img = this.add
-        .image(150 + rand(-120, 120), 640 + Math.random() * 150, key)
-        .setDisplaySize((art.w / art.h) * h, h)
-        .setFlipX(Math.random() < 0.5)
-        .setAlpha(0.95)
-        .setDepth(4)
-      this.departureBirds.push(img)
-      // each lifts off, becomes a flight sprite, and is gone into the flock
-      this.time.delayedCall(700 + i * 105, () => {
-        if (!img.active) return
-        this.audio.formSnap('gather')
-        this.tweens.add({
-          targets: img,
-          y: img.y - 150 - Math.random() * 120,
-          x: img.x + 220 + Math.random() * 180,
-          alpha: 0,
-          duration: 900,
-          ease: 'Sine.easeIn',
-          onComplete: () => img.destroy(),
-        })
-      })
+
+    // The camera starts close on the roost and eases out to flight framing, so
+    // control arrives mid-takeoff rather than after a cutaway.
+    const cam = this.cameras.main
+    cam.setZoom(1.22)
+    this.tweens.add({ targets: cam, zoom: 1, duration: 3400, ease: 'Sine.easeInOut' })
+
+    // Hold the WHOLE flock on the branches. Waves are staggered so the tree
+    // empties in a cascade, and the last bird leaves about two seconds in.
+    const crownY = GROUND + 18 - th * 0.62
+    const birds = this.flock.birds
+    for (let i = 0; i < birds.length; i++) {
+      const b = birds[i]
+      // seat them across the crown, denser toward the middle
+      const t = i / Math.max(1, birds.length - 1)
+      const spread = (Math.random() - 0.5) * treeW * 0.74
+      const px = treeX + spread
+      const py = crownY + Math.sin(t * Math.PI) * -60 + (Math.random() - 0.5) * 150
+      // waves of roughly eight, 0.11s apart, after a half-second of stillness
+      const wave = Math.floor(i / 8)
+      this.flock.perch(b, px, py, 0.55 + wave * 0.11 + Math.random() * 0.05)
     }
+
+    // the flock's intention starts out over open air, so the moment they are
+    // released they are already going somewhere
+    this.flock.intentX = treeX + 620
+    this.flock.intentY = 430
+
+    // one wingbeat swell as the tree empties, and the day card holds until the
+    // cascade is underway so the two never compete
+    this.audio.formSnap('gather')
+    this.time.delayedCall(560, () => this.audio.celebrationSwell(0.4))
   }
+
+
 
   /** The day's closing bookend: the camera eases in on the roost while the
    * flock settles into its branches, bird by bird. */
+  /**
+   * How the day ended. Computed once when the roost is reached, and it must be
+   * readable with the sound off in a single frame — is the tree lit or in fog,
+   * and are the birds ON the branches or circling above them.
+   */
+  private arrivalGrade: 'golden' | 'harried' | 'hunted' = 'golden'
+
+  private gradeArrival(): void {
+    const day = this.night.daylight
+    const behind = this.flock.centerX - this.night.edgeX
+    const held = this.flock.count / Math.max(1, this.stats.startCount)
+    if (day < 0.25 || behind < 380) this.arrivalGrade = 'hunted'
+    else if (day >= 0.55 && behind > 900 && held >= 0.7) this.arrivalGrade = 'golden'
+    else this.arrivalGrade = 'harried'
+  }
+
   private runArrivalCeremony(dt: number): void {
     void dt
     const cam = this.cameras.main
@@ -4415,7 +4605,16 @@ export class DayScene extends Phaser.Scene {
     cam.setZoom(Phaser.Math.Linear(cam.zoom, zoom, 0.04))
     // birds land: one settles roughly every 0.12s once the flock is home
     if (t > 2.2 && this.textures.exists('perched_a')) {
-      const want = Math.min(26, Math.floor((t - 2.2) / 0.12))
+      // Perch what you ACTUALLY brought home, not a hard-coded 26 — the tally
+      // told in birds before a single number appears. A hunted flock cannot
+      // settle at all: it circles the covered tree.
+      const canLand =
+        this.arrivalGrade === 'hunted'
+          ? 0
+          : this.arrivalGrade === 'harried'
+            ? Math.floor(this.flock.count * 0.66)
+            : this.flock.count
+      const want = Math.min(Math.min(44, canLand), Math.floor((t - 2.2) / 0.1))
       while (this.perched.length < want) {
         const i = this.perched.length
         const key = ['perched_a', 'perched_b', 'perched_c', 'perched_sleep'][i % 4]

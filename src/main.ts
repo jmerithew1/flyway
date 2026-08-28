@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { W as VIEW_W, H as VIEW_H } from './backdrop'
 import { createCoreTextures, loadArt, resolveFalconTexture } from './textures'
 import { SandboxScene } from './scenes/SandboxScene'
 import { DayScene } from './scenes/DayScene'
@@ -52,15 +53,18 @@ Promise.all([fontsReady]).finally(() => {
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 1536,
-  height: 960,
+  width: VIEW_W,
+  height: VIEW_H,
   backgroundColor: '#3f3760',
   scale: {
-    // FIT letterboxed 26% of a landscape phone away (audit: mobile-pillarbox).
-    // ENVELOP fills the viewport and lets the extra width show more world,
-    // which is exactly right for a side-scroller; desktop is unchanged
-    // because its aspect already matches.
-    mode: Phaser.Scale.ENVELOP,
+    // FIT, not ENVELOP. ENVELOP covers the viewport and CROPS the remainder,
+    // which cut the bottom controls off any phone wider than about 2.2:1 — a
+    // Pixel in landscape lost roughly half its height and both formation pads.
+    // Because the canvas width is now derived from the device's own aspect
+    // (see backdrop.ts), FIT matches it almost exactly: no crop, and no bars
+    // except on unusually tall viewports, where a small bar is far better than
+    // an unreachable control.
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   // four simultaneous pointers: the left thumb on the floating joystick, a

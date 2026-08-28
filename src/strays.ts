@@ -17,37 +17,84 @@ interface StrayBird {
   joining: boolean
 }
 
+/**
+ * The five ways a cage can be met. One cage type taught one lesson and then
+ * repeated it for the whole flight; these each ask something different, and
+ * the FIRST cage a player ever meets is always `perched` — safe, still, at a
+ * comfortable height — because no encounter's first appearance may also be its
+ * first difficulty.
+ */
+export type CageKind = 'perched' | 'hanging' | 'high' | 'sunken' | 'great'
+
 export class StrayGroup {
   x: number
   y: number
   remaining: number
+  readonly kind: CageKind
   private birds: StrayBird[] = []
   private scene: Phaser.Scene
   private joinTimer = 0
   private tint: number
   private glow: Phaser.GameObjects.Image | null = null
+  /** What it hangs from. The break has to tear it off something, or the cage
+   * merely vanishes and nothing was overcome. */
+  private mount: Phaser.GameObjects.Image | null = null
+  private startCount: number
+  private strain = 0
 
-  constructor(scene: Phaser.Scene, x: number, y: number, count: number, tint = 0x2a2038) {
+  constructor(scene: Phaser.Scene, x: number, y: number, count: number, tint = 0x2a2038, index = 0) {
     this.scene = scene
     this.x = x
     this.y = y
     this.tint = tint
     this.remaining = count
+    this.startCount = count
+    // Derived from the placement it was already given rather than from a new
+    // field, so the level's existing geometry decides the kind and the two
+    // files stay independent. Height and prize size are exactly the qualities
+    // a player reads off a cage at distance, so deriving from them cannot
+    // disagree with what the screen shows.
+    this.kind =
+      index === 0 ? 'perched'
+        : count >= 9 ? 'great'
+          : y < 320 ? 'high'
+            : y > 620 ? 'sunken'
+              : index % 2 === 0 ? 'hanging' : 'perched'
     // A soft blob is shapeless and means nothing at a glance. A CAGE says
     // "birds are held here, come free them" with no explanation needed - and
     // in a game about a flock it is the one enclosure that reads instantly.
+    // A great cage is visibly larger because the prize is larger — the detour
+    // has to be worth taking from far enough away to decide on it.
+    const swings = this.kind === 'hanging' || this.kind === 'high'
+    const art = this.kind === 'great' ? 'cage_great' : swings ? 'cage' : 'cage_box'
+    const size = this.kind === 'great' ? 190 : this.kind === 'sunken' ? 118 : 132
     this.glow = scene.add
-      .image(x, y, 'cage').setTint(0xffb35e)
-      .setDisplaySize(132, 132)
+      .image(x, y, scene.textures.exists(art) ? art : 'cage').setTint(0xffb35e)
+      .setDisplaySize(size, size)
       .setAlpha(0.72)
       .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(1.5)
-    // it hangs and sways, the way a cage would
     scene.tweens.add({ targets: this.glow, alpha: 0.5, duration: 1600, yoyo: true, repeat: -1 })
-    scene.tweens.add({
-      targets: this.glow, rotation: 0.05, duration: 2400,
-      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    })
+    if (swings && scene.textures.exists('streak')) {
+      // the chain up out of frame — cheap, and it is the entire reason the
+      // collapse reads as a structure failing rather than a prop despawning
+      this.mount = scene.add
+        .image(x, y - size * 0.46 - 60, 'streak')
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setTint(0xffb35e)
+        .setDisplaySize(3, 130)
+        .setAlpha(0.5)
+        .setDepth(1.45)
+    }
+    if (swings) {
+      // A hanging cage swings, and the swing is the difficulty: you time the
+      // approach to it. A perched one must stay still, or the tell is a lie.
+      scene.tweens.add({
+        targets: this.glow, rotation: this.kind === 'high' ? 0.16 : 0.1,
+        duration: this.kind === 'high' ? 1900 : 2400,
+        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      })
+    }
     for (let i = 0; i < count; i++) {
       const sprite = scene.add.image(x, y, 'bird-mid')
       sprite.setScale(0.2)
@@ -122,6 +169,22 @@ export class StrayGroup {
       }
     }
     this.remaining = this.birds.length
+    // BUILDUP. A cage that is about to give way must LOOK about to give way:
+    // strain climbs as it empties, and the shudder is the warning. Without it
+    // the break is a surprise rather than a payoff you watched arrive.
+    if (this.glow && this.startCount > 0) {
+      this.strain = 1 - this.remaining / this.startCount
+      const k = this.strain * this.strain
+      const shake = k * 5.5
+      this.glow.x = this.x + Math.sin(time * 26) * shake
+      this.glow.y = this.y + Math.sin(time * 31 + 1.7) * shake * 0.7
+      if (this.mount) {
+        this.mount.x = this.glow.x
+        // the chain draws taut and brightens as the load comes onto it
+        this.mount.setAlpha(0.5 + k * 0.45)
+        this.mount.setDisplaySize(3 + k * 2, 130)
+      }
+    }
     if (this.remaining === 0 && this.glow) {
       // FREEING THE CAGE. It used to just fade out, which threw away the whole
       // payoff: the cage bursts white, breaks open, and tumbles out of the sky
@@ -129,6 +192,23 @@ export class StrayGroup {
       const g = this.glow
       this.glow = null
       g.setBlendMode(Phaser.BlendModes.ADD).setTint(0xffffff)
+      // THE MOUNT FAILS FIRST. The chain snaps upward as the load leaves it,
+      // in the opposite direction to the falling wreck — that opposition is
+      // what makes the break read as something giving way rather than as an
+      // object being deleted.
+      if (this.mount) {
+        const m = this.mount
+        this.mount = null
+        this.scene.tweens.add({
+          targets: m,
+          y: m.y - 46,
+          displayHeight: 74,
+          alpha: 0,
+          duration: 380,
+          ease: 'Quad.easeOut',
+          onComplete: () => m.destroy(),
+        })
+      }
 
       // the burst
       this.scene.tweens.add({
@@ -229,6 +309,8 @@ export class StrayGroup {
   }
 
   destroy(): void {
+    this.mount?.destroy()
+    this.mount = null
     for (const b of this.birds) b.sprite.destroy()
     this.birds = []
     this.glow?.destroy()

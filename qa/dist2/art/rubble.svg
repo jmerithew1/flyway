@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="130" viewBox="0 0 300 130">
+  <!-- Collapsed stone at the foot of a ruin: a leaning slab, tumbled blocks of
+       differing size and angle, settling into dark ground scrub. -->
+  <g>
+    <!-- leaning slab, tilted -->
+    <path fill="#4e4468" d="M 84,124 L 96,44 L 132,50 L 124,126 Z"/>
+    <path fill="#8b7ba6" opacity="0.4" d="M 84,124 L 96,44 L 106,46 L 95,125 Z"/>
+    <!-- tumbled blocks -->
+    <path fill="#544a70" d="M 140,126 L 146,86 L 192,92 L 188,128 Z"/>
+    <path fill="#3f3560" opacity="0.5" d="M 176,90 L 192,92 L 188,128 L 173,127 Z"/>
+    <path fill="#4a406a" d="M 30,128 L 38,100 L 76,106 L 72,129 Z"/>
+    <path fill="#544a70" d="M 198,129 L 206,110 L 238,116 L 234,130 Z"/>
+    <!-- a canted block half-buried -->
+    <path fill="#4e4468" d="M 236,130 L 246,116 L 274,126 L 270,130 Z"/>
+    <!-- dark scrub swallowing the base -->
+    <g fill="#1d1628">
+      <ellipse cx="150" cy="126" rx="150" ry="16"/>
+      <ellipse cx="60"  cy="120" rx="46" ry="14"/>
+      <ellipse cx="228" cy="122" rx="54" ry="13"/>
+      <ellipse cx="106" cy="124" rx="30" ry="11"/>
+    </g>
+  </g>
+</svg>

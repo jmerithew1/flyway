@@ -19,13 +19,6 @@ import {
   DIVE_SPEED_BONUS,
   GATHER_HEALTHY,
   GATHER_OVER,
-  HARMONY_ATTACK_MULT,
-  HARMONY_BUILD,
-  HARMONY_DECAY,
-  HARMONY_FORM_BAND,
-  HARMONY_SPEND_MIN,
-  HARMONY_SPEND_TIME,
-  HARMONY_STRAIN_MAX,
   SPREAD_HEALTHY,
   SPREAD_OVER,
   STRAIN_RECOVERY_RATE,
@@ -185,6 +178,10 @@ export interface Bird {
   riskPulseT: number
   /** seconds of carried light left — the flock visibly holds what it takes */
   litT: number
+  /** >0 while this bird is still perched and outside the simulation */
+  perchT: number
+  perchX: number
+  perchY: number
   flapPhase: number
   flapFreq: number
   renderAngle: number // smoothed heading for the sprite (kills rotation jitter)
@@ -315,6 +312,9 @@ export class Flock {
       slotIdx: -1,
       riskPulseT: 0,
       litT: 0,
+      perchT: 0,
+      perchX: 0,
+      perchY: 0,
       flapPhase: rand(0, Math.PI * 2),
       // most birds beat steadily; a few glide with slow lazy strokes
       flapFreq: Math.random() < 0.15 ? rand(2.5, 4) : rand(7, 11),
@@ -491,14 +491,8 @@ export class Flock {
   /** Vortex Whirl: 0..1 rotating-column intensity, decays over VORTEX_DECAY. */
   vortex = 0
   private vortexDir = 1
-  /** Harmony: 0..1 calm reservoir. Read-only feel value (HUD / audio calm). */
-  harmony = 0
-  /** Harmony is the one ability with no call site — it just happens. This is
-   * the single switch that restores exact pre-Phase-8 strain behaviour, for
-   * autopilot regressions that need the old baseline. */
-  harmonyEnabled = true
-  /** Remaining seconds of harmony-bought strain-free grace. */
-  harmonyGrace = 0
+
+
   private prevFormTarget = 0
   private braced = false
   /** Tailwind / updraft bank: 0..1 stored aligned-wind momentum. */
@@ -516,7 +510,6 @@ export class Flock {
    * otherwise bracing doubles it.
    */
   private get strainMult(): number {
-    if (this.harmonyGrace > 0) return 0
     return this.braced ? BRACE_STRAIN_MULT : 1
   }
 
@@ -673,12 +666,26 @@ export class Flock {
     return strength
   }
 
-  /** Spend banked harmony on a formation change: HARMONY_SPEND_TIME seconds
-   * of strain-free, fast-attack morphing. No-op below HARMONY_SPEND_MIN. */
-  private spendHarmony(): void {
-    if (!this.harmonyEnabled || this.harmony < HARMONY_SPEND_MIN) return
-    this.harmonyGrace = Math.max(this.harmonyGrace, HARMONY_SPEND_TIME * this.harmony)
-    this.harmony = 0
+  /**
+   * Hold a bird on a branch. It leaves the simulation entirely until released,
+   * so the birds that lift off the roost ARE the flock rather than decoration
+   * standing next to it — the number that leaves the tree is exactly the number
+   * on the HUD.
+   */
+  perch(b: Bird, x: number, y: number, until: number): void {
+    b.perchT = until
+    b.perchX = x
+    b.perchY = y
+    b.x = x
+    b.y = y
+    b.vx = 0
+    b.vy = 0
+  }
+
+  /** True while any bird is still waiting on a branch. */
+  get anyPerched(): boolean {
+    for (const b of this.birds) if (b.perchT > 0) return true
+    return false
   }
 
   private step(dt: number, input: FlockInput, obstacles: Obstacle[]): void {
@@ -693,7 +700,6 @@ export class Flock {
     this.flareAmt = Math.max(0, this.flareAmt - dt / 0.4)
     this.diveLift = Math.max(0, this.diveLift - dt / DIVE_LIFT_DECAY)
     this.vortex = Math.max(0, this.vortex - dt / VORTEX_DECAY)
-    this.harmonyGrace = Math.max(0, this.harmonyGrace - dt)
     if (this.dive) this.diveHold += dt
     if (this.bankHold > 0) this.bankHold = Math.max(0, this.bankHold - dt)
     else this.bank = Math.max(0, this.bank - dt * BANK_DECAY)
@@ -705,12 +711,9 @@ export class Flock {
 
     // gather/spread axis — quick to respond, slow to relax (shape memory)
     const formTarget = input.gather ? 1 : input.spread ? -1 : 0
-    // HARMONY: a formation change (the press edge out of neutral) cashes in the
-    // calm reservoir — the morph snaps and costs nothing for HARMONY_SPEND_TIME
-    if (formTarget !== 0 && this.prevFormTarget === 0) this.spendHarmony()
     this.prevFormTarget = formTarget
     const strainRelief = 1 + Math.max(this.gatherStrain, this.spreadStrain) * 0.8
-    const attack = TUNING.formLerpAttack * (this.harmonyGrace > 0 ? HARMONY_ATTACK_MULT : 1)
+    const attack = TUNING.formLerpAttack
     const formRate = formTarget === 0 ? TUNING.formLerpRelease * strainRelief : attack
     this.form += (formTarget - this.form) * (1 - Math.exp(-formRate * dt))
     const f = this.form
@@ -738,23 +741,6 @@ export class Flock {
     // ---- hidden strain clocks: holding a formation past its healthy window
     // squeezes birds loose (gather) or lets the edges drift (spread).
     // Neutral is REGROUP: strain drains fast and loose birds return.
-    // HARMONY: calm neutral flight is banked. It builds only while genuinely
-    // idle-handed (near-neutral form AND both strains near zero) and drains
-    // once that stops, so it reads as "the flock settled" rather than a meter.
-    const calm =
-      Math.abs(f) < HARMONY_FORM_BAND &&
-      this.gatherStrain < HARMONY_STRAIN_MAX &&
-      this.spreadStrain < HARMONY_STRAIN_MAX
-    if (!this.harmonyEnabled) {
-      this.harmony = 0
-      this.harmonyGrace = 0
-    } else if (calm) {
-      if (this.harmonyGrace <= 0) this.harmony = Math.min(1, this.harmony + dt * HARMONY_BUILD)
-    } else {
-      this.harmony = Math.max(0, this.harmony - dt * HARMONY_DECAY)
-    }
-
-    // Held-formation accrual runs through strainMult: harmony grace zeroes it,
     // brace doubles it. Recovery is never scaled — mercy is not for sale.
     const accrual = this.strainMult
     const cleanAir = this.draft > 0.5 ? 0.5 : 1
@@ -846,6 +832,24 @@ export class Flock {
 
     for (let i = 0; i < this.birds.length; i++) {
       const b = this.birds[i]
+
+      // A perched bird is outside the simulation entirely — it holds its branch
+      // until its wave is called, then rejoins mid-air with the flock already
+      // moving, so the takeoff is a real departure and not a cutaway.
+      if (b.perchT > 0) {
+        b.perchT -= dt
+        b.x = b.perchX
+        b.y = b.perchY
+        b.vx = 0
+        b.vy = 0
+        if (b.perchT <= 0) {
+          // it drops off the branch before the wings catch — the beat that
+          // makes a launch read as weight rather than as a spawn
+          b.vx = 40 + Math.random() * 70
+          b.vy = 60 + Math.random() * 50
+        }
+        continue
+      }
 
       // --- gather neighbors from grid
       neighborIdx.length = 0

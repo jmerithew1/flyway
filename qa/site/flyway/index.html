@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#14102a" />
+  <title>FLYWAY</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="/flyway/favicon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/flyway/favicon-32.png" />
+  <meta name="description" content="FLYWAY — bring the flock home before nightfall. A murmuration you steer by intention." />
+  <meta property="og:title" content="FLYWAY" />
+  <meta property="og:description" content="Bring the flock home before nightfall." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #14102a;
+      /* no browser scroll, pinch-zoom or pull-to-refresh stealing the flight */
+      touch-action: none;
+      overscroll-behavior: none;
+      -webkit-text-size-adjust: 100%;
+    }
+    /* Phaser's autoCenter already centres the canvas; centring it a second
+       time here throws the ENVELOP crop off-axis and crops the HUD away. */
+    body { -webkit-tap-highlight-color: transparent; }
+    canvas { display: block; touch-action: none; }
+
+    /* Branded boot veil — the wordmark on the game's own navy, instead of
+       Phaser's black flash. Removed from the DOM once the game is up. */
+    #boot-veil {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #14102a;
+      z-index: 10;
+      opacity: 1;
+      transition: opacity 520ms ease;
+      pointer-events: none;
+    }
+    #boot-veil.gone { opacity: 0; }
+    #boot-veil .veil-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 26px;
+    }
+    #boot-veil img {
+      width: min(46vw, 420px);
+      max-width: 76vw;
+      height: auto;
+      animation: veil-breathe 2600ms ease-in-out 120ms infinite;
+    }
+    #boot-veil .veil-line {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: clamp(14px, 2.1vw, 20px);
+      color: #d8cbe4;
+      opacity: 0.8;
+      letter-spacing: 0.02em;
+    }
+    /* a real fill, so the wait is legibly progress and not a hang */
+    #boot-veil .veil-rail {
+      width: min(34vw, 300px);
+      height: 2px;
+      background: rgba(240, 207, 154, 0.18);
+      overflow: hidden;
+      border-radius: 2px;
+    }
+    #boot-veil .veil-fill {
+      display: block;
+      height: 100%;
+      width: 12%;
+      background: linear-gradient(90deg, rgba(240,207,154,0) 0%, #f0cf9a 50%, rgba(240,207,154,0) 100%);
+      animation: veil-sweep 1500ms ease-in-out infinite;
+    }
+    @keyframes veil-sweep {
+      0%   { transform: translateX(-120%); }
+      100% { transform: translateX(900%); }
+    }
+    @keyframes veil-breathe {
+      0%   { opacity: 0.34; }
+      50%  { opacity: 0.9; }
+      100% { opacity: 0.34; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #boot-veil img { animation: none; opacity: 0.85; }
+      #boot-veil .veil-fill { animation: none; width: 100%; }
+    }
+  </style>
+  <style>
+    /* PORTRAIT IS NOT A PLAYABLE ORIENTATION. The flight is a wide, side-on
+       world with a fog wall closing from the left and the roost far to the
+       right; in portrait the player cannot see far enough ahead to read an
+       approaching hazard, which turns authored difficulty into ambush. So the
+       game is not letterboxed into portrait, it is BLOCKED there.
+
+       Done in CSS rather than JavaScript on purpose: it cannot fail to run, it
+       cannot be missed during loading, and it responds the instant the device
+       turns. The Screen Orientation lock API is not used because it requires
+       fullscreen on most mobile browsers and is unsupported on iOS, so it would
+       silently do nothing exactly where it is most needed. */
+    #rotate {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #14102a;
+      color: #f2e8f5;
+      font-family: 'Jost', system-ui, sans-serif;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 2rem;
+    }
+    #rotate .glyph {
+      width: 74px;
+      height: 118px;
+      border: 3px solid #f2e8f5;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+      animation: turn 2.4s ease-in-out infinite;
+    }
+    @keyframes turn {
+      0%, 30% { transform: rotate(0deg); }
+      60%, 100% { transform: rotate(-90deg); }
+    }
+    #rotate h1 {
+      font-size: 1.4rem;
+      font-weight: 400;
+      letter-spacing: 0.22em;
+      margin: 0 0 0.9rem;
+      text-transform: uppercase;
+    }
+    #rotate p {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.1rem;
+      font-style: italic;
+      opacity: 0.78;
+      margin: 0;
+      max-width: 22rem;
+      line-height: 1.5;
+    }
+    /* Only on phone-sized screens — a desktop window that happens to be tall
+       must never be blocked out of the game. */
+    @media (orientation: portrait) and (max-width: 900px) {
+      #rotate { display: flex; }
+      /* Phaser appends its canvas straight to <body>, so there is no wrapper to
+         hide — target the canvas and the loading veil directly. Getting this
+         selector wrong would leave the game visibly running behind the notice. */
+      canvas, #boot-veil { visibility: hidden; }
+    }
+  </style>
+  <script type="module" crossorigin src="/flyway/assets/index-CNb4IJiG.js"></script>
+  <link rel="modulepreload" crossorigin href="/flyway/assets/phaser-0RJB29YE.js">
+</head>
+<body>
+  <div id="rotate">
+    <div class="glyph"></div>
+    <h1>Turn your phone</h1>
+    <p>The flyway runs wide. Hold your phone sideways to see the road ahead — and what is coming up behind you.</p>
+  </div>
+  <div id="boot-veil">
+    <div class="veil-inner">
+      <img src="assets/processed/final/wordmark.webp" alt="FLYWAY" />
+      <div class="veil-line">Bring the flock home before nightfall.</div>
+      <div class="veil-rail"><span class="veil-fill"></span></div>
+    </div>
+  </div>
+</body>
+</html>

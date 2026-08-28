@@ -48,6 +48,25 @@ const LEAD_EMPTY = -520
 const EDGE_LERP = 2.1
 /** How many soft blobs build the fog body. */
 const BLOBS = 26
+/**
+ * The exact mean of ((1+sin)/2)^3 over a full cycle, which is 5/16.
+ *
+ * The surge is that cubed wave, and subtracting this constant makes it sum to
+ * ZERO over time. That is the whole reason the billow is safe to ship: the fog
+ * may lunge and slacken as violently as it likes and its average position is
+ * still exactly where it was before, so the two-sided difficulty contract the
+ * level is tuned against does not move. This is arithmetic, not a number
+ * arrived at by eye — do not "tune" it.
+ */
+const SURGE_MEAN = 5 / 16
+/** How far the front reaches toward the flock when it is most intent on it. */
+const LEAN_REACH = 190
+/**
+ * Width of the lunge, squared. A lobe roughly a third of the frame tall reads
+ * as a directed reach at something; widen it and the whole wall moves forward
+ * together, which is indistinguishable from the wall simply being closer.
+ */
+const LEAN_SIGMA2 = 230 * 230
 
 export class Nightfall {
   /** 1 = broad day, 0 = the dark is on you. */
@@ -64,7 +83,20 @@ export class Nightfall {
 
   private scene: Phaser.Scene
   private blobs: Phaser.GameObjects.Image[] = []
-  private blobSpec: { dx: number; y: number; r: number; phase: number; speed: number; rise: number; depth: number }[] = []
+  private blobSpec: {
+    dx: number
+    y: number
+    r: number
+    phase: number
+    speed: number
+    rise: number
+    depth: number
+    surgePhase: number
+    surgeRate: number
+    spinPhase: number
+    spinRate: number
+    spinDir: number
+  }[] = []
   private rim!: Phaser.GameObjects.Image
   private edgeFade!: Phaser.GameObjects.Image
   private tendrils: Phaser.GameObjects.Image[] = []
@@ -81,6 +113,16 @@ export class Nightfall {
   private trailBuf: (Bird | null)[] = []
   private trailCount = 0
   private intensity = 1
+  /**
+   * The billow and churn clocks are INTEGRATED rather than read off elapsed
+   * time. Their rates rise as the day runs out, and `now * rate(now)` rewrites
+   * the phase of every cycle already past, so the fog would visibly jump
+   * forward each time daylight dropped instead of quickening. Accumulating dt
+   * makes the acceleration smooth, which is the only way it reads as something
+   * closing in rather than as a stutter.
+   */
+  private surgeClock = 0
+  private churnClock = 0
 
   constructor(scene: Phaser.Scene, viewW: number, viewH: number) {
     this.scene = scene
@@ -104,15 +146,27 @@ export class Nightfall {
       this.blobs.push(img)
       // depth 0 = the leading wisps, 1 = the body far behind
       const d = i / (BLOBS - 1)
+      const by = Math.random() * viewH
       this.blobSpec.push({
         // clustered behind the edge, densest deep, sparse and reaching at the front
         dx: 470 - Math.pow(d, 0.9) * 1020 - Math.random() * 130,
-        y: Math.random() * viewH,
+        y: by,
         r: 340 + Math.random() * 240 + d * 200,
         phase: Math.random() * Math.PI * 2,
         speed: 0.5 + Math.random() * 0.85,
         rise: 34 + Math.random() * 60,
         depth: d,
+        // Seeded from the blob's ALTITUDE as well as from chance, so a push
+        // travels along the front instead of firing everywhere at once. A wall
+        // that surges in unison is a rectangle that grows and shrinks, which is
+        // the exact "breathing box" read this effect exists to avoid.
+        surgePhase: Math.random() * Math.PI * 2 + (by / viewH) * 2.4,
+        surgeRate: 0.42 + Math.random() * 0.34,
+        spinPhase: Math.random() * Math.PI * 2,
+        spinRate: 0.21 + Math.random() * 0.28,
+        // half the field turns one way and half the other, so the churn never
+        // resolves into the whole mass sliding in a single direction
+        spinDir: i % 2 === 0 ? 1 : -1,
       })
     }
 
@@ -231,6 +285,23 @@ export class Nightfall {
     const vis = this.encroach > 0.001
     const t = this.scene.time.now * 0.001
 
+    // How far the day has run out. The dark does not merely arrive, it gets
+    // hungrier on the way — but the opening minutes have to stay calm or there
+    // is nothing to escalate FROM, so the amplitudes ride the square while the
+    // rates ride the linear term.
+    const esc = 1 - this.daylight
+    const fury = esc * esc
+    this.surgeClock += dt * (0.62 + esc * 0.9)
+    this.churnClock += dt * (0.5 + esc * 0.72)
+
+    // Gathered off the leading blobs so the rim and the boundary fade ride the
+    // same roll the mass does. Left on a fixed line they would read as a ruled
+    // vertical sitting still while everything around them churned, which is the
+    // straight-edge artefact in another costume.
+    let frontSurge = 0
+    let frontLean = 0
+    let frontN = 0
+
     for (let i = 0; i < this.blobs.length; i++) {
       const img = this.blobs[i]
       const sp = this.blobSpec[i]
@@ -241,25 +312,97 @@ export class Nightfall {
       const breathe = Math.sin(t * sp.speed + sp.phase)
       const r = sp.r * (0.86 + breathe * 0.26)
       const y = sp.y + Math.sin(t * sp.speed * 0.7 + sp.phase * 1.7) * sp.rise
-      const x = screenEdge + sp.dx + Math.cos(t * sp.speed * 0.6 + sp.phase) * 88
-      img.setPosition(x, y)
-      img.setDisplaySize(r * 2.3, r * 1.15)
+
+      // Only the leading fog rolls. The deep body holds still and holds its
+      // opacity, which is what stops the churn from opening holes in a mass
+      // whose whole job is to be solid.
+      const front = Math.max(0, 1 - sp.depth * 1.7)
+
+      // SURGE, not drift. The cubed wave sits near zero for most of its cycle
+      // and spikes briefly, so the front comes forward in rolling pushes with
+      // slack between them the way smoke does, rather than advancing evenly
+      // like weather. SURGE_MEAN takes the average back out — see its comment:
+      // this is what buys the violence without buying any speed.
+      const w = 0.5 + 0.5 * Math.sin(this.surgeClock * sp.surgeRate + sp.surgePhase)
+      const surge = w * w * w - SURGE_MEAN
+      const push = surge * (46 + 150 * fury) * (0.3 + front)
+
+      // IT LEANS AT YOU. The stretch of front level with the flock reaches
+      // further than the rest, so the silhouette deforms toward its prey and
+      // follows it up and down the frame. This is the difference between a dark
+      // that is coming for you and a dark that is merely getting bigger, and it
+      // costs one exp(). It is confined to the sheer leading wisps — dragging
+      // the dense body forward would move the apparent kill line, which the rim
+      // is there to state honestly.
+      const dy = y - flock.centerY
+      const lean =
+        Math.max(0, 1 - sp.depth * 3.2) *
+        LEAN_REACH *
+        Math.exp(-(dy * dy) / LEAN_SIGMA2) *
+        (0.35 + 0.65 * esc)
+
+      if (sp.depth < 0.35) {
+        frontSurge += push
+        frontLean += lean
+        frontN++
+      }
+
+      img.setPosition(screenEdge + sp.dx + Math.cos(t * sp.speed * 0.6 + sp.phase) * 44 + push + lean, y)
+
+      // Blobs turn over as they roll instead of sliding rigidly. Width and
+      // height breathe against each other as RECIPROCALS, so the shape morphs
+      // while the area it covers stays constant — a uniform pulse would thin
+      // the whole mass at its trough and let lit sky show through the wall.
+      const morph =
+        1 + Math.sin(this.churnClock * sp.spinRate * 0.83 + sp.spinPhase) * (0.06 + 0.16 * fury) * front
+      img.setDisplaySize(r * 2.3 * morph, (r * 1.15) / morph)
+      // two incommensurate frequencies, so the tumble never settles into a
+      // loop the eye can learn and start reading as a rotating sprite
+      img.setRotation(
+        (Math.sin(this.churnClock * sp.spinRate + sp.spinPhase) +
+          0.5 * Math.sin(this.churnClock * sp.spinRate * 1.73 + sp.spinPhase * 2.1)) *
+          (0.07 + 0.19 * fury) *
+          sp.spinDir *
+          (0.4 + front),
+      )
+
       // leading wisps stay thin, the body behind is dense
       // leading wisps stay sheer so the lethal edge is still readable
       const body = sp.depth < 0.2 ? 0.34 + sp.depth * 0.9 : 0.86 + sp.depth * 1.25
-      img.setAlpha(Math.min(0.95, this.encroach * 1.5 * body * (0.75 + breathe * 0.25)))
+      // the leading fog also THICKENS on the push, so a surge reads as mass
+      // arriving rather than as a blob sliding sideways past the camera.
+      // Weighted by `front` so the body's guaranteed opacity is never touched.
+      img.setAlpha(
+        Math.min(0.95, this.encroach * 1.5 * body * (0.75 + breathe * 0.25 + surge * 0.5 * front)),
+      )
     }
+
+    const meanSurge = frontN > 0 ? frontSurge / frontN : 0
+    const meanLean = frontN > 0 ? frontLean / frontN : 0
 
     this.edgeFade.setVisible(vis)
     if (vis) {
-      this.edgeFade.x = screenEdge - 210
+      this.edgeFade.x = screenEdge - 210 + meanSurge * 0.6 + meanLean * 0.5
       this.edgeFade.setAlpha(Math.min(0.95, this.encroach * 1.5))
     }
 
     this.rim.setVisible(vis)
     if (vis) {
-      this.rim.x = screenEdge + 40
-      this.rim.setAlpha(Math.min(0.2, 0.05 + this.encroach * 0.18))
+      // The rim rides the SURGE but never the lean. The surge averages to zero
+      // so the brightest line in the effect still sits on the real kill line
+      // over any cycle, while the lean is a sustained forward bias that would
+      // move it — and this rim is the game's one honest statement of where
+      // being caught begins.
+      this.rim.x = screenEdge + 40 + meanSurge * 0.45
+      // It also BOWS toward the flock. A single feathered bar cannot be bent,
+      // but tilting it puts the end nearest the flock furthest forward, which
+      // makes the boundary itself lean at its prey instead of staying a ruled
+      // vertical while the mass behind it churns.
+      this.rim.setRotation(
+        Math.PI / 2 +
+          Phaser.Math.Clamp((viewH / 2 - flock.centerY) / viewH, -0.5, 0.5) * (0.22 + 0.18 * esc),
+      )
+      this.rim.setAlpha(Math.min(0.24, 0.05 + this.encroach * 0.18 + meanSurge * 0.0004))
     }
 
     // tendrils reach out of the murk toward the nearest trailing birds.

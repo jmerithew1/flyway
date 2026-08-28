@@ -1,3 +1,4 @@
+import sys
 """A pilot that actually plays the game, for two-sided fairness testing.
 
 The previous probe steered toward the clearest lane and held Gather, and did
@@ -119,6 +120,9 @@ PILOT = """(cfg) => {
       try { d.echoCall(); calls++; callT = 6.5; } catch (e) {}
     }
 
+    // a player reads and dismisses; a probe that does not is measuring a
+    // world held at 18% speed by an open teaching card
+    if (d.card) d.dismissCard();
     d.update(performance.now() + steps * dt, dt);
     steps++;
   }
@@ -160,6 +164,7 @@ def main():
         b = p.chromium.launch(headless=True, args=[
             '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
         pg = b.new_page(viewport={'width': 1536, 'height': 960})
+        failed = False
 
         for look, margin in [(0.62, 60), (0.72, 70)]:
             boot(pg)
@@ -175,11 +180,23 @@ def main():
             sk = pg.evaluate(PILOT, cfg)
             sk_ok = sk['x'] >= END and sk['birds'] > 0
             verdict = 'PASS' if (afk_ok and sk_ok) else 'fail'
+            if not (afk_ok and sk_ok):
+                failed = True
             print(f"{look:.2f}/{margin:<4} AFK {'dies@'+str(afk['x']) if afk_ok else 'SURVIVES!!':>12} | "
                   f"pilot x={sk['x']:>5} birds={sk['birds']:>3} col={sk['collisions']:>3} "
                   f"day={sk['daylight']:>3}% {verdict}")
         b.close()
+    return 1 if failed else 0
 
 
 if __name__ == '__main__':
-    main()
+    # A CRASH MUST NOT READ AS A PASS. This exited 0 after failing to reach the
+    # dev server at all, so the two-sided difficulty contract could report
+    # success having never run a single frame. A gate that cannot fail is not a
+    # gate, and this one guards the whole balance of the game.
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f'PILOT DID NOT RUN: {e}')
+        print('the difficulty contract is UNVERIFIED — this is a failure, not a pass')
+        sys.exit(2)

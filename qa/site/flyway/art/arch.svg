@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="150" viewBox="0 0 260 150">
+  <!-- Broken monumental arch crown spanning an opening. The right haunch has
+       collapsed away, so the ring is asymmetric and the negative space under
+       it is an interesting shape rather than a clean semicircle. -->
+  <g>
+    <!-- arch ring, drawn as a filled band (outer arc out, inner arc back) -->
+    <path fill="#544a70" d="
+      M 16,150
+      C 14,84 58,30 128,28
+      C 186,27 232,64 240,116
+      L 244,150
+      L 214,150
+      L 210,120
+      C 202,84 170,58 128,59
+      C 76,60 44,98 46,150
+      Z"/>
+    <!-- keystone, tilted and proud of the ring -->
+    <path fill="#5f5480" d="M 113,20 L 146,17 L 152,52 L 118,55 Z"/>
+    <path fill="#8b7ba6" opacity="0.6" d="M 113,20 L 126,19 L 130,54 L 118,55 Z"/>
+    <!-- lit inner edge of the sun-side haunch -->
+    <path fill="#8b7ba6" opacity="0.5" d="
+      M 16,150 C 14,84 58,30 128,28 L 128,40
+      C 66,42 27,90 29,150 Z"/>
+    <!-- collapsed stone missing from the right haunch: broken stumps -->
+    <path fill="#544a70" d="M 210,120 L 226,112 L 232,132 L 244,128 L 244,150 L 214,150 Z"/>
+    <path fill="#3b3159" opacity="0.55" d="M 214,150 L 210,120 L 222,116 L 226,150 Z"/>
+    <!-- voussoir joints radiating off the ring, uneven -->
+    <g fill="#3b3159" opacity="0.4">
+      <path d="M 60,86 L 71,95 L 66,101 L 55,92 Z"/>
+      <path d="M 96,53 L 102,66 L 95,69 L 89,56 Z"/>
+      <path d="M 166,63 L 158,74 L 152,69 L 160,58 Z"/>
+      <path d="M 200,104 L 189,109 L 186,102 L 197,97 Z"/>
+    </g>
+  </g>
+</svg>
